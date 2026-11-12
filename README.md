@@ -1,20 +1,45 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Cadet 1 Orbital Telemetry
 
-# Run and deploy your AI Studio app
+A React + Vite + Three.js application for orbital telemetry visualization and simulation.
 
-This contains everything you need to run your app locally.
+## Overview
 
-View your app in AI Studio: https://ai.studio/apps/fe37054f-0b40-43c9-8966-583cb3c490c1
+This project implements a web-based interface for tracking and visualizing orbital telemetry data. Built with React, Vite, and Three.js, it provides real-time visualization of orbital parameters, trajectory analysis, and simulation controls.
 
-## Run Locally
+## Features
 
-**Prerequisites:**  Node.js
+- **Orbital Trajectory Visualization** — 3D rendering of orbital paths using Three.js
+- **Telemetry Data Display** — Real-time status of orbital parameters (altitude, velocity, inclination, etc.)
+- **Simulation Controls** — Adjust simulation speed, enable/disable subsystems
+- **Responsive UI** — Clean, modern interface for monitoring orbital data
 
+## Prerequisites
+
+- Node.js (v18+)
+- npm or yarn
+
+## Setup
 
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+   ```bash
+   npm install
+   ```
+
+
+
+3. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+## Project Structure
+
+- `src/` — Source code (components, types, game logic, assets)
+- `public/` — Static assets (images, fonts)
+- `package.json` — Project dependencies and scripts
+- `vite.config.ts` — Vite configuration
+- `tsconfig.json` — TypeScript configuration
+
+## License
+
+MIT

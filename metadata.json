@@ -1,6 +1,5 @@
 {
   "name": "Cadet-1: Orbital Telemetry",
   "description": "A high-performance aerospace orbital flight simulation and pilot training game with 3D telemetry and precision navigation.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "requestFramePermissions": []
 }
