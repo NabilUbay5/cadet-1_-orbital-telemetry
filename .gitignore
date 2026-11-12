@@ -7,4 +7,7 @@ coverage/
 .env*
 !.env.example
 
+# Local visual assets (screenshots, GIFs) - not committed
+public/assets/
+
 .wikirc.yaml
