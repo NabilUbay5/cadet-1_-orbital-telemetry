@@ -1,0 +1,250 @@
+---
+name: Cadet-1 Telemetry
+colors:
+  surface: '#121316'
+  surface-dim: '#121316'
+  surface-bright: '#38393c'
+  surface-container-lowest: '#0d0e11'
+  surface-container-low: '#1b1b1f'
+  surface-container: '#1f1f23'
+  surface-container-high: '#292a2d'
+  surface-container-highest: '#343538'
+  on-surface: '#e3e2e6'
+  on-surface-variant: '#b9cacb'
+  inverse-surface: '#e3e2e6'
+  inverse-on-surface: '#303034'
+  outline: '#849495'
+  outline-variant: '#3b494b'
+  surface-tint: '#00dbe9'
+  primary: '#dbfcff'
+  on-primary: '#00363a'
+  primary-container: '#00f0ff'
+  on-primary-container: '#006970'
+  inverse-primary: '#006970'
+  secondary: '#ffdb9d'
+  on-secondary: '#412d00'
+  secondary-container: '#feb700'
+  on-secondary-container: '#6b4b00'
+  tertiary: '#d9ffe2'
+  on-tertiary: '#00391f'
+  tertiary-container: '#00f899'
+  on-tertiary-container: '#006d40'
+  error: '#ffb4ab'
+  on-error: '#690005'
+  error-container: '#93000a'
+  on-error-container: '#ffdad6'
+  primary-fixed: '#7df4ff'
+  primary-fixed-dim: '#00dbe9'
+  on-primary-fixed: '#002022'
+  on-primary-fixed-variant: '#004f54'
+  secondary-fixed: '#ffdea8'
+  secondary-fixed-dim: '#ffba20'
+  on-secondary-fixed: '#271900'
+  on-secondary-fixed-variant: '#5e4200'
+  tertiary-fixed: '#56ffa8'
+  tertiary-fixed-dim: '#00e38b'
+  on-tertiary-fixed: '#002110'
+  on-tertiary-fixed-variant: '#00522f'
+  background: '#121316'
+  on-background: '#e3e2e6'
+  surface-variant: '#343538'
+  surface-panel: '#12141C'
+  surface-elevated: '#181B26'
+  surface-trench: '#050608'
+  surface-highest: '#222634'
+  border-hairline: '#2E3446'
+  border-subtle: '#1C202D'
+  text-photonic: '#FFFFFF'
+  text-silver: '#E2E8F0'
+  text-avionics: '#A0AEC0'
+  text-muted: '#64748B'
+  alert-critical: '#FF3B30'
+  diagnostics-indigo: '#4A6BFF'
+  well-cyan: '#00363D'
+  well-amber: '#3D2C00'
+typography:
+  display-lg:
+    fontFamily: Inter
+    fontSize: 48px
+    fontWeight: '800'
+    lineHeight: 52px
+    letterSpacing: -0.03em
+  display-lg-mobile:
+    fontFamily: Inter
+    fontSize: 32px
+    fontWeight: '800'
+    lineHeight: 36px
+    letterSpacing: -0.02em
+  display-md:
+    fontFamily: Inter
+    fontSize: 36px
+    fontWeight: '700'
+    lineHeight: 40px
+    letterSpacing: -0.025em
+  display-md-mobile:
+    fontFamily: Inter
+    fontSize: 26px
+    fontWeight: '700'
+    lineHeight: 30px
+    letterSpacing: -0.02em
+  headline-lg:
+    fontFamily: Inter
+    fontSize: 28px
+    fontWeight: '700'
+    lineHeight: 34px
+    letterSpacing: -0.02em
+  headline-md:
+    fontFamily: Inter
+    fontSize: 20px
+    fontWeight: '600'
+    lineHeight: 28px
+    letterSpacing: -0.01em
+  body-base:
+    fontFamily: Inter
+    fontSize: 15px
+    fontWeight: '400'
+    lineHeight: 22px
+    letterSpacing: '0'
+  body-bold:
+    fontFamily: Inter
+    fontSize: 15px
+    fontWeight: '600'
+    lineHeight: 22px
+    letterSpacing: '0'
+  telemetry-lg:
+    fontFamily: JetBrains Mono
+    fontSize: 32px
+    fontWeight: '600'
+    lineHeight: 36px
+    letterSpacing: -0.02em
+  telemetry-md:
+    fontFamily: JetBrains Mono
+    fontSize: 18px
+    fontWeight: '500'
+    lineHeight: 24px
+    letterSpacing: '0'
+  telemetry-sm:
+    fontFamily: JetBrains Mono
+    fontSize: 13px
+    fontWeight: '500'
+    lineHeight: 18px
+    letterSpacing: 0.04em
+  label-caps:
+    fontFamily: JetBrains Mono
+    fontSize: 11px
+    fontWeight: '700'
+    lineHeight: 14px
+    letterSpacing: 0.08em
+spacing:
+  gutter: 1rem
+  margin: 1.5rem
+  space-xs: 0.25rem
+  space-sm: 0.5rem
+  space-md: 1rem
+  space-lg: 1.5rem
+  space-xl: 2rem
+---
+
+## Brand & Style
+
+This design system establishes a high-performance aerospace telemetry language rooted in **Digital Brutalism** and **Aero-Minimalism**. Engineered for flight-critical simulation and interactive training, the visual atmosphere rejects consumer fluff, decorative gradients, and soft ambient blur in favor of mathematical precision, architectural discipline, and zero-latency operational feedback.
+
+### Brand Personality & Philosophy
+- **Clinical Precision:** Every visual marker corresponds to physical or computational telemetry (acceleration, oxygen reserves, gyroscopic stability, orbital vectors). Nothing exists as mere ornamentation.
+- **Mission-Critical Utility:** Interfaces evoke the focused, austere glass cockpits of modern spacecraft and orbital mission control consoles. High-contrast typography and razor-thin architectural boundaries ensure maximum optical legibility under varying cognitive loads.
+- **Tactile Brutalism with Aerospace Restraint:** Interactive controls behave like hardware switches and avionics readouts—snappy 1-frame state transitions, high color inversion upon activation, and strict tabular numeric alignment.
+
+### Target Audience
+Junior astronauts, simulation pilots, aerospace software operators, and technical cadets who demand rigorous simulation depth combined with modern, high-framerate visual clarity.
+
+## Colors
+
+The color palette is engineered specifically for deep-void dark environments. It leverages photonic accents against ultra-dense carbon and obsidian grounds, preserving night-vision focus and maximizing telemetry contrast.
+
+### Palette Architecture
+- **Primary (`#00F0FF` - Electric Cyan):** Active telemetry acquisition, primary mission triggers, active target locks, vector trajectories, and focused operational state.
+- **Secondary (`#FFB800` - Lunar Amber):** Warning conditions, inertial instability warnings, low oxygen thresholds (< 25%), recalibration indicators, and manual thruster overrides.
+- **Tertiary (`#00FF9D` - Orbital Vector Green):** Nominal states, 100% mission readiness, confirmed module docking, and orbital lock verification.
+- **Neutral (`#0A0B0E` - Deep Void Obsidian):** Primary viewport backdrop, root WebGL stage background, and deep space canvas.
+
+### Operational Ground & Trench Tiers
+- **Surface Panel (`#12141C`):** Base HUD console panels, telemetry deck chassis, and dock containers.
+- **Surface Elevated (`#181B26`):** Floating flight cards, active control containers, dialog modals.
+- **Surface Trench (`#050608`):** Inset telemetry gutters, recessed gauge slots, and progress track wells.
+- **Precision Hairlines (`#2E3446` & `#1C202D`):** Razor-sharp 1px structural grid lines and cell dividing boundaries.
+
+## Typography
+
+The typographic hierarchy enforces a dual-engine architecture:
+1. **Structural Prose & Heads (Inter):** Geometric grotesque for interface framing, navigation items, system announcements, and instructional manuals.
+2. **Avionics & Telemetry (JetBrains Mono):** Tabular, monospaced typography dedicated strictly to physical units, coordinate matrices, operational counters, and system readouts.
+
+### Execution Directives
+- **Tabular Numerics:** All real-time telemetry must apply `font-variant-numeric: tabular-nums` to eliminate layout jitter during high-frequency sensor updates.
+- **Unit Coupling:** Dimensional units (`kPa`, `m/s²`, `%`, `BAR`, `G`) sit immediately adjacent to their numeric value at 50% scale, set in `#A0AEC0` or `#64748B`.
+- **Labels in Caps:** Avionics labels (`label-caps`) are always rendered in uppercase with positive letter spacing (`+0.08em`) to guarantee quick recognition on dense telemetry wings.
+
+## Layout & Spacing
+
+The layout model combines an unbounded viewport stage for 3D WebGL space with a fixed-coordinate HUD perimeter docking system.
+
+### Spatial Distribution
+- **Top Command Deck (Height 48px):** Spans 100% viewport width. Houses mission elapsed timer (`MET`), current flight phase status, and mission readiness index.
+- **Left Wing Telemetry (Width 280px):** Fixed docking panel reserved for environmental metrics, gravity calibration vectors, and oxygen consumption graphs.
+- **Right Wing Telemetry (Width 300px):** Fixed docking panel hosting resource capture inventories, radar azimuths, and agility checklists.
+- **Bottom Flight Deck (Height 56px, Max Width 640px):** Floating centered flight instrumentation with key binding indicators and primary actuation triggers.
+
+### Spacing Scale & Rhythm
+Spacing adheres to a strict 4px base increment (`space-xs` = 4px, `space-sm` = 8px, `space-md` = 16px, `space-lg` = 24px, `space-xl` = 32px).
+Internal component padding never exceeds `16px`–`20px` to maintain mission-grade density. Data rows within telemetry cards maintain a compact `8px` vertical gap.
+
+## Elevation & Depth
+
+Depth is established through translucent glass surfaces, razor-sharp 1px boundary rules, and structural contrast rather than heavy diffused drop shadows.
+
+### Atmospheric HUD Glassmorphism
+- **Base Surface:** Translucent console charcoal (`rgba(18, 20, 28, 0.82)`).
+- **Backdrop Diffusion:** Crisp optical blur (`backdrop-filter: blur(16px)`).
+- **Surface Inset:** A 1px inner hairline highlight (`inset 0 1px 0 rgba(255, 255, 255, 0.08)`) simulating ground-glass edges.
+
+### Structural Boundaries
+- **Rule Lines:** High-precision 1px borders using `#2E3446` (resting) or `#00F0FF` (engaged/locked).
+- **Elevation Shadow:** A tight, low-diffusion perimeter drop (`0 8px 32px rgba(0, 0, 0, 0.75)`) separates floating HUD elements cleanly from active WebGL starfields and planetary bay meshes.
+
+## Shapes
+
+The design system employs **Level 0 (Sharp)** corner geometry. Interfaces conform to brutalist, precision-cut rectangular prisms and sharp chamfered modules.
+
+### Structural Geometry
+- **Corners:** 0px radius across panels, button frames, input envelopes, and data cards. Where mechanical softness is needed for ergonomic touch targets, an absolute maximum radius of `2px`–`4px` is permitted on auxiliary controls.
+- **Hairline Collisions:** Adjacent data cells share borders via `-1px` negative margins to prevent double-line weight build-up.
+- **Segmented Meters:** Gauge indicators are built from discrete mechanical tick blocks rather than continuous rounded pill capsules.
+
+## Components
+
+### 1. Actuators & Buttons
+- **Primary Flight Trigger:** Rectangular block (Height 44px), solid Electric Cyan (`#00F0FF`) with Deep Obsidian (`#0A0B0E`) typography in `Inter Bold`. Active state triggers instantaneous inversion: obsidian fill with 1px cyan perimeter and cyan text.
+- **Secondary Telemetry Action:** Translucent charcoal fill (`rgba(18, 20, 28, 0.85)`), 1px border (`#2E3446`), Photonic White text. Hover states elevate the border immediately to Electric Cyan.
+- **Hazard / Override Button:** Obsidian ground with 1px Lunar Amber (`#FFB800`) border and amber text. On engagement, flips to solid amber with obsidian text.
+
+### 2. HUD Telemetry Cards & Panels
+- **Container Structure:** 1px hairline border (`#2E3446`), background `rgba(18, 20, 28, 0.80)`, 16px internal padding.
+- **Header Structure:** Includes an uppercase avionics tag (`label-caps`) in `#A0AEC0` paired with an active state beacon (`#00F0FF` or `#00FF9D`).
+- **Telemetry Readout:** High-visibility tabular numeric block (`telemetry-lg`) in `#FFFFFF`, with inline baseline-anchored unit symbols in `#64748B`.
+
+### 3. Flight Phase Segmented Selector
+- **Architecture:** Segmented brutalist bar anchored across the top display perimeter.
+- **Inactive Phase:** `#12141C` fill, `#A0AEC0` text, 11px uppercase monospace index (`01 // GRAVITY CALIBRATION`).
+- **Active Phase:** Inset 2px top indicator in Electric Cyan, `#181B26` fill, `#FFFFFF` text, and an illuminated cyan pulse beacon.
+
+### 4. Telemetry Input Fields & Calibrators
+- **Numerical Inputs:** Recessed ground (`#0A0B0E`), 1px boundary (`#2E3446`), 8px padding, `JetBrains Mono` text in `#FFFFFF`. Focus transitions border to `#00F0FF` with no outer glow.
+- **Stepped Adjustment Sliders:** 4px trench track (`#050608`), filled active segment in `#00F0FF` or `#FFB800`, with a sharp 14×14px square white thumb.
+
+### 5. Checkboxes, Radios & Status Markers
+- **Telemetry Checkboxes:** 16×16px sharp square (`0px` radius). Unchecked: `#0A0B0E` well with 1px `#2E3446` edge. Checked: solid `#00F0FF` square containing an obsidian check vector.
+- **Status Markers (LED Ticks):** 6×6px solid geometric indicators. Nominal (`#00FF9D`), Standby/Drift (`#FFB800`), Warning/Hazard (`#FF3B30`).
+
+### 6. Domain-Specific Telemetry Modules
+- **Resource Matrix:** 3-column micro-grid holding collected telemetry modules, oxygen canisters, and solar grid nodes. Each slot contains a 36×36px recessed trench, wireframe vector icon, and tabular tally (`03/12`).
+- **Inertial Stability Reticle:** 2D crosshair with pitch and yaw tick lines, triggering Lunar Amber warning markers when physical drift exceeds `±5°`.

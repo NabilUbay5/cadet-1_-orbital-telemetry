@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-pixel: 'Press Start 2P', monospace;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  body {
+    font-family: var(--font-pixel);
+    background-color: #050508;
+    color: #FFFFFF;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    image-rendering: pixelated;
+  }
+
+  canvas {
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-crisp-edges;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+}
+
+.font-pixel {
+  font-family: var(--font-pixel);
+  letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums;
+}
+
+.font-telemetry {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 8-bit Arcade Window Frame with 2px borders and solid shadow */
+.retro-window {
+  background-color: #0d111a;
+  border: 2px solid #00F0FF;
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.retro-window-amber {
+  background-color: #0d111a;
+  border: 2px solid #FFB000;
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.retro-window-red {
+  background-color: #0d111a;
+  border: 2px solid #FF3344;
+  box-shadow: 3px 3px 0px #000000;
+}
+
+.retro-window-green {
+  background-color: #0d111a;
+  border: 2px solid #00FF66;
+  box-shadow: 3px 3px 0px #000000;
+}
+
+/* Tactile 8-bit Arcade Button */
+.retro-btn {
+  font-family: var(--font-pixel);
+  border: 2px solid #00F0FF;
+  background-color: #00F0FF;
+  color: #050508;
+  box-shadow: 3px 3px 0px #000000;
+  transition: none;
+  cursor: pointer;
+}
+
+.retro-btn:hover {
+  background-color: #050508;
+  color: #00F0FF;
+}
+
+.retro-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px #000000;
+}
+
+.retro-btn-secondary {
+  font-family: var(--font-pixel);
+  border: 2px solid #2A3B5C;
+  background-color: #0d111a;
+  color: #FFFFFF;
+  box-shadow: 2px 2px 0px #000000;
+  transition: none;
+  cursor: pointer;
+}
+
+.retro-btn-secondary:hover {
+  border-color: #00F0FF;
+  color: #00F0FF;
+}
+
+.retro-btn-secondary:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* Clean Arcade Perimeter Vignette - Zero horizontal scanline bars interrupting the 3D ship */
+.crt-overlay {
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 0, 0, 0) 75%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+}
+
+/* Blinking arcade text animation */
+@keyframes arcadeBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.animate-arcade-blink {
+  animation: arcadeBlink 0.9s infinite;
+}
+
+.pixel-confetti-piece {
+  position: absolute;
+  top: -12px;
+  image-rendering: pixelated;
+  animation-name: pixelConfettiFall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes pixelConfettiFall {
+  0% {
+    transform: translateY(-12px) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(calc(100vh + 24px)) rotate(720deg);
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pixel-confetti {
+    display: none;
+  }
+}
