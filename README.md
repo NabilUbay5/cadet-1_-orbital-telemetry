@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./public/banner.svg" alt="CADET-1 Orbital Telemetry Banner" width="1200" height="320"/>
+  <img src="./public/banner.png" alt="CADET-1 Orbital Telemetry Banner" width="1200" height="320"/>
 </p>
 
 <p align="center">
@@ -427,7 +427,8 @@ Output: `dist/` — static assets ready for any static host (Netlify, Vercel, Cl
 cadet-1_-orbital-telemetry/
 ├── .github/workflows/ci.yml            # Install, type-check, and build with Bun
 ├── public/
-│   ├── banner.svg                      # README banner
+│   ├── banner.png                      # README banner
+│   ├── banner.svg                      # Editable banner source
 │   └── assets/                         # Planned preview captures
 ├── src/
 │   ├── App.tsx                         # Engine lifecycle and React state
