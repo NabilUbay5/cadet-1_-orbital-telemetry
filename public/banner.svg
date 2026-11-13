@@ -167,7 +167,7 @@
 
     <!-- Subtitle -->
     <text x="0" y="100" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="400" fill="#A0B8D8" letter-spacing="3" text-transform="uppercase">
-      3D REAL-TIME TRAJECTORY & SUBSYSTEM SIMULATION ENGINE
+      3D REAL-TIME TRAJECTORY &amp; SUBSYSTEM SIMULATION ENGINE
     </text>
 
     <!-- Status badges row -->

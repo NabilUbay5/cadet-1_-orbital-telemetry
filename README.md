@@ -1,15 +1,15 @@
 <p align="center">
-  <img src="public/banner.svg" alt="CADET-1 Orbital Telemetry Banner" width="1200" height="320"/>
+  <img src="./public/banner.svg" alt="CADET-1 Orbital Telemetry Banner" width="1200" height="320"/>
 </p>
 
 <p align="center">
-  <a href="https://github.com/NabilUbay5/cadet-1_-orbital-telemetry/actions"><img src="https://img.shields.io/github/actions/workflow/status/NabilUbay5/cadet-1_-orbital-telemetry/ci.yml?branch=main&label=Build&logo=githubactions&style=flat-square" alt="Build Status"/></a>
+  <a href="https://github.com/NabilUbay5/cadet-1_-orbital-telemetry/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/NabilUbay5/cadet-1_-orbital-telemetry/ci.yml?branch=main&label=Build&logo=githubactions&style=flat-square" alt="Build Status"/></a>
   <a href="https://react.dev"><img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&style=flat-square" alt="React 19"/></a>
-  <a href="https://vitejs.dev"><img src="https://img.shields.io/badge/Vite-6-FFD62E?logo=vite&style=flat-square" alt="Vite 6"/></a>
-  <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&style=flat-square" alt="TypeScript 5.5"/></a>
-  <a href="https://threejs.org"><img src="https://img.shields.io/badge/Three.js-r168-000000?logo=three.js&style=flat-square" alt="Three.js r168"/></a>
+  <a href="https://vitejs.dev"><img src="https://img.shields.io/badge/Vite-8-FFD62E?logo=vite&style=flat-square" alt="Vite 8"/></a>
+  <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&style=flat-square" alt="TypeScript 7"/></a>
+  <a href="https://threejs.org"><img src="https://img.shields.io/badge/Three.js-r187-000000?logo=three.js&style=flat-square" alt="Three.js r187"/></a>
   <a href="https://webgl2fundamentals.org"><img src="https://img.shields.io/badge/WebGL-2.0-990000?logo=webgl&style=flat-square" alt="WebGL 2.0"/></a>
-  <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.1-FFFFFF?logo=bun&style=flat-square" alt="Bun 1.1"/></a>
+  <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.4.4-FFFFFF?logo=bun&style=flat-square" alt="Bun 1.4.4"/></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-00FF66?style=flat-square" alt="MIT License"/></a>
   <a href="https://github.com/NabilUbay5/cadet-1_-orbital-telemetry/stargazers"><img src="https://img.shields.io/github/stars/NabilUbay5/cadet-1_-orbital-telemetry?style=flat-square&logo=github&color=FFB000" alt="GitHub Stars"/></a>
 </p>
@@ -18,78 +18,68 @@
 
 ## 🚀 Elevator Pitch
 
-**CADET-1 Orbital Telemetry** is a production-grade, browser-based aerospace flight simulation and pilot training engine. Built with **React 19**, **Vite 6**, **TypeScript 5.5**, and **Three.js r168**, it delivers a real-time 3D orbital mechanics simulator with a complete telemetry HUD, multi-stage mission progression, and zero-dependency core physics — all running at 60 FPS in a WebGL 2.0 context.
+**CADET-1 Orbital Telemetry** is a browser-based flight simulation and astronaut training game built with **React 19**, **Vite 8**, **TypeScript 7**, and **Three.js r187**. It combines a WebGL 2.0 scene, arcade flight dynamics, live telemetry, three mission stages, and certification quizzes in an 8-bit CRT aesthetic.
 
-> **Not a toy. Not a demo.** A complete simulation engine featuring Newtonian flight dynamics, orbital entry corridors, satellite telemetry alignment, debris collision physics, and an 8-bit CRT aesthetic — built to the same architectural standards as production aerospace ground software.
+Frame rate depends on the browser and renderer. Hardware rendering uses `requestAnimationFrame`; software rendering uses GPU synchronization and a timed fallback. The flight model is implemented in the project using Three.js math helpers, without a separate physics engine.
 
 ---
 
 ## 🏗 Architecture Overview
 
-The simulation follows a strict **simulation-loop → state-store → renderer** separation, ensuring deterministic physics, testable logic, and a clean React integration boundary.
+The engine owns the simulation state and renders the Three.js scene. It sends telemetry and mission callbacks to React, which manages the HUD, quizzes, and modals. Keyboard events and HUD callbacks control the engine.
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              CADET-1 ARCHITECTURE                               │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│   ┌──────────────┐     ┌─────────────────┐     ┌──────────────────────────┐   │
-│   │  INPUT LAYER │     │  SIMULATION LOOP │     │    STATE STORE (React)   │   │
-│   │  (Keyboard,  │────▶│  (FlightEngine) │────▶│  (useState + useRef)     │   │
-│   │   Gamepad)   │     │  • 6-DOF Physics  │     │  • TelemetryData       │   │
-│   └──────────────┘     │  • Stage Logic    │     │  • GameState           │   │
-│                        │  • Collision Det. │     │  • MissionResult       │   │
-│                        │  • Resource Mgmt  │     └───────────┬────────────┘   │
-│                        └────────┬────────┘                  │                │
-│                                 │                           │                │
-│                                 ▼                           ▼                │
-│                        ┌─────────────────┐     ┌──────────────────────────┐   │
-│                        │ THREE.js RENDERER│     │      HUD COMPONENTS      │   │
-│                        │  (WebGL2 Context) │     │  (React + Tailwind CSS)  │   │
-│                        │  • Scene Graph    │◀────│  • Telemetry Panels      │   │
-│                        │  • Camera System  │     │  • Radar Scope           │   │
-│                        │  • Post-FX        │     │  • Stage Directives      │   │
-│                        │  • Pixel Pipeline │     │  • Certification Modals  │   │
-│                        └─────────────────┘     └──────────────────────────┘   │
-│                                                                                 │
-│   Data Flow:  Input → Physics (60Hz fixed-step) → Telemetry Emission          │
-│               → React State (throttled @ 45ms) → HUD Re-render                 │
-│               → Three.js Render (requestAnimationFrame)                        │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
++---------------------------------------------------------------+
+| CADET-1 ARCHITECTURE                                          |
+|                                                               |
+| Keyboard / HUD controls                                       |
+|            |                                                  |
+|            v                                                  |
+| +-------------------------+       +-------------------------+ |
+| | FlightEngine            |------>| Three.js renderer       | |
+| | Physics + mission state |       | Scene + camera + canvas | |
+| +-------------------------+       +-------------------------+ |
+|            |                                                  |
+|            | telemetry callbacks                              |
+|            v                                                  |
+| +-------------------------+       +-------------------------+ |
+| | React state (App)       |------>| HUD + quizzes + modals  | |
+| | Updates >= 45 ms apart  |       | React + Tailwind CSS    | |
+| +-------------------------+       +-------------------------+ |
++---------------------------------------------------------------+
 ```
 
 ### Key Architectural Decisions
 
-| Decision | Rationale |
-|----------|-----------|
-| **Zero-GC Physics Loop** | Pre-allocated `THREE.Vector3`, `Quaternion`, `Euler` objects; no allocations in hot path |
-| **Fixed-Step Simulation** | `dt = Math.min(rawDt, 0.05)` caps frame time; deterministic replayability |
-| **Software WebGL Detection** | Auto-detects SwiftShader/llvmpipe; disables shadows & reduces resolution |
-| **Virtual Low-Res Buffer** | Internal 1/3 resolution upscaled via `image-rendering: pixelated` for 8-bit CRT look |
-| **Throttled Telemetry** | Physics runs at 60Hz; React state updates at ~22Hz (45ms) to prevent render thrashing |
-| **Stage-Gated Progression** | Each mission stage unlocks via certification quiz (trivia gate) — no pay-to-win |
+| Decision                     | Implementation                                                                           |
+| ---------------------------- | ---------------------------------------------------------------------------------------- |
+| **Reused math helpers**      | Shared vector, quaternion, and Euler helpers; per-frame allocations still exist.         |
+| **Capped variable timestep** | Frame delta is capped at 0.05 s; there is no fixed-step accumulator or replay system.    |
+| **Software WebGL detection** | Detects software renderers, disables shadows, and uses GPU fences plus timed scheduling. |
+| **Low-resolution canvas**    | One-third viewport dimensions, with a 280 × 180 minimum, upscaled using pixelated CSS.   |
+| **Throttled telemetry**      | React accepts telemetry updates at least 45 ms apart, at most about 22 updates/s.        |
+| **Quiz-gated progression**   | Each stage requires a three-question quiz; all answers must be correct to advance.       |
 
 ---
 
 ## 🎮 Simulation Preview
 
-> **Visual assets are placeholder slots.** Replace with actual captures by dropping files into `public/assets/` (see **Contributing Visual Assets** below).
+> **WIP — preview captures are not yet available.** The filenames below are planned assets, not broken image links. Once a capture is added to `public/assets/`, replace its WIP status with a relative image embed (see **Contributing Visual Assets** below).
 
-| View | Description | Placeholder |
-|------|-------------|-------------|
-| **Live Demo** | Full simulation run — launch, orbital entry, satellite alignment | `public/assets/demo-preview.gif` |
-| **Telemetry HUD** | Left/right wing panels, center reticle, bottom flight deck | `public/assets/telemetry-hud.png` |
-| **Orbital View** | Chase camera showing craft, planet, waypoint rings, satellite | `public/assets/orbital-view.png` |
-| **Cockpit View** | First-person cockpit with HUD overlay | `public/assets/cockpit-view.png` |
-| **Radar Scope** | 8-bit proximity radar with hazard/waypoint blips | `public/assets/radar-scope.png` |
-| **Certification Quiz** | Astronaut trivia gate between mission stages | `public/assets/certification-quiz.png` |
+| View                   | Description                                                      | Status | Planned asset                          |
+| ---------------------- | ---------------------------------------------------------------- | ------ | -------------------------------------- |
+| **Live Demo**          | Full simulation run — launch, orbital entry, satellite alignment | WIP    | `public/assets/demo-preview.gif`       |
+| **Telemetry HUD**      | Left/right wing panels, center reticle, bottom flight deck       | WIP    | `public/assets/telemetry-hud.png`      |
+| **Orbital View**       | Chase camera showing craft, planet, waypoint rings, satellite    | WIP    | `public/assets/orbital-view.png`       |
+| **Cockpit View**       | First-person cockpit with HUD overlay                            | WIP    | `public/assets/cockpit-view.png`       |
+| **Radar Scope**        | 8-bit proximity radar with hazard/waypoint blips                 | WIP    | `public/assets/radar-scope.png`        |
+| **Certification Quiz** | Astronaut trivia gate between mission stages                     | WIP    | `public/assets/certification-quiz.png` |
 
 ### Capturing Assets
 
 ```bash
 # 1. Start dev server
-bun run dev          # or: npm run dev
+bun run dev
 
 # 2. Record GIF (example using ffmpeg)
 ffmpeg -f x11grab -r 30 -s 1280x720 -i :0.0 -t 30 \
@@ -106,7 +96,7 @@ ffmpeg -f x11grab -r 30 -s 1280x720 -i :0.0 -t 30 \
 
 ## ⚙ Core Simulation Engine Example
 
-The following is a **real, self-contained excerpt** from `src/game/flightEngine.ts` demonstrating the 6-DOF Newtonian physics, stage-specific task logic, and telemetry emission.
+The following is an **illustrative, condensed excerpt** of the flight and stage logic. It omits resource handling, audio, collision responses, and some state updates. See [flightEngine.ts](src/game/flightEngine.ts) for the complete implementation.
 
 ```typescript
 // src/game/flightEngine.ts (excerpt: updateSimulation)
@@ -255,6 +245,8 @@ private updateSimulation(dt: number) {
 
 ### Telemetry Data Contract (`src/types/game.ts`)
 
+Selected fields are shown below. The complete [TelemetryData interface](src/types/game.ts) also includes camera settings, resource totals, readiness, and audio state.
+
 ```typescript
 export interface TelemetryData {
   // Core Flight State
@@ -300,7 +292,7 @@ export interface TelemetryData {
   hazardDistance: number;
   radarBlips: Array<{
     x: number; y: number;
-    type: 'waypoint' | 'cube' | 'hazard' | 'satellite' | 'o2';
+    type: 'waypoint' | 'cube' | 'pod' | 'hazard' | 'satellite' | 'o2';
     distance: number;
   }>;
 }
@@ -310,18 +302,21 @@ export interface TelemetryData {
 
 ## 📊 Feature Matrix
 
-| Module | Technical Implementation | Key Files |
-|--------|-------------------------|-----------|
-| **3D Orbital Renderer** | Three.js r168 • WebGL2 • Virtual 1/3 resolution buffer • Nearest-neighbor upscale • ACES Filmic tonemapping • FogExp2 atmosphere • PMREM environment maps | `src/game/flightEngine.ts:124-161`, `src/game/proceduralModels.ts` |
-| **Telemetry HUD** | React 19 + Tailwind CSS 4 • Pixel-perfect 8-bit widget system • Throttled @ 45ms • CRT scanline overlay • Dynamic pixel bars • Radar scope with coordinate transform | `src/components/HUD.tsx`, `src/components/PixelBadge.tsx` |
-| **Flight Physics Engine** | 6-DOF Newtonian • Quaternion orientation (YXZ) • Fixed-step (≤50ms) • Pre-allocated math objects (zero GC) • Flight assist damping • Boost/afterburner • RCS thrusters | `src/game/flightEngine.ts:504-788` |
-| **Stage Progression System** | 3-stage mission tree • Gyro stabilization (±4.5°/4s) • Energy cube collection • Satellite alignment (<8°/3s) • Certification quiz gates • Badge persistence | `src/game/flightEngine.ts:692-783`, `src/components/CertificationQuizModal.tsx` |
-| **Collision & Damage** | Sphere-sphere broad phase • Velocity-reflect impulse • Hull integrity degradation • Camera shake + hitstop • Debris field (36 asteroids) | `src/game/flightEngine.ts:656-677` |
-| **Resource Management** | O₂ depletion (0.2%/s) • Energy recharge (8%/s) • Boost capacitor (26%/s drain, 14%/s recharge) • Scanner pulse (15 energy, 160m radius) | `src/game/flightEngine.ts:572-579`, `src/game/flightEngine.ts:391-401` |
-| **Camera System** | 3 modes: Chase (lerp + FOV zoom), Cockpit (head-mounted), Orbit (fixed offset) • Smooth transitions • Boost FOV animation | `src/game/flightEngine.ts:790-828` |
-| **Audio Engine** | Web Audio API • Procedural chiptone synthesis • Thruster loop (pitch/throttle synced) • RCS bursts • Collision impact • Radio dispatch chirps | `src/audio/soundManager.ts` |
-| **Procedural Assets** | CanvasTexture generation (nearest-filter) • 8-bit planet/cloud/asteroid textures • Solar panel grid • Low-poly craft (ConeGeometry, 5-sided) | `src/game/proceduralModels.ts:11-133` |
-| **State Management** | React `useRef` for engine instance • `useState` for telemetry/UI • Callbacks for physics→React bridge • Cleanup on unmount | `src/App.tsx:67-109` |
+| Module                   | Current implementation                                                                                | Source                                                                                |
+| ------------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **3D renderer**          | Three.js r187, WebGL2, low-resolution canvas, ACES tone mapping, fog, and PMREM lighting.             | [Engine](src/game/flightEngine.ts)                                                    |
+| **Telemetry HUD**        | React 19, Tailwind CSS 4, CRT overlay, pixel bars, and craft-relative radar.                          | [HUD](src/components/HUD.tsx), [App](src/App.tsx)                                     |
+| **Flight physics**       | Thrust, quaternion rotation, capped variable timestep, flight assist, and boost.                      | [Engine](src/game/flightEngine.ts)                                                    |
+| **Stage progression**    | Gyro calibration, three energy cubes, satellite alignment, and three quiz gates.                      | [Engine](src/game/flightEngine.ts), [Quiz](src/components/CertificationQuizModal.tsx) |
+| **Mission thresholds**   | ±4.5° pitch/yaw for 4 s; ring passes add 1 s; satellite distance <45 m and error <8° for 3 s.         | [Engine](src/game/flightEngine.ts)                                                    |
+| **Badges**               | One badge per passed quiz, held in memory and reset on a new run.                                     | [App](src/App.tsx), [Badges](src/components/PixelBadge.tsx)                           |
+| **Collision and damage** | 36 randomized asteroids, sphere-distance checks, reflected velocity, hull damage, shake, and hitstop. | [Engine](src/game/flightEngine.ts)                                                    |
+| **Oxygen and energy**    | Oxygen drains 0.2 percentage points/s; canisters restore 35; energy recharges 8 points/s.             | [Engine](src/game/flightEngine.ts)                                                    |
+| **Boost and scanner**    | Boost drains 26 charge points/s and recharges 14; scanner costs 15 energy and expands to 160 m.       | [Engine](src/game/flightEngine.ts)                                                    |
+| **Camera system**        | Chase, cockpit, and offset orbit views; interpolated positions and boost-dependent field of view.     | [Engine](src/game/flightEngine.ts)                                                    |
+| **Audio**                | Web Audio oscillators and noise for thrusters, RCS, collisions, scanner, and dispatch chirps.         | [Sound manager](src/audio/soundManager.ts)                                            |
+| **Procedural assets**    | Canvas textures with nearest filtering; low-poly craft, planet, stars, satellite, and debris.         | [Models](src/game/proceduralModels.ts)                                                |
+| **React integration**    | Engine stored in a ref; telemetry and UI in state; effect cleanup calls engine disposal.              | [App](src/App.tsx)                                                                    |
 
 ---
 
@@ -329,20 +324,19 @@ export interface TelemetryData {
 
 ### 1. Prerequisites
 
-| Requirement | Minimum Version | Verification |
-|-------------|-----------------|--------------|
-| **Node.js** | v18.0.0+ | `node --version` |
-| **Bun** (recommended) | v1.1.0+ | `bun --version` |
-| **npm** | v9.0.0+ (bundled with Node) | `npm --version` |
-| **Browser** | WebGL 2.0 + Hardware Acceleration | `chrome://gpu` → "WebGL: Hardware accelerated" |
-| **GPU** | Discrete or integrated (Intel UHD 620+, AMD Vega 8+, Apple M1+) | — |
+| Requirement            | Supported setup                                                | Verification                                       |
+| ---------------------- | -------------------------------------------------------------- | -------------------------------------------------- |
+| **Node.js**            | Node 24 LTS, used in CI for Node-based tooling.                | `node --version`                                   |
+| **Bun**                | Bun 1.4.4, pinned in CI.                                       | `bun --version`                                    |
+| **Browser**            | WebGL 2.0; hardware acceleration recommended.                  | Browser GPU diagnostics, e.g. `chrome://gpu`.      |
+| **Software rendering** | SwiftShader and llvmpipe are detected; performance is reduced. | Inspect the WebGL renderer in browser diagnostics. |
 
-> **Note:** The simulation detects software renderers (SwiftShader, llvmpipe) and automatically degrades: disables shadows, reduces internal resolution, and shows a notice.
+The engine disables shadows and uses a slower scheduling path when it detects software rendering. The low-resolution canvas is used on both hardware and software renderers.
 
 ### 2. Clone the Repository
 
 ```bash
-# HTTPS (read/write with token)
+# HTTPS
 git clone https://github.com/NabilUbay5/cadet-1_-orbital-telemetry.git
 
 # SSH (if you have keys configured)
@@ -351,64 +345,55 @@ git clone git@github.com:NabilUbay5/cadet-1_-orbital-telemetry.git
 cd cadet-1_-orbital-telemetry
 ```
 
-### 3. Configure Environment Variables
+### 3. Optional Environment Configuration
 
-The project uses a minimal `.env` for runtime configuration. Copy the template:
+The default workflow requires no `.env` file, API keys, or external services.
+
+| Variable      | Required | Default             | Actual use                                                                             |
+| ------------- | -------- | ------------------- | -------------------------------------------------------------------------------------- |
+| `APP_URL`     | No       | Unset               | Present only in `.env.example`; not read by the current app or Vite config.            |
+| `DISABLE_HMR` | No       | Unset (HMR enabled) | Setting the process variable to `true` disables Vite HMR; file watching stays enabled. |
+
+To disable HMR, supply the variable to the process before Vite loads its config:
 
 ```bash
-cp .env.example .env
+DISABLE_HMR=true bun run dev
 ```
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `APP_URL` | No | `http://localhost:3000` | Base URL for self-referential links, OAuth callbacks, API endpoints |
-| `DISABLE_HMR` | No | `false` | Set `true` to disable Vite HMR (useful in CI/containers) |
-
-> **No API keys, no secrets, no external services required.** The simulation runs entirely client-side.
 
 ### 4. Install Dependencies
 
-| Package Manager | Command | Lockfile |
-|-----------------|---------|----------|
-| **Bun** (recommended — fastest) | `bun install` | `bun.lock` |
-| **npm** | `npm install` | `package-lock.json` |
-| **yarn** | `yarn install` | `yarn.lock` |
-| **pnpm** | `pnpm install` | `pnpm-lock.yaml` |
+```bash
+bun install --frozen-lockfile
+```
 
-Both `bun.lock` and `package-lock.json` are committed; use whichever manager you prefer.
+`bun.lock` is the single dependency lockfile. Use Bun for dependency changes (`bun add`, `bun remove`, or `bun install`) and commit the updated lockfile. CI uses `--frozen-lockfile` to reject unexpected dependency changes; do not generate npm, Yarn, or pnpm lockfiles.
 
 ### 5. Start the Development Server
 
 ```bash
-# Bun (recommended)
 bun run dev
-
-# npm
-npm run dev
-
-# yarn
-yarn dev
 ```
 
 The Vite dev server starts at **`http://localhost:3000`** (configurable in `package.json`).
 
 ```text
-  VITE v6.x.x  ready in 320 ms
+  VITE v8.x.x  ready in 320 ms
 
   ➜  Local:   http://localhost:3000/
   ➜  Network: http://192.168.x.x:3000/
 ```
 
-Open the URL in a WebGL 2.0-capable browser. Press **Space** or **Enter** at the title screen to begin.
+Open the URL in a WebGL 2.0-capable browser. Click **PRESS START** or press **Enter** to begin. **Space** also starts the mission and triggers the scanner, spending 15 energy.
 
 ### 6. Production Build
 
 ```bash
 # Type-check + build
-bun run build      # or: npm run build
+bun run lint
+bun run build
 
 # Preview production build locally
-bun run preview    # or: npm run preview
+bun run preview
 ```
 
 Output: `dist/` — static assets ready for any static host (Netlify, Vercel, Cloudflare Pages, GitHub Pages, Nginx, S3+CloudFront).
@@ -417,23 +402,22 @@ Output: `dist/` — static assets ready for any static host (Netlify, Vercel, Cl
 
 ## 🎮 Controls Reference
 
-| Action | Key(s) | Description |
-|--------|--------|-------------|
-| **Throttle Up** | `W` / `↑` | Increase main engine thrust |
-| **Throttle Down** | `S` / `↓` | Decrease thrust |
-| **Yaw Left** | `A` / `←` | Rotate nose left |
-| **Yaw Right** | `D` / `→` | Rotate nose right |
-| **Pitch Up** | `R` | Nose up |
-| **Pitch Down** | `F` | Nose down |
-| **Roll Left** | `Q` | Roll counter-clockwise |
-| **Roll Right** | `E` | Roll clockwise |
-| **Afterburner** | `Shift` (hold) | 65 m/s² boost (drains capacitor) |
-| **Cycle Camera** | `C` | Chase → Cockpit → Orbit |
-| **Toggle Flight Assist** | `I` | Damping ON/OFF |
-| **Scanner Pulse** | `Space` | 160m radar scan (costs 15 energy) |
-| **Toggle Audio** | `M` | Mute/unmute all audio |
-| **Pause/Resume** | `Esc` / `P` | Pause simulation |
-| **Dismiss Announcement** | `M` (in HUD) | Toggle mission dispatch panel |
+| Action                   | Key or control                         | Behavior                                                                            |
+| ------------------------ | -------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Start mission**        | `Enter` / `Space` / **PRESS START**    | Start from the title screen.                                                        |
+| **Throttle up**          | `W` / `↑`                              | Increase throttle up to 100%.                                                       |
+| **Throttle down**        | `S` / `↓`                              | Decrease throttle down to 0%.                                                       |
+| **Yaw left / right**     | `A` / `←` and `D` / `→`                | Apply positive / negative yaw input.                                                |
+| **Pitch − / +**          | `R` / `F`                              | Apply negative / positive pitch input.                                              |
+| **Roll left / right**    | `Q` / `E`                              | Apply positive / negative roll input.                                               |
+| **Afterburner**          | Hold `Shift`                           | Requires throttle >10% and charge >2%; thrust coefficient rises from 38 to 65 m/s². |
+| **Cycle camera**         | `C`                                    | Chase → Cockpit → Orbit.                                                            |
+| **Toggle flight assist** | `I`                                    | Toggle stronger rotational and linear damping.                                      |
+| **Scanner pulse**        | `Space` during flight                  | Spend 15 energy on a visual pulse expanding to 160 m; radar updates separately.     |
+| **Toggle audio**         | `M`                                    | Toggle the sound manager's mute state.                                              |
+| **Pause / resume**       | `Esc` / `P`                            | Toggle flight between playing and paused.                                           |
+| **Restart after result** | `R`                                    | Start a new run from victory or defeat.                                             |
+| **Toggle dispatch**      | Click **DISPATCH** / **MISSION BRIEF** | Show or hide the mission announcement; click **[X]** to dismiss it.                 |
 
 ---
 
@@ -441,35 +425,34 @@ Output: `dist/` — static assets ready for any static host (Netlify, Vercel, Cl
 
 ```text
 cadet-1_-orbital-telemetry/
+├── .github/workflows/ci.yml            # Install, type-check, and build with Bun
 ├── public/
-│   ├── banner.svg              # Hero banner (this README)
-│   └── assets/                 # Screenshots/GIFs (gitignored, add locally)
+│   ├── banner.svg                      # README banner
+│   └── assets/                         # Planned preview captures
 ├── src/
-│   ├── App.tsx                 # Root component, engine lifecycle, state bridge
-│   ├── main.tsx                # React 19 entry point
-│   ├── index.css               # Tailwind 4 + custom utilities (crt-overlay, pixel bars)
-│   ├── types/
-│   │   └── game.ts             # TypeScript contracts (TelemetryData, MissionResult, etc.)
+│   ├── App.tsx                         # Engine lifecycle and React state
+│   ├── main.tsx                        # React entry point
+│   ├── index.css                       # Tailwind and CRT styling
+│   ├── types/game.ts                   # Telemetry and mission contracts
 │   ├── game/
-│   │   ├── flightEngine.ts     # Core simulation (1028 lines — physics, stages, telemetry)
-│   │   └── proceduralModels.ts # 8-bit textures, low-poly geometry generators
+│   │   ├── flightEngine.ts             # Flight, missions, rendering, and input
+│   │   └── proceduralModels.ts         # Procedural textures and geometry
 │   ├── components/
-│   │   ├── HUD.tsx             # Full telemetry HUD (569 lines)
-│   │   ├── TitleScreen.tsx     # Animated title with scanlines
-│   │   ├── Modals.tsx          # Pause/Victory/Defeat modals
-│   │   ├── CertificationQuizModal.tsx # 9-question trivia gates
-│   │   └── PixelBadge.tsx      # 8-bit badge component
-│   ├── audio/
-│   │   └── soundManager.ts     # Web Audio API chiptone synthesis
-│   └── data/
-│       └── triviaBank.ts       # 27 aerospace questions (3 per stage)
-├── index.html                  # Entry HTML, CSP, meta tags
-├── vite.config.ts              # Vite 6 + Tailwind 4 + path aliases
-├── tsconfig.json               # TypeScript 5.5 strict config
-├── package.json                # Scripts, deps, engines
-├── bun.lock / package-lock.json
-├── .env.example                # Environment template
-└── README.md                   # This file
+│   │   ├── HUD.tsx                     # Flight telemetry and controls
+│   │   ├── TitleScreen.tsx             # Mission lobby
+│   │   ├── Modals.tsx                  # Pause, victory, and defeat screens
+│   │   ├── CertificationQuizModal.tsx  # Three questions per stage
+│   │   └── PixelBadge.tsx              # Stage badge graphics
+│   ├── audio/soundManager.ts           # Procedural Web Audio synthesis
+│   └── data/triviaBank.ts              # Nine questions total, three per stage
+├── index.html                          # HTML entry point and metadata
+├── vite.config.ts                      # Vite, React, and Tailwind configuration
+├── tsconfig.json                       # TypeScript configuration
+├── package.json                        # Scripts and dependency declarations
+├── bun.lock                            # Single dependency lockfile
+├── LICENSE                             # MIT License
+├── .env.example                        # Optional, unused APP_URL template
+└── README.md                           # This file
 ```
 
 ---
@@ -477,17 +460,16 @@ cadet-1_-orbital-telemetry/
 ## 🧪 Testing & Quality
 
 ```bash
-# Type-check (strict, no emit)
-bun run lint      # or: npm run lint
+# Type-check with the repository configuration (no emit)
+bun run lint
 
 # Production build verification
-bun run build     # or: npm run build
+bun run build
 ```
 
-No unit test framework configured — the physics engine is validated via:
-- **Deterministic fixed-step** — same inputs → same outputs
-- **Visual regression** — pixel-perfect 8-bit rendering
-- **Integration** — `FlightEngine` mounts in React, emits telemetry, disposes cleanly
+CI runs TypeScript checking and the Vite production build. There is no configured unit-test or visual-regression suite, and `tsconfig.json` does not enable strict mode.
+
+For a manual smoke check, start the app and verify the title screen, WebGL canvas, live telemetry, start/pause/resume controls, and return to lobby. Frame timing and randomized scene generation mean deterministic replay is not provided.
 
 ---
 
@@ -495,19 +477,22 @@ No unit test framework configured — the physics engine is validated via:
 
 ### Static Hosting (Recommended)
 
-| Platform | Command | Notes |
-|----------|---------|-------|
-| **Netlify** | `bun run build` → drag `dist/` | Auto-detects Vite |
-| **Vercel** | `vercel --prod` | Zero-config |
-| **Cloudflare Pages** | `bun run build` → upload `dist/` | Edge runtime |
-| **GitHub Pages** | `bun run build` → `gh-pages -d dist` | Set base in `vite.config.ts` |
-| **Nginx/Apache** | `bun run build` → serve `dist/` | `try_files $uri $uri/ /index.html` |
+| Platform             | Build and output                  | Configuration notes                                                                    |
+| -------------------- | --------------------------------- | -------------------------------------------------------------------------------------- |
+| **Netlify**          | `bun run build`; publish `dist/`. | Set Bun 1.4.4 and Node 24 in the site's build environment.                             |
+| **Vercel**           | `bun run build`; output `dist/`.  | Select Vite and configure the Bun version used for installation.                       |
+| **Cloudflare Pages** | `bun run build`; output `dist/`.  | Upload the static build or configure a compatible Bun build environment.               |
+| **GitHub Pages**     | `bun run build`; deploy `dist/`.  | Set Vite `base` to `/cadet-1_-orbital-telemetry/`; add a separate deployment workflow. |
+| **Nginx**            | `bun run build`; serve `dist/`.   | Configure the document root; use `try_files $uri $uri/ /index.html` for SPA fallback.  |
+| **Apache**           | `bun run build`; serve `dist/`.   | Configure the document root; use `FallbackResource /index.html` for SPA fallback.      |
 
 ### Docker
 
+This is an example recipe, not a committed Docker setup. It requires a `Dockerfile` and an `nginx.conf` that serves the built files. Ensure Node.js is available in the builder for the current tool scripts.
+
 ```dockerfile
 # Dockerfile
-FROM oven/bun:1.1 AS builder
+FROM oven/bun:1.4.4 AS builder
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
@@ -527,8 +512,9 @@ EXPOSE 80
 ### Visual Assets
 
 1. Capture screenshots/GIFs per **Simulation Preview** table
-2. Drop into `public/assets/` (gitignored — not committed)
-3. Open PR with assets + updated README references
+2. Save them under the exact filenames in `public/assets/` listed above. These six filenames are allowed by `.gitignore`; other local captures remain ignored.
+3. Replace the corresponding WIP status with an embed such as `![Telemetry HUD](./public/assets/telemetry-hud.png)` only after that file exists.
+4. Include both the image and README update in the same PR so GitHub can render the preview.
 
 ### Code Contributions
 
@@ -552,10 +538,10 @@ git push origin feat/your-feature
 ### Development Guidelines
 
 - **Zero new dependencies** without discussion (core is dependency-free physics)
-- **TypeScript strict mode** — no `any`, no `@ts-ignore`
+- **Type safety** — run `bun run lint`; avoid new `any` and `@ts-ignore` usage (strict mode is not enabled).
 - **Pre-allocated math** in hot paths — no `new THREE.Vector3()` in loops
 - **8-bit aesthetic** — nearest-neighbor, pixel-perfect, CRT scanlines
-- **Accessibility** — keyboard-navigable, reduced-motion respect, color-blind safe palette
+- **Accessibility goals** — improve keyboard navigation, reduced-motion support, and color contrast; these are not comprehensively validated.
 
 ---
 

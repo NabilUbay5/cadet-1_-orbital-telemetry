@@ -7,7 +7,13 @@ coverage/
 .env*
 !.env.example
 
-# Local visual assets (screenshots, GIFs) - not committed
-public/assets/
+# Ignore local captures except the named README preview assets
+public/assets/*
+!public/assets/demo-preview.gif
+!public/assets/telemetry-hud.png
+!public/assets/orbital-view.png
+!public/assets/cockpit-view.png
+!public/assets/radar-scope.png
+!public/assets/certification-quiz.png
 
 .wikirc.yaml
