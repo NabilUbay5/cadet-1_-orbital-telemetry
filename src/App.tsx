@@ -181,6 +181,11 @@ export default function App() {
     engineRef.current?.triggerScannerPulse();
   };
 
+  const handleExportFlightLog = () => {
+    if (!engineRef.current) throw new Error('Flight engine unavailable');
+    engineRef.current.exportTelemetryLog();
+  };
+
   // Trivia Certification Passed Handler
   const handlePassQuiz = (passedStage: MissionStage) => {
     const badgeId =
@@ -209,9 +214,9 @@ export default function App() {
   };
 
   return (
-    <div className="relative w-screen h-screen bg-[#050508] overflow-hidden select-none">
+    <div className="relative w-screen h-dvh bg-[#050508] overflow-hidden select-none">
       {/* 3D WebGL Canvas Mount Container */}
-      <div ref={canvasMountRef} className="absolute inset-0 z-0" />
+      <div ref={canvasMountRef} data-testid="flight-canvas" className="absolute inset-0 z-0 flight-canvas" />
 
       {/* 8-Bit CRT Scanlines & Vignette Filter */}
       <div className="absolute inset-0 pointer-events-none crt-overlay z-[5] opacity-45" />
@@ -248,6 +253,7 @@ export default function App() {
       {/* Modals */}
       {gameState === 'PAUSED' && (
         <PauseModal
+          onExportFlightLog={handleExportFlightLog}
           onResume={handleResume}
           onRestart={handleRestart}
           onExit={handleReturnToLobby}
@@ -256,6 +262,7 @@ export default function App() {
 
       {gameState === 'VICTORY' && missionResult && (
         <VictoryModal
+          onExportFlightLog={handleExportFlightLog}
           result={missionResult}
           onRestart={handleRestart}
           onExit={handleReturnToLobby}
@@ -264,6 +271,7 @@ export default function App() {
 
       {gameState === 'DEFEAT' && missionResult && (
         <DefeatModal
+          onExportFlightLog={handleExportFlightLog}
           result={missionResult}
           onRestart={handleRestart}
           onExit={handleReturnToLobby}

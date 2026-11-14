@@ -45,7 +45,7 @@ To be eligible for a Global Award, a project must use NASA data or resources. On
 
 | Resource (form "Link Text")                 | Form "Link Url"                           | How the game uses it                                                                                             | Status         |
 | ------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------- |
-| NASA JPL Horizons System                    | https://ssd.jpl.nasa.gov/horizons/        | Sun elevation at the two outpost sites drives daily solar power in Outpost Ops, including the real lunar night. Body constants (solar constant, length of a solar day) come from the same API. | **Integrated** |
+| NASA JPL Horizons System                    | https://ssd.jpl.nasa.gov/horizons/        | Sun elevation drives Outpost Ops solar power. In flight, the HUD replays geometric Moon/Earth range, relative speed, and radial velocity from a bundled ephemeris, with source and epoch labels. | **Integrated** |
 | NASA Curiosity RAD surface radiation (Hassler et al., 2014) | https://doi.org/10.1126/science.1244797 | Mars daily dose of 0.64 mSv in Outpost Ops ([outpostLogic.ts](src/game/outpostLogic.ts)). Value quoted from the paper; team to re-check before submitting. | Integrated (one constant) |
 | NASA Open APIs Portal                       | https://api.nasa.gov/                     | Planned for live space-weather events. Not used by any code yet, so do not list it on the form.                    | Not integrated |
 
@@ -59,7 +59,44 @@ To be eligible for a Global Award, a project must use NASA data or resources. On
 
 #### What is not NASA data
 
-These are game-design values, chosen for playability and labelled as such in the code: the 30 mSv mission dose limit, the 16% dose cut per shield layer, flare doses and timing, dust-storm timing and its 75% sunlight cut, and every power, water, oxygen and food rate. Dust and atmosphere are not modelled from data. The flight stages (Stages 1–3) still use hand-tuned constants and no NASA data.
+These are game-design values, chosen for playability and labelled as such in the code: the 30 mSv mission dose limit, the 16% dose cut per shield layer, flare doses and timing, dust-storm timing and its 75% sunlight cut, and every power, water, oxygen and food rate. Dust and atmosphere are not modelled from data. Flight physics and stage rules (Stages 1–3) still use hand-tuned constants. The NASA orbital reference displayed in the flight HUD does not drive the craft's trajectory.
+
+#### Flight HUD orbital reference and export
+
+The amber panels in both flight HUD wings show a **bundled reference replay** of
+the Moon relative to Earth's center, separate from the craft's simulated gauges.
+The replay starts at **2027-01-16 07:00 TDB** and advances by flight mission elapsed
+time (MET), including pause/reset behavior. It is not a live API feed or spacecraft
+tracking data. The 145 geometric states cover 24 hours at 10-minute intervals in
+the **ICRF equatorial frame**, with position in **km**, velocity in **km/s**, and
+epochs in **Julian days TDB**. Cubic Hermite interpolation uses the positions and
+velocities; the HUD displays unavailable readings beyond the source interval.
+
+- Regenerate with `bun scripts/fetch-flight-ephemeris.ts`. The script saves the full
+  query URL, retrieval time and API version in
+  [flightEphemeris.ts](src/data/nasa/flightEphemeris.ts), plus the original NASA
+  response in [horizons-flight-raw.json](data/nasa/horizons-flight-raw.json).
+- **Export Flight Log** in pause, victory, or defeat downloads a JSON file through
+  `FlightEngine.exportTelemetryLog()`. It records craft speed, attitude, stage,
+  throttle, hull, oxygen, and energy once per simulation second, plus the latest
+  reading on export. At most 3,600 samples are retained; the file reports how many
+  older samples were dropped. Restart clears the prior flight. Each row includes
+  the corresponding NASA reference reading; source/frame/units/query metadata is
+  included once in the file.
+- Canvas drawing-buffer dimensions remain `max(280, floor(width / 3))` by
+  `max(180, floor(height / 3))` at pixel ratio 1, with pixelated CSS upscaling.
+  HUD wings scroll independently on small or short screens, and modals remain
+  scrollable so the export controls are reachable.
+
+With the dev server running, the optional browser smoke checks cover widths
+320, 390, 568, and 1280 px at device pixel ratio 2, reference epoch advancement,
+all three modal downloads, and log reset. Terminal screens are tested using
+controlled engine transitions, not a complete mission playthrough:
+
+```bash
+PLAYWRIGHT_MODULE=/path/to/playwright-core/index.mjs \
+  CHROMIUM_PATH=/usr/bin/chromium node scripts/verify-hud.mjs
+```
 
 ### Other data, libraries and tools
 
@@ -85,6 +122,7 @@ Space Apps requires teams to state where AI tools were used. Code and data made 
 
 - The unit tests added for `missionLogic.ts` and `fixedTimestep.ts`, and this section of the README, were drafted with an AI coding assistant (Claude Code) and reviewed by the team.
 - OpenAI Codex assisted with the pooled procedural audio controller, visual effects, related tests, browser-capture automation, and their documentation. The preview GIF and screenshots are actual application captures.
+- OpenAI Codex assisted with NASA orbital reference ingestion/interpolation, HUD layout, flight-log export, validation, and the associated documentation. Orbital states were retrieved from NASA/JPL Horizons; they were not generated by AI.
 - The Outpost Ops mode was drafted with an AI coding assistant (Claude Code) and reviewed by the team: the game rules ([outpostLogic.ts](src/game/outpostLogic.ts)), its screen ([OutpostMode.tsx](src/components/OutpostMode.tsx)), its tests, the Horizons fetch script, and the related README text. The Horizons snapshot itself is NASA/JPL data, not AI-generated.
 - *Team: add every other place AI tools were used before submitting.*
 
