@@ -664,6 +664,17 @@ EXPOSE 80
 
 ---
 
+## 👥 Team contributors
+
+Project maintainer: [@NabilUbay5](https://github.com/NabilUbay5)
+
+- [@faustinamgo-rgb](https://github.com/faustinamgo-rgb)
+- [@lulzbot02](https://github.com/lulzbot02)
+- [@nauracahya](https://github.com/nauracahya)
+- [@tyo1616](https://github.com/tyo1616)
+
+---
+
 ## 🤝 Contributing
 
 ### Visual Assets
@@ -692,6 +703,14 @@ git commit -m "feat: add orbital decay simulation"
 # 5. Push & PR
 git push origin feat/your-feature
 ```
+
+### GitHub contributor attribution
+
+Use a commit email associated with your GitHub account, or your account-specific
+GitHub `noreply` address, so GitHub can link your work to your profile. Submit your
+changes through a pull request targeting `main` for the maintainer to review.
+GitHub generates its Contributors list from qualifying commits on the default
+branch; the team credits above are maintained separately.
 
 ### Development Guidelines
 
