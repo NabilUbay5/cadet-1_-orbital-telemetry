@@ -74,6 +74,7 @@ The banner, models and textures are generated in code or drawn for this project.
 Space Apps requires teams to state where AI tools were used. Code and data made with AI must say so in descriptive text, and AI images or videos need a visible watermark.
 
 - The unit tests added for `missionLogic.ts` and `fixedTimestep.ts`, and this section of the README, were drafted with an AI coding assistant (Claude Code) and reviewed by the team.
+- OpenAI Codex assisted with the pooled procedural audio controller, visual effects, related tests, browser-capture automation, and their documentation. The preview GIF and screenshots are actual application captures.
 - *Team: add every other place AI tools were used before submitting.*
 
 ### Submission form readiness
@@ -82,7 +83,7 @@ Space Apps requires teams to state where AI tools were used. Code and data made 
 | ----------------------------------- | -------- | -------------------------------------------- | ---------------------------------------------- |
 | Project Name                        | No       | Team decision                                | Placeholder on the form                        |
 | Summary (50–200 words)              | Yes      | Elevator Pitch above                         | To write                                       |
-| Project Demonstration               | Yes      | Video ≤ 30 s or ≤ 7 slides, public link       | Not recorded (see Simulation Preview)          |
+| Project Demonstration               | Yes      | Video ≤ 30 s or ≤ 7 slides, public link       | GIF/PNG previews captured; final submission video/slides still needed          |
 | Project link                        | Yes      | This public repository or a deployed build   | Ready to paste once the repo is final          |
 | Project Details                     | Yes      | Architecture and Feature Matrix sections     | To write                                       |
 | Use of SI                           | Yes      | AI (SI) tool use, above                      | Team to complete                               |
