@@ -24,6 +24,76 @@ Frame rate depends on the browser and renderer. Hardware rendering uses `request
 
 ---
 
+## 🛰 NASA Space Apps Challenge & Open Data Alignment
+
+### Target challenge
+
+| Item           | Detail                                                                                                     |
+| -------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Event**      | [NASA Space Apps Challenge 2026](https://www.spaceappschallenge.org/2026/)                                 |
+| **Local event**| Johor Bahru, Malaysia                                                                                      |
+| **Team page**  | [Innovation of Skudai](https://www.spaceappschallenge.org/2026/find-a-team/innovation-of-skudai/)          |
+| **Challenge**  | Build a Junior Astronaut Mission Trainer                                                                   |
+
+> Space-themed STEM content often oversimplifies the engineering trade-offs that define a real mission or presents them at a level too complex to hold a young learner's attention. Few tools make those trade-offs both tangible and fun. Your challenge is to design and build an interactive game or app that lets students run a lunar or Martian outpost, balancing competing demands like life support, radiation shielding, power, and food production, so they experience firsthand the decisions that determine whether a mission fails or succeeds.
+
+### NASA data and resources
+
+To be eligible for a Global Award, a project must use NASA data or resources. The team has chosen the two sources below. **As of this commit neither is wired into the code yet**: no file in `src/` calls them, and the flight model uses hand-tuned constants. Change a row's status to *Integrated* and name the file that uses it once the integration lands.
+
+| Resource (form "Link Text")  | Form "Link Url"                        | Planned use                                                         | Status            |
+| ---------------------------- | -------------------------------------- | ------------------------------------------------------------------- | ----------------- |
+| NASA JPL Horizons System     | https://ssd.jpl.nasa.gov/horizons/     | Orbital ephemeris for authentic trajectories and stage progression  | Not yet integrated |
+| NASA Open APIs Portal        | https://api.nasa.gov/                  | NASA open data feeds for in-game mission content                    | Not yet integrated |
+
+Planned integration rules, so the engine's performance guarantees hold:
+
+- Fetch and parse data outside the physics loop, and ship a bundled snapshot so the game also works offline.
+- Convert ephemeris into plain typed arrays before a run starts; the fixed-timestep loop only reads numbers and never allocates or awaits.
+- Keep parsing separate from [missionLogic.ts](src/game/missionLogic.ts) so the rules stay pure and testable against fixture data.
+
+### Other data, libraries and tools
+
+For the submission form's "Space Agency Partner & Other Data" field. All are open source.
+
+| Name          | URL                               | Used for                          |
+| ------------- | --------------------------------- | --------------------------------- |
+| React         | https://react.dev                 | UI, HUD and modals                |
+| Three.js      | https://threejs.org               | 3D scene, rendering, math helpers |
+| Vite          | https://vite.dev                  | Dev server and production build   |
+| TypeScript    | https://www.typescriptlang.org    | Strict type checking              |
+| Tailwind CSS  | https://tailwindcss.com           | Styling                           |
+| Motion        | https://motion.dev                | UI animation                      |
+| Lucide        | https://lucide.dev                | Icons                             |
+| Bun           | https://bun.sh                    | Package manager and test runner   |
+
+The banner, models and textures are generated in code or drawn for this project. No NASA logos, flags or mission identifiers are used.
+
+### AI (SI) tool use
+
+Space Apps requires teams to state where AI tools were used. Code and data made with AI must say so in descriptive text, and AI images or videos need a visible watermark.
+
+- The unit tests added for `missionLogic.ts` and `fixedTimestep.ts`, and this section of the README, were drafted with an AI coding assistant (Claude Code) and reviewed by the team.
+- *Team: add every other place AI tools were used before submitting.*
+
+### Submission form readiness
+
+| Form field                          | Required | Source                                       | Status                                         |
+| ----------------------------------- | -------- | -------------------------------------------- | ---------------------------------------------- |
+| Project Name                        | No       | Team decision                                | Placeholder on the form                        |
+| Summary (50–200 words)              | Yes      | Elevator Pitch above                         | To write                                       |
+| Project Demonstration               | Yes      | Video ≤ 30 s or ≤ 7 slides, public link       | Not recorded (see Simulation Preview)          |
+| Project link                        | Yes      | This public repository or a deployed build   | Ready to paste once the repo is final          |
+| Project Details                     | Yes      | Architecture and Feature Matrix sections     | To write                                       |
+| Use of SI                           | Yes      | AI (SI) tool use, above                      | Team to complete                               |
+| NASA Data                           | Yes      | NASA data and resources, above               | **Blocked until an integration lands**         |
+| Space Agency Partner & Other Data   | No       | Other data, libraries and tools, above       | Ready                                          |
+| Terms and originality checkboxes    | Yes      | Team                                         | Team to confirm                                |
+
+Submissions close **Sunday, November 15, 2026 at 11:59 PM** in the local event's time zone.
+
+---
+
 ## 🏗 Architecture Overview
 
 The engine owns the simulation state and renders the Three.js scene. It sends telemetry and mission callbacks to React, which manages the HUD, quizzes, and modals. Keyboard events and HUD callbacks control the engine.
@@ -516,8 +586,8 @@ CI runs all three on every push and pull request: strict TypeScript checking, th
 | Check                  | What it covers                                                                                                                       |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | **Strict TypeScript**  | `"strict": true` across the app and tests, with no `any` or `@ts-ignore`.                                                            |
-| **Stage thresholds**   | Stage 1 ±4.5° window, 4 s hold, half-rate decay, and +1 s ring bonus; Stage 2 5 m pickup radius and 3-cube goal; Stage 3 <45 m / <8° lock held for 3 s with 0.6× decay. |
-| **Fixed timestep**     | Same physics step count at 30, 60, 144, and 240 Hz; 0.05 s frame clamp prevents a spiral of death.                                   |
+| **Stage thresholds**   | Stage 1 ±4.5° window, 4 s hold, half-rate decay, and +1 s ring bonus; Stage 2 5 m pickup radius and 3-cube goal; Stage 3 <45 m / <8° lock held for 3 s with 0.6× decay. Also pins every exported constant, strict vs. inclusive boundaries, timer clamping under 5,000 random steps, and `progressPercent` rounding, capping, and monotonicity. |
+| **Fixed timestep**     | Same physics step count at 30, 60, 144, and 240 Hz; 0.05 s frame clamp prevents a spiral of death. Also covers remainder carry-over, zero and exact-clamp deltas, irregular frame jitter, per-instance state, and deterministic replay. |
 | **Trivia bank**        | Three questions per stage, unique ids, four distinct options, in-range `correctIndex`, and one badge per stage.                       |
 
 Tests live in [`src/game/__tests__/`](src/game/__tests__) and exercise the pure modules ([missionLogic.ts](src/game/missionLogic.ts), [fixedTimestep.ts](src/game/fixedTimestep.ts), [triviaBank.ts](src/data/triviaBank.ts)), so they run without WebGL or a browser. Audio graph lifecycle and exhaust buffer reuse are also covered by Bun tests. The optional browser checks render audio using OfflineAudioContext and exercise mute, quiz retry/pass, stage transitions, and pause/resume. There is no automated visual-regression suite.
