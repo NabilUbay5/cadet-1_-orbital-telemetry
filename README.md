@@ -51,14 +51,16 @@ The engine owns the simulation state and renders the Three.js scene. It sends te
 
 ### Key Architectural Decisions
 
-| Decision                     | Implementation                                                                           |
-| ---------------------------- | ---------------------------------------------------------------------------------------- |
-| **Reused math helpers**      | Shared vector, quaternion, and Euler helpers; per-frame allocations still exist.         |
-| **Capped variable timestep** | Frame delta is capped at 0.05 s; there is no fixed-step accumulator or replay system.    |
-| **Software WebGL detection** | Detects software renderers, disables shadows, and uses GPU fences plus timed scheduling. |
-| **Low-resolution canvas**    | One-third viewport dimensions, with a 280 × 180 minimum, upscaled using pixelated CSS.   |
-| **Throttled telemetry**      | React accepts telemetry updates at least 45 ms apart, at most about 22 updates/s.        |
-| **Quiz-gated progression**   | Each stage requires a three-question quiz; all answers must be correct to advance.       |
+| Decision                         | Implementation                                                                                                                                                                         |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Zero-allocation hot path**     | Physics, collision, camera, and radar math reuse `private readonly` Vector3/Quaternion/Euler scratch fields; per-step input clearing uses `Set.clear()`. Only the telemetry snapshot sent to React is allocated, once per frame. |
+| **Fixed-timestep accumulator**   | Frame delta is clamped to 0.05 s and consumed in `FIXED_DT = 1/60 s` steps ([fixedTimestep.ts](src/game/fixedTimestep.ts)), so damping, thrust, and stage timers match at any refresh rate. |
+| **Pure mission rules**           | Stage thresholds live in allocation-free scalar functions ([missionLogic.ts](src/game/missionLogic.ts)) shared by the engine and the unit tests.                                      |
+| **Strict TypeScript**            | `"strict": true` in `tsconfig.json`; no `any` or `@ts-ignore`.                                                                                                                         |
+| **Software WebGL detection**     | Detects software renderers, disables shadows, and uses GPU fences plus timed scheduling.                                                                                               |
+| **Low-resolution canvas**        | One-third viewport dimensions, with a 280 × 180 minimum, upscaled using pixelated CSS.                                                                                                 |
+| **Throttled telemetry**          | The engine emits at most one telemetry snapshot per rendered frame; React accepts updates at least 45 ms apart (about 22 updates/s).                                                   |
+| **Quiz-gated progression**       | Each stage requires a three-question quiz; all answers must be correct to advance.                                                                                                     |
 
 ---
 
@@ -100,7 +102,8 @@ The following is an **illustrative, condensed excerpt** of the flight and stage 
 
 ```typescript
 // src/game/flightEngine.ts (excerpt: updateSimulation)
-// 6-DOF Newtonian flight physics with stage-gated mission progression
+// 6-DOF Newtonian flight physics with stage-gated mission progression.
+// Called once per FIXED_DT (1/60 s) step by the fixed-timestep accumulator.
 
 private updateSimulation(dt: number) {
   // ── 1. ENVIRONMENTAL ROTATIONS ──────────────────────────────────────
@@ -139,21 +142,20 @@ private updateSimulation(dt: number) {
   this.angularVelocity.multiplyScalar(Math.pow(rotDamp, dt * 60));
 
   // Quaternion integration (YXZ order = aerospace convention)
-  _eulerA.set(
+  this._deltaEuler.set(
     this.angularVelocity.x * dt,
     this.angularVelocity.y * dt,
     this.angularVelocity.z * dt,
     'YXZ'
   );
-  _quatA.setFromEuler(_eulerA);
-  this.orientation.multiply(_quatA);
+  this._deltaQuat.setFromEuler(this._deltaEuler);
+  this.orientation.multiply(this._deltaQuat);
   this.craftGroup.quaternion.copy(this.orientation);
 
-  // ── 3. THRUST → LINEAR ACCELERATION ─────────────────────────────────
-  const forwardVector = new THREE.Vector3(0, 0, -1).applyQuaternion(this.orientation);
+  // ── 3. THRUST → LINEAR ACCELERATION (reused scratch vector, no allocation) ──
   const speedMultiplier = this.isBoosting ? 65 : 38;  // m/s²
-  const thrustAccel = forwardVector.multiplyScalar(this.throttle * speedMultiplier * dt);
-  this.velocity.add(thrustAccel);
+  this._forwardVec.set(0, 0, -1).applyQuaternion(this.orientation);
+  this.velocity.addScaledVector(this._forwardVec, this.throttle * speedMultiplier * dt);
 
   // Linear drag when flight assist engaged
   if (this.flightAssist) {
@@ -167,9 +169,9 @@ private updateSimulation(dt: number) {
 
   // ── 4. STAGE-SPECIFIC TASK LOGIC ────────────────────────────────────
   // Extract Euler angles for stability assessment
-  _eulerA.setFromQuaternion(this.orientation, 'YXZ');
-  const pitchDeg = (_eulerA.x * 180) / Math.PI;
-  const yawDeg   = (_eulerA.y * 180) / Math.PI;
+  this._attitudeEuler.setFromQuaternion(this.orientation, 'YXZ');
+  const pitchDeg = this._attitudeEuler.x * RAD_TO_DEG;
+  const yawDeg   = this._attitudeEuler.y * RAD_TO_DEG;
 
   // STAGE 1: Ground School — Gyro Stabilization (±4.5° for 4s)
   if (this.stage === 1 && !this.stage1Complete) {
@@ -221,10 +223,10 @@ private updateSimulation(dt: number) {
   const distToSat = this.position.distanceTo(satPos);
 
   // Heading error between craft forward and vector-to-satellite
-  _vec3A.subVectors(satPos, this.position).normalize();
-  const craftForward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.orientation);
-  const alignDot = Math.max(-1, Math.min(1, craftForward.dot(_vec3A)));
-  const alignErrorDeg = (Math.acos(alignDot) * 180) / Math.PI;
+  this._toTargetVec.subVectors(satPos, this.position).normalize();
+  this._forwardVec.set(0, 0, -1).applyQuaternion(this.orientation);
+  const alignDot = THREE.MathUtils.clamp(this._forwardVec.dot(this._toTargetVec), -1, 1);
+  const alignErrorDeg = Math.acos(alignDot) * RAD_TO_DEG;
 
   if (this.stage === 3 && !this.stage3Complete) {
     if (distToSat < 45 && alignErrorDeg < 8.0) {
@@ -238,8 +240,9 @@ private updateSimulation(dt: number) {
     }
   }
 
-  // ── 5. TELEMETRY EMISSION ───────────────────────────────────────────
-  this.emitTelemetry(pitchDeg, yawDeg, distToSat, alignErrorDeg);
+  // ── 5. TELEMETRY ────────────────────────────────────────────────────
+  // Readings are cached here and emitted once per rendered frame by flushTelemetry().
+  this.telemetryPending = true;
 }
 ```
 
@@ -306,7 +309,7 @@ export interface TelemetryData {
 | ------------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | **3D renderer**          | Three.js r187, WebGL2, low-resolution canvas, ACES tone mapping, fog, and PMREM lighting.             | [Engine](src/game/flightEngine.ts)                                                    |
 | **Telemetry HUD**        | React 19, Tailwind CSS 4, CRT overlay, pixel bars, and craft-relative radar.                          | [HUD](src/components/HUD.tsx), [App](src/App.tsx)                                     |
-| **Flight physics**       | Thrust, quaternion rotation, capped variable timestep, flight assist, and boost.                      | [Engine](src/game/flightEngine.ts)                                                    |
+| **Flight physics**       | Thrust, quaternion rotation, fixed 1/60 s timestep, flight assist, and boost.                         | [Engine](src/game/flightEngine.ts)                                                    |
 | **Stage progression**    | Gyro calibration, three energy cubes, satellite alignment, and three quiz gates.                      | [Engine](src/game/flightEngine.ts), [Quiz](src/components/CertificationQuizModal.tsx) |
 | **Mission thresholds**   | ±4.5° pitch/yaw for 4 s; ring passes add 1 s; satellite distance <45 m and error <8° for 3 s.         | [Engine](src/game/flightEngine.ts)                                                    |
 | **Badges**               | One badge per passed quiz, held in memory and reset on a new run.                                     | [App](src/App.tsx), [Badges](src/components/PixelBadge.tsx)                           |
@@ -351,7 +354,6 @@ The default workflow requires no `.env` file, API keys, or external services.
 
 | Variable      | Required | Default             | Actual use                                                                             |
 | ------------- | -------- | ------------------- | -------------------------------------------------------------------------------------- |
-| `APP_URL`     | No       | Unset               | Present only in `.env.example`; not read by the current app or Vite config.            |
 | `DISABLE_HMR` | No       | Unset (HMR enabled) | Setting the process variable to `true` disables Vite HMR; file watching stays enabled. |
 
 To disable HMR, supply the variable to the process before Vite loads its config:
@@ -388,8 +390,9 @@ Open the URL in a WebGL 2.0-capable browser. Click **PRESS START** or press **En
 ### 6. Production Build
 
 ```bash
-# Type-check + build
+# Type-check + unit tests + build
 bun run lint
+bun test
 bun run build
 
 # Preview production build locally
@@ -425,7 +428,7 @@ Output: `dist/` — static assets ready for any static host (Netlify, Vercel, Cl
 
 ```text
 cadet-1_-orbital-telemetry/
-├── .github/workflows/ci.yml            # Install, type-check, and build with Bun
+├── .github/workflows/ci.yml            # Install, type-check, test, and build with Bun
 ├── public/
 │   ├── banner.png                      # README banner
 │   ├── banner.svg                      # Editable banner source
@@ -437,7 +440,10 @@ cadet-1_-orbital-telemetry/
 │   ├── types/game.ts                   # Telemetry and mission contracts
 │   ├── game/
 │   │   ├── flightEngine.ts             # Flight, missions, rendering, and input
-│   │   └── proceduralModels.ts         # Procedural textures and geometry
+│   │   ├── fixedTimestep.ts            # 1/60 s fixed-step accumulator
+│   │   ├── missionLogic.ts             # Pure stage thresholds and timers
+│   │   ├── proceduralModels.ts         # Procedural textures and geometry
+│   │   └── __tests__/                  # bun:test unit tests
 │   ├── components/
 │   │   ├── HUD.tsx                     # Flight telemetry and controls
 │   │   ├── TitleScreen.tsx             # Mission lobby
@@ -452,7 +458,6 @@ cadet-1_-orbital-telemetry/
 ├── package.json                        # Scripts and dependency declarations
 ├── bun.lock                            # Single dependency lockfile
 ├── LICENSE                             # MIT License
-├── .env.example                        # Optional, unused APP_URL template
 └── README.md                           # This file
 ```
 
@@ -461,16 +466,28 @@ cadet-1_-orbital-telemetry/
 ## 🧪 Testing & Quality
 
 ```bash
-# Type-check with the repository configuration (no emit)
+# Strict type-check with the repository configuration (no emit)
 bun run lint
+
+# Unit tests (bun:test)
+bun test
 
 # Production build verification
 bun run build
 ```
 
-CI runs TypeScript checking and the Vite production build. There is no configured unit-test or visual-regression suite, and `tsconfig.json` does not enable strict mode.
+CI runs all three on every push and pull request: strict TypeScript checking, the `bun test` suite, and the Vite production build.
 
-For a manual smoke check, start the app and verify the title screen, WebGL canvas, live telemetry, start/pause/resume controls, and return to lobby. Frame timing and randomized scene generation mean deterministic replay is not provided.
+| Check                  | What it covers                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **Strict TypeScript**  | `"strict": true` across the app and tests, with no `any` or `@ts-ignore`.                                                            |
+| **Stage thresholds**   | Stage 1 ±4.5° window, 4 s hold, half-rate decay, and +1 s ring bonus; Stage 2 5 m pickup radius and 3-cube goal; Stage 3 <45 m / <8° lock held for 3 s with 0.6× decay. |
+| **Fixed timestep**     | Same physics step count at 30, 60, 144, and 240 Hz; 0.05 s frame clamp prevents a spiral of death.                                   |
+| **Trivia bank**        | Three questions per stage, unique ids, four distinct options, in-range `correctIndex`, and one badge per stage.                       |
+
+Tests live in [`src/game/__tests__/`](src/game/__tests__) and exercise the pure modules ([missionLogic.ts](src/game/missionLogic.ts), [fixedTimestep.ts](src/game/fixedTimestep.ts), [triviaBank.ts](src/data/triviaBank.ts)), so they run without WebGL or a browser. There is no visual-regression suite.
+
+For a manual smoke check, start the app and verify the title screen, WebGL canvas, live telemetry, start/pause/resume controls, and return to lobby. The fixed timestep makes physics refresh-rate independent, but randomized asteroid placement means deterministic replay is not provided.
 
 ---
 
@@ -526,8 +543,9 @@ git clone https://github.com/YOUR-USERNAME/cadet-1_-orbital-telemetry.git
 # 2. Create feature branch
 git checkout -b feat/your-feature
 
-# 3. Develop (type-check passes)
+# 3. Develop (type-check and tests pass)
 bun run lint
+bun test
 
 # 4. Commit (conventional commits)
 git commit -m "feat: add orbital decay simulation"
@@ -539,8 +557,8 @@ git push origin feat/your-feature
 ### Development Guidelines
 
 - **Zero new dependencies** without discussion (core is dependency-free physics)
-- **Type safety** — run `bun run lint`; avoid new `any` and `@ts-ignore` usage (strict mode is not enabled).
-- **Pre-allocated math** in hot paths — no `new THREE.Vector3()` in loops
+- **Type safety** — strict mode is enabled; run `bun run lint` and `bun test`, and don't add `any` or `@ts-ignore`.
+- **Pre-allocated math** in hot paths — no `new THREE.*()`, `.clone()`, or object literals per physics step; reuse the engine's `private readonly` scratch fields.
 - **8-bit aesthetic** — nearest-neighbor, pixel-perfect, CRT scanlines
 - **Accessibility goals** — improve keyboard navigation, reduced-motion support, and color contrast; these are not comprehensively validated.
 

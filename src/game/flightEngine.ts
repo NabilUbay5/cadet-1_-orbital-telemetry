@@ -17,11 +17,26 @@ import {
   createSpaceStationAlpha,
   createWaypointRing,
 } from './proceduralModels.ts';
+import { FIXED_DT, FixedTimestep } from './fixedTimestep.ts';
+import {
+  STAGE1_TARGET_TIME,
+  STAGE1_TOTAL_RINGS,
+  STAGE2_REQUIRED_CUBES,
+  STAGE3_LOCK_TIME,
+  applyRingBonus,
+  isCraftLevel,
+  isEnergyCubeInRange,
+  isEnergyHarvestComplete,
+  isSatelliteAligned,
+  isSatelliteLockComplete,
+  isStabilizationComplete,
+  progressPercent,
+  stepSatelliteLockTimer,
+  stepStabilizationTimer,
+} from './missionLogic.ts';
 
-// Pre-allocated math helpers to ensure zero GC in animation loop
-const _vec3A = new THREE.Vector3();
-const _quatA = new THREE.Quaternion();
-const _eulerA = new THREE.Euler(0, 0, 0, 'YXZ');
+const RAD_TO_DEG = 180 / Math.PI;
+const PREVENT_DEFAULT_KEYS = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
 export class FlightEngine {
   private container: HTMLElement;
@@ -31,6 +46,27 @@ export class FlightEngine {
   private isSoftwareGl: boolean = false;
   private frameId: number = 0;
   private clock: THREE.Clock = new THREE.Clock();
+  private readonly timestep = new FixedTimestep();
+
+  // Scratch math objects, reused every physics step so the hot path never allocates.
+  private readonly _tmpVec = new THREE.Vector3();
+  private readonly _forwardVec = new THREE.Vector3();
+  private readonly _toTargetVec = new THREE.Vector3();
+  private readonly _shakeOffset = new THREE.Vector3();
+  private readonly _cameraGoal = new THREE.Vector3();
+  private readonly _cameraLook = new THREE.Vector3();
+  private readonly _deltaQuat = new THREE.Quaternion();
+  private readonly _invOrientation = new THREE.Quaternion();
+  private readonly _deltaEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+  private readonly _attitudeEuler = new THREE.Euler(0, 0, 0, 'YXZ');
+
+  // Latest attitude/alignment readings, captured each step and emitted once per frame.
+  private lastPitchDeg: number = 0;
+  private lastYawDeg: number = 0;
+  private lastRollDeg: number = 0;
+  private lastDistToSat: number = 0;
+  private lastAlignErrorDeg: number = 0;
+  private telemetryPending: boolean = false;
 
   // Craft & Scene entities
   private craftGroup: THREE.Group;
@@ -71,7 +107,6 @@ export class FlightEngine {
 
   // Stage 1: Ground School & Gravity Basics (Balance & Stabilization Task)
   private stabilizationTimer: number = 0;
-  private readonly targetStabilizationTime: number = 4.0;
   private isCraftStabilized: boolean = false;
   private vectorRingsPassedCount: number = 0;
   private stage1Complete: boolean = false;
@@ -90,7 +125,8 @@ export class FlightEngine {
 
   // Input System (Held & JustPressed)
   private heldKeys: Record<string, boolean> = {};
-  private justPressedKeys: Record<string, boolean> = {};
+  // A Set is cleared in place each step instead of re-allocating an object literal.
+  private readonly justPressedKeys = new Set<string>();
 
   // External Callbacks
   private onTelemetryUpdate?: (telemetry: TelemetryData) => void;
@@ -320,6 +356,7 @@ export class FlightEngine {
 
     this.satelliteLockTimer = 0;
     this.stage3Complete = false;
+    this.timestep.reset();
 
     this.o2Cans.forEach((o) => {
       o.collected = false;
@@ -401,13 +438,13 @@ export class FlightEngine {
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
-    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+    if (PREVENT_DEFAULT_KEYS.has(e.code)) {
       e.preventDefault();
     }
 
     const key = e.code.toLowerCase();
     if (!this.heldKeys[key]) {
-      this.justPressedKeys[key] = true;
+      this.justPressedKeys.add(key);
     }
     this.heldKeys[key] = true;
 
@@ -447,7 +484,7 @@ export class FlightEngine {
 
   private onWindowBlur = () => {
     this.heldKeys = {};
-    this.justPressedKeys = {};
+    this.justPressedKeys.clear();
   };
 
   private onWindowResize = () => {
@@ -465,10 +502,13 @@ export class FlightEngine {
 
   private startLoop() {
     const tick = () => {
-      const rawDt = this.clock.getDelta();
-      const dt = Math.min(rawDt, 0.05);
-
-      this.updateSimulation(dt);
+      // Fixed-timestep accumulator: the frame delta is clamped to MAX_FRAME_DT and
+      // consumed in FIXED_DT slices, so physics is refresh-rate independent.
+      const steps = this.timestep.advance(this.clock.getDelta());
+      for (let i = 0; i < steps; i++) {
+        this.updateSimulation(FIXED_DT);
+      }
+      this.flushTelemetry();
       this.render();
 
       if (this.isSoftwareGl) {
@@ -542,7 +582,7 @@ export class FlightEngine {
     if (this.hitstopDuration > 0) {
       this.hitstopDuration -= dt;
       this.updateCamera(dt);
-      this.justPressedKeys = {};
+      this.justPressedKeys.clear();
       return;
     }
 
@@ -557,13 +597,13 @@ export class FlightEngine {
         150 + Math.sin(time * 0.25) * 14
       );
       this.camera.lookAt(this.craftGroup.position);
-      this.justPressedKeys = {};
+      this.justPressedKeys.clear();
       return;
     }
 
     if (this.gameState !== 'PLAYING') {
       this.updateCamera(dt);
-      this.justPressedKeys = {};
+      this.justPressedKeys.clear();
       return;
     }
 
@@ -620,22 +660,20 @@ export class FlightEngine {
     const rotDamp = this.flightAssist ? 0.88 : 0.97;
     this.angularVelocity.multiplyScalar(Math.pow(rotDamp, dt * 60));
 
-    _eulerA.set(
+    this._deltaEuler.set(
       this.angularVelocity.x * dt,
       this.angularVelocity.y * dt,
       this.angularVelocity.z * dt,
       'YXZ'
     );
-    _quatA.setFromEuler(_eulerA);
-    this.orientation.multiply(_quatA);
+    this._deltaQuat.setFromEuler(this._deltaEuler);
+    this.orientation.multiply(this._deltaQuat);
     this.craftGroup.quaternion.copy(this.orientation);
 
-    // Thrust
-    const forwardVector = new THREE.Vector3(0, 0, -1).applyQuaternion(this.orientation);
+    // Thrust (reuses the forward scratch vector instead of allocating one per step)
     const speedMultiplier = this.isBoosting ? 65 : 38;
-    const thrustAccel = forwardVector.multiplyScalar(this.throttle * speedMultiplier * dt);
-
-    this.velocity.add(thrustAccel);
+    this._forwardVec.set(0, 0, -1).applyQuaternion(this.orientation);
+    this.velocity.addScaledVector(this._forwardVec, this.throttle * speedMultiplier * dt);
 
     if (this.flightAssist) {
       const linearDamp = 0.975;
@@ -662,8 +700,8 @@ export class FlightEngine {
         this.hullIntegrity = Math.max(0, this.hullIntegrity - damage);
         this.damageTakenCount += damage;
 
-        _vec3A.subVectors(this.position, ast.mesh.position).normalize();
-        this.velocity.reflect(_vec3A).multiplyScalar(0.5);
+        this._tmpVec.subVectors(this.position, ast.mesh.position).normalize();
+        this.velocity.reflect(this._tmpVec).multiplyScalar(0.5);
 
         this.hitstopDuration = 0.055;
         this.cameraShake = Math.min(1.4, 0.4 + damage * 0.03);
@@ -690,9 +728,9 @@ export class FlightEngine {
 
     // === STAGE SPECIFIC TASK LOGIC ===
 
-    _eulerA.setFromQuaternion(this.orientation, 'YXZ');
-    const pitchDeg = (_eulerA.x * 180) / Math.PI;
-    const yawDeg = (_eulerA.y * 180) / Math.PI;
+    this._attitudeEuler.setFromQuaternion(this.orientation, 'YXZ');
+    const pitchDeg = this._attitudeEuler.x * RAD_TO_DEG;
+    const yawDeg = this._attitudeEuler.y * RAD_TO_DEG;
 
     // Stage 1: Ground School & Gravity Basics (Balance & Stabilization Mini-Task)
     if (this.stage === 1 && !this.stage1Complete) {
@@ -703,19 +741,11 @@ export class FlightEngine {
       this.angularVelocity.y += turbYaw * dt;
 
       // Stable flight attitude requires holding pitch & yaw within ±4.5°
-      const isLevel = Math.abs(pitchDeg) <= 4.5 && Math.abs(yawDeg) <= 4.5;
+      const isLevel = isCraftLevel(pitchDeg, yawDeg);
       this.isCraftStabilized = isLevel;
-
-      if (isLevel) {
-        this.stabilizationTimer += dt;
-        if (this.stabilizationTimer >= this.targetStabilizationTime) {
-          this.stage1Complete = true;
-          this.stabilizationTimer = this.targetStabilizationTime;
-          soundManager.playWaypointPass();
-          this.onStageTaskCompleted?.(1);
-        }
-      } else {
-        this.stabilizationTimer = Math.max(0, this.stabilizationTimer - dt * 0.5);
+      this.stabilizationTimer = stepStabilizationTimer(this.stabilizationTimer, isLevel, dt);
+      if (isStabilizationComplete(this.stabilizationTimer)) {
+        this.completeStageTask(1);
       }
 
       // Navigating through waypoint rings provides an immediate +1.0s calibration boost
@@ -726,13 +756,11 @@ export class FlightEngine {
             ring.passed = true;
             ring.group.visible = false;
             this.vectorRingsPassedCount++;
-            this.stabilizationTimer = Math.min(this.targetStabilizationTime, this.stabilizationTimer + 1.0);
+            this.stabilizationTimer = applyRingBonus(this.stabilizationTimer);
             soundManager.playItemCollect();
 
-            if (this.stabilizationTimer >= this.targetStabilizationTime && !this.stage1Complete) {
-              this.stage1Complete = true;
-              soundManager.playWaypointPass();
-              this.onStageTaskCompleted?.(1);
+            if (!this.stage1Complete && isStabilizationComplete(this.stabilizationTimer)) {
+              this.completeStageTask(1);
             }
           }
         }
@@ -742,18 +770,14 @@ export class FlightEngine {
     // Stage 2: Atmosphere & Orbital Entry (Collect 3 Energy Cubes)
     if (this.stage === 2 && !this.stage2Complete) {
       for (const cube of this.energyCubes) {
-        if (!cube.collected) {
-          if (this.position.distanceTo(cube.group.position) < 5.0) {
-            cube.collected = true;
-            cube.group.visible = false;
-            this.energyCubesCollectedCount++;
-            soundManager.playItemCollect();
+        if (!cube.collected && isEnergyCubeInRange(this.position.distanceTo(cube.group.position))) {
+          cube.collected = true;
+          cube.group.visible = false;
+          this.energyCubesCollectedCount++;
+          soundManager.playItemCollect();
 
-            if (this.energyCubesCollectedCount >= 3) {
-              this.stage2Complete = true;
-              soundManager.playWaypointPass();
-              this.onStageTaskCompleted?.(2);
-            }
+          if (isEnergyHarvestComplete(this.energyCubesCollectedCount)) {
+            this.completeStageTask(2);
           }
         }
       }
@@ -763,32 +787,48 @@ export class FlightEngine {
     const satPos = this.satelliteRelay.group.position;
     const distToSat = this.position.distanceTo(satPos);
 
-    // Calculate heading error between craft forward and vector to satellite
-    _vec3A.subVectors(satPos, this.position).normalize();
-    const craftForward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.orientation);
-    const alignDot = Math.max(-1, Math.min(1, craftForward.dot(_vec3A)));
-    const alignErrorDeg = (Math.acos(alignDot) * 180) / Math.PI;
+    // Heading error between craft forward and the vector to the satellite
+    this._toTargetVec.subVectors(satPos, this.position).normalize();
+    this._forwardVec.set(0, 0, -1).applyQuaternion(this.orientation);
+    const alignDot = THREE.MathUtils.clamp(this._forwardVec.dot(this._toTargetVec), -1, 1);
+    const alignErrorDeg = Math.acos(alignDot) * RAD_TO_DEG;
 
     if (this.stage === 3 && !this.stage3Complete) {
-      if (distToSat < 45 && alignErrorDeg < 8.0) {
-        this.satelliteLockTimer += dt;
-        if (this.satelliteLockTimer >= 3.0) {
-          this.stage3Complete = true;
-          soundManager.playWaypointPass();
-          this.onStageTaskCompleted?.(3);
-        }
-      } else {
-        this.satelliteLockTimer = Math.max(0, this.satelliteLockTimer - dt * 0.6);
+      const aligned = isSatelliteAligned(distToSat, alignErrorDeg);
+      this.satelliteLockTimer = stepSatelliteLockTimer(this.satelliteLockTimer, aligned, dt);
+      if (isSatelliteLockComplete(this.satelliteLockTimer)) {
+        this.completeStageTask(3);
       }
     }
 
     this.updateCamera(dt);
-    this.emitTelemetry(pitchDeg, yawDeg, distToSat, alignErrorDeg);
-    this.justPressedKeys = {};
+
+    // Telemetry is emitted once per rendered frame (see flushTelemetry), not once per physics step.
+    this.lastPitchDeg = pitchDeg;
+    this.lastYawDeg = yawDeg;
+    this.lastRollDeg = this._attitudeEuler.z * RAD_TO_DEG;
+    this.lastDistToSat = distToSat;
+    this.lastAlignErrorDeg = alignErrorDeg;
+    this.telemetryPending = true;
+    this.justPressedKeys.clear();
+  }
+
+  private completeStageTask(stage: MissionStage) {
+    if (stage === 1) this.stage1Complete = true;
+    else if (stage === 2) this.stage2Complete = true;
+    else this.stage3Complete = true;
+    soundManager.playWaypointPass();
+    this.onStageTaskCompleted?.(stage);
+  }
+
+  private flushTelemetry() {
+    if (!this.telemetryPending) return;
+    this.telemetryPending = false;
+    this.emitTelemetry(this.lastPitchDeg, this.lastYawDeg, this.lastDistToSat, this.lastAlignErrorDeg);
   }
 
   private updateCamera(dt: number) {
-    let shakeOffset = new THREE.Vector3(0, 0, 0);
+    const shakeOffset = this._shakeOffset.set(0, 0, 0);
     if (this.cameraShake > 0.001) {
       shakeOffset.set(
         (Math.random() - 0.5) * this.cameraShake,
@@ -798,32 +838,32 @@ export class FlightEngine {
       this.cameraShake *= Math.pow(0.88, dt * 60);
     }
 
-    if (this.cameraMode === 'CHASE') {
-      const targetPos = this.craftGroup.position;
-      const backwards = new THREE.Vector3(0, 2.8, 11).applyQuaternion(this.orientation);
-      const idealCameraPos = targetPos.clone().add(backwards).add(shakeOffset);
+    const craftPos = this.craftGroup.position;
 
-      this.camera.position.lerp(idealCameraPos, 1 - Math.exp(-8 * dt));
-      const lookahead = targetPos.clone().add(new THREE.Vector3(0, 0.4, -12).applyQuaternion(this.orientation));
-      this.camera.lookAt(lookahead);
+    if (this.cameraMode === 'CHASE') {
+      this._cameraGoal.set(0, 2.8, 11).applyQuaternion(this.orientation).add(craftPos).add(shakeOffset);
+      this.camera.position.lerp(this._cameraGoal, 1 - Math.exp(-8 * dt));
+
+      this._cameraLook.set(0, 0.4, -12).applyQuaternion(this.orientation).add(craftPos);
+      this.camera.lookAt(this._cameraLook);
 
       const targetFov = this.isBoosting ? 74 : 62 + this.throttle * 4;
       this.camera.fov = THREE.MathUtils.damp(this.camera.fov, targetFov, 6, dt);
       this.camera.updateProjectionMatrix();
     } else if (this.cameraMode === 'COCKPIT') {
-      const cockpitMount = new THREE.Vector3(0, 0.4, -0.6).applyQuaternion(this.orientation);
-      this.camera.position.copy(this.craftGroup.position).add(cockpitMount).add(shakeOffset);
+      this._cameraGoal.set(0, 0.4, -0.6).applyQuaternion(this.orientation);
+      this.camera.position.copy(craftPos).add(this._cameraGoal).add(shakeOffset);
 
-      const lookAhead = this.camera.position.clone().add(new THREE.Vector3(0, 0, -25).applyQuaternion(this.orientation));
-      this.camera.lookAt(lookAhead);
+      this._cameraLook.set(0, 0, -25).applyQuaternion(this.orientation).add(this.camera.position);
+      this.camera.lookAt(this._cameraLook);
 
       const targetFov = this.isBoosting ? 82 : 72;
       this.camera.fov = THREE.MathUtils.damp(this.camera.fov, targetFov, 8, dt);
       this.camera.updateProjectionMatrix();
     } else {
-      const orbitPos = this.craftGroup.position.clone().add(new THREE.Vector3(12, 8, 16));
-      this.camera.position.lerp(orbitPos, 0.05);
-      this.camera.lookAt(this.craftGroup.position);
+      this._cameraGoal.set(12, 8, 16).add(craftPos);
+      this.camera.position.lerp(this._cameraGoal, 0.05);
+      this.camera.lookAt(craftPos);
     }
   }
 
@@ -838,10 +878,10 @@ export class FlightEngine {
     const currentSpeed = this.velocity.length();
     let driftAngle = 0;
     if (currentSpeed > 0.5) {
-      const craftForward = new THREE.Vector3(0, 0, -1).applyQuaternion(this.orientation);
-      const moveDir = this.velocity.clone().normalize();
-      const dot = Math.max(-1, Math.min(1, craftForward.dot(moveDir)));
-      driftAngle = (Math.acos(dot) * 180) / Math.PI;
+      this._forwardVec.set(0, 0, -1).applyQuaternion(this.orientation);
+      this._tmpVec.copy(this.velocity).normalize();
+      const dot = THREE.MathUtils.clamp(this._forwardVec.dot(this._tmpVec), -1, 1);
+      driftAngle = Math.acos(dot) * RAD_TO_DEG;
     }
 
     const gForce = 1.0 + this.throttle * (this.isBoosting ? 4.2 : 2.1) + this.angularVelocity.length() * 1.5;
@@ -849,18 +889,19 @@ export class FlightEngine {
     // Stage Task Progress Calculation
     let stageTitle = '01 // GROUND SCHOOL';
     let stageTaskTitle = 'STABILIZE FLIGHT GYROS';
-    let stageTaskProgress = Math.min(100, Math.round((this.stabilizationTimer / this.targetStabilizationTime) * 100));
+    let stageTaskProgress = progressPercent(this.stabilizationTimer, STAGE1_TARGET_TIME);
     let stageTaskComplete = this.stage1Complete;
+    const satelliteLockProgress = progressPercent(this.satelliteLockTimer, STAGE3_LOCK_TIME);
 
     if (this.stage === 2) {
       stageTitle = '02 // ORBITAL ENTRY';
       stageTaskTitle = 'HARVEST 3 ENERGY CUBES';
-      stageTaskProgress = Math.round((this.energyCubesCollectedCount / 3) * 100);
+      stageTaskProgress = progressPercent(this.energyCubesCollectedCount, STAGE2_REQUIRED_CUBES);
       stageTaskComplete = this.stage2Complete;
     } else if (this.stage === 3) {
       stageTitle = '03 // DEEP SPACE';
       stageTaskTitle = 'ALIGN SATELLITE TELEMETRY';
-      stageTaskProgress = Math.min(100, Math.round((this.satelliteLockTimer / 3.0) * 100));
+      stageTaskProgress = satelliteLockProgress;
       stageTaskComplete = this.stage3Complete;
     }
 
@@ -873,7 +914,7 @@ export class FlightEngine {
     let hazardWarning = false;
     let hazardDistance = 999;
     const radarBlips: TelemetryData['radarBlips'] = [];
-    const craftInvQuat = this.orientation.clone().invert();
+    const craftInvQuat = this._invOrientation.copy(this.orientation).invert();
 
     for (const ast of this.asteroids) {
       const dist = this.position.distanceTo(ast.mesh.position);
@@ -882,10 +923,10 @@ export class FlightEngine {
           hazardWarning = true;
           hazardDistance = Math.min(hazardDistance, Math.round(dist));
         }
-        _vec3A.subVectors(ast.mesh.position, this.position).applyQuaternion(craftInvQuat);
+        this._tmpVec.subVectors(ast.mesh.position, this.position).applyQuaternion(craftInvQuat);
         radarBlips.push({
-          x: _vec3A.x / 120,
-          y: -_vec3A.z / 120,
+          x: this._tmpVec.x / 120,
+          y: -this._tmpVec.z / 120,
           type: 'hazard',
           distance: Math.round(dist),
         });
@@ -895,10 +936,10 @@ export class FlightEngine {
     if (this.stage === 1) {
       for (const ring of this.waypointRings) {
         if (!ring.passed) {
-          _vec3A.subVectors(ring.group.position, this.position).applyQuaternion(craftInvQuat);
+          this._tmpVec.subVectors(ring.group.position, this.position).applyQuaternion(craftInvQuat);
           radarBlips.push({
-            x: _vec3A.x / 140,
-            y: -_vec3A.z / 140,
+            x: this._tmpVec.x / 140,
+            y: -this._tmpVec.z / 140,
             type: 'waypoint',
             distance: Math.round(this.position.distanceTo(ring.group.position)),
           });
@@ -908,20 +949,20 @@ export class FlightEngine {
     } else if (this.stage === 2) {
       for (const cube of this.energyCubes) {
         if (!cube.collected) {
-          _vec3A.subVectors(cube.group.position, this.position).applyQuaternion(craftInvQuat);
+          this._tmpVec.subVectors(cube.group.position, this.position).applyQuaternion(craftInvQuat);
           radarBlips.push({
-            x: _vec3A.x / 140,
-            y: -_vec3A.z / 140,
+            x: this._tmpVec.x / 140,
+            y: -this._tmpVec.z / 140,
             type: 'cube',
             distance: Math.round(this.position.distanceTo(cube.group.position)),
           });
         }
       }
     } else if (this.stage === 3) {
-      _vec3A.subVectors(this.satelliteRelay.group.position, this.position).applyQuaternion(craftInvQuat);
+      this._tmpVec.subVectors(this.satelliteRelay.group.position, this.position).applyQuaternion(craftInvQuat);
       radarBlips.push({
-        x: _vec3A.x / 160,
-        y: -_vec3A.z / 160,
+        x: this._tmpVec.x / 160,
+        y: -this._tmpVec.z / 160,
         type: 'satellite',
         distance: Math.round(distToSat),
       });
@@ -935,7 +976,7 @@ export class FlightEngine {
       gForce: Math.round(gForce * 10) / 10,
       pitch: Math.round(pitchDeg),
       yaw: Math.round(yawDeg),
-      roll: Math.round((_eulerA.z * 180) / Math.PI),
+      roll: Math.round(this.lastRollDeg),
       driftAngle: Math.round(driftAngle * 10) / 10,
       isInertialDrifting: driftAngle > 5.0,
       hullIntegrity: Math.round(this.hullIntegrity),
@@ -959,14 +1000,14 @@ export class FlightEngine {
       stabilizationProgress: stageTaskProgress,
       isStabilized: this.isCraftStabilized,
       vectorRingsPassed: this.vectorRingsPassedCount,
-      totalVectorRings: 3,
+      totalVectorRings: STAGE1_TOTAL_RINGS,
 
       energyCubesCollected: this.energyCubesCollectedCount,
-      totalEnergyCubes: 3,
+      totalEnergyCubes: STAGE2_REQUIRED_CUBES,
 
       satelliteDistance: Math.round(distToSat),
       satelliteAlignment: Math.round(alignErrorDeg),
-      satelliteLockProgress: Math.min(100, Math.round((this.satelliteLockTimer / 3.0) * 100)),
+      satelliteLockProgress,
 
       telemetryPodsCollected: this.energyCubesCollectedCount,
       totalTelemetryPods: 3,
