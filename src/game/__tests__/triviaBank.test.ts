@@ -6,11 +6,11 @@ const STAGES: MissionStage[] = [1, 2, 3];
 const allQuestions = STAGES.flatMap((stage) => TRIVIA_QUESTIONS[stage]);
 
 describe('triviaBank integrity', () => {
-  test('has exactly three questions per stage (nine total)', () => {
+  test('has an expanded pool with more than three questions per stage', () => {
     for (const stage of STAGES) {
-      expect(TRIVIA_QUESTIONS[stage]).toHaveLength(3);
+      expect(TRIVIA_QUESTIONS[stage].length).toBeGreaterThan(3);
     }
-    expect(allQuestions).toHaveLength(9);
+    expect(allQuestions).toHaveLength(15);
   });
 
   test('every question is filed under its own stage', () => {
@@ -30,6 +30,10 @@ describe('triviaBank integrity', () => {
     for (const q of allQuestions) {
       expect(q.question.trim().length).toBeGreaterThan(0);
       expect(q.explanation.trim().length).toBeGreaterThan(0);
+      expect(q.source.title.trim().length).toBeGreaterThan(0);
+      const sourceUrl = new URL(q.source.url);
+      expect(sourceUrl.protocol).toBe('https:');
+      expect(['science.nasa.gov', 'spaceplace.nasa.gov']).toContain(sourceUrl.hostname);
       expect(q.options).toHaveLength(4);
       expect(new Set(q.options).size).toBe(4);
       for (const option of q.options) expect(option.trim().length).toBeGreaterThan(0);

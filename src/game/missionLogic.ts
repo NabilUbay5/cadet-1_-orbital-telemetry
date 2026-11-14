@@ -7,6 +7,10 @@
  * Pure, allocation-free mission rules shared by the flight engine and the unit
  * tests. Every function takes and returns scalars so it can run inside the
  * fixed-timestep hot path without creating garbage.
+ *
+ * These Flight Academy thresholds are gameplay values, not NASA vehicle limits
+ * or measurements from JPL Horizons. Horizons data is consumed separately by
+ * Outpost Ops.
  */
 
 // Stage 1: Ground School — gyro stabilization

@@ -21,18 +21,96 @@ export interface SiteSunlight {
   sunlight: readonly number[];
 }
 
+export interface HorizonsQueryRecord {
+  target: string;
+  epoch: { start: string; stop: string; step: string; timeType: string } | null;
+  center: string | null;
+  referenceFrame: string | null;
+  units: string;
+  query: string;
+}
+
 export const HORIZONS_SNAPSHOT: {
   source: string;
+  apiEndpoint: string;
+  apiDocumentation: string;
   apiVersion: string;
   retrieved: string;
   method: string;
+  queries: {
+    bodyData: { moon: HorizonsQueryRecord; mars: HorizonsQueryRecord };
+    moonSunriseSearch: HorizonsQueryRecord;
+    moonSunlight: HorizonsQueryRecord;
+    marsSunlight: HorizonsQueryRecord;
+  };
   moon: SiteSunlight;
   mars: SiteSunlight;
 } = {
   "source": "NASA/JPL Horizons System (https://ssd.jpl.nasa.gov/horizons/)",
+  "apiEndpoint": "https://ssd.jpl.nasa.gov/api/horizons.api",
+  "apiDocumentation": "https://ssd-api.jpl.nasa.gov/doc/horizons.html",
   "apiVersion": "1.2",
   "retrieved": "2026-11-14",
-  "method": "Sun elevation from a surface site (QUANTITIES=4). Daily sunlight = share of samples with the Sun above the horizon, times the body mean solar constant divided by the Moon mean solar constant. Assumes sun-tracking panels; dust and atmosphere are handled as game events.",
+  "method": "Horizons observer quantity 4 returns airless apparent azimuth/elevation of the Sun center. Daily sunlight = share of samples with center elevation above 0 degrees, times the body mean solar constant divided by the Moon mean solar constant. Assumes sun-tracking panels; dust and atmosphere are handled as game events.",
+  "queries": {
+    "bodyData": {
+      "moon": {
+        "target": "301 (Moon)",
+        "epoch": null,
+        "center": null,
+        "referenceFrame": null,
+        "units": "solar constant: W/m^2; mean solar day: s",
+        "query": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27301%27&OBJ_DATA=%27YES%27&MAKE_EPHEM=%27NO%27"
+      },
+      "mars": {
+        "target": "499 (Mars)",
+        "epoch": null,
+        "center": null,
+        "referenceFrame": null,
+        "units": "solar constant: W/m^2; mean solar day: s",
+        "query": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27499%27&OBJ_DATA=%27YES%27&MAKE_EPHEM=%27NO%27"
+      }
+    },
+    "moonSunriseSearch": {
+      "target": "10 (Sun)",
+      "epoch": {
+        "start": "2027-01-01",
+        "stop": "2027-02-15",
+        "step": "1h",
+        "timeType": "UT"
+      },
+      "center": "coord@301",
+      "referenceFrame": "REF_SYSTEM=ICRF (for geometric/astrometric quantities); topocentric local-horizon airless apparent azimuth/elevation of target center (QUANTITIES=4)",
+      "units": "Site longitude/latitude: degrees; site elevation: km; time: UT; airless apparent azimuth/elevation: degrees",
+      "query": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%2723.47%2C0.67%2C0%27&START_TIME=%272027-01-01%27&STOP_TIME=%272027-02-15%27&STEP_SIZE=%271h%27&TIME_TYPE=%27UT%27&REF_SYSTEM=%27ICRF%27&QUANTITIES=%274%27&CSV_FORMAT=%27YES%27&OBJ_DATA=%27NO%27"
+    },
+    "moonSunlight": {
+      "target": "10 (Sun)",
+      "epoch": {
+        "start": "2027-01-16 07:00",
+        "stop": "2027-02-16 07:00",
+        "step": "1h",
+        "timeType": "UT"
+      },
+      "center": "coord@301",
+      "referenceFrame": "REF_SYSTEM=ICRF (for geometric/astrometric quantities); topocentric local-horizon airless apparent azimuth/elevation of target center (QUANTITIES=4)",
+      "units": "Site longitude/latitude: degrees; site elevation: km; time: UT; airless apparent azimuth/elevation: degrees",
+      "query": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%2723.47%2C0.67%2C0%27&START_TIME=%272027-01-16+07%3A00%27&STOP_TIME=%272027-02-16+07%3A00%27&STEP_SIZE=%271h%27&TIME_TYPE=%27UT%27&REF_SYSTEM=%27ICRF%27&QUANTITIES=%274%27&CSV_FORMAT=%27YES%27&OBJ_DATA=%27NO%27"
+    },
+    "marsSunlight": {
+      "target": "10 (Sun)",
+      "epoch": {
+        "start": "2027-01-01 00:00",
+        "stop": "2027-02-01 19:47",
+        "step": "30m",
+        "timeType": "UT"
+      },
+      "center": "coord@499",
+      "referenceFrame": "REF_SYSTEM=ICRF (for geometric/astrometric quantities); topocentric local-horizon airless apparent azimuth/elevation of target center (QUANTITIES=4)",
+      "units": "Site longitude/latitude: degrees; site elevation: km; time: UT; airless apparent azimuth/elevation: degrees",
+      "query": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27coord%40499%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%27-77.45%2C18.44%2C0%27&START_TIME=%272027-01-01+00%3A00%27&STOP_TIME=%272027-02-01+19%3A47%27&STEP_SIZE=%2730m%27&TIME_TYPE=%27UT%27&REF_SYSTEM=%27ICRF%27&QUANTITIES=%274%27&CSV_FORMAT=%27YES%27&OBJ_DATA=%27NO%27"
+    }
+  },
   "moon": {
     "site": "Mare Tranquillitatis, Moon",
     "lonE": 23.47,

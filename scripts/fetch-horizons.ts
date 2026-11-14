@@ -25,17 +25,36 @@ interface HorizonsResponse {
   signature: { source: string; version: string };
 }
 
-async function horizons(params: Record<string, string>): Promise<HorizonsResponse> {
+interface HorizonsResult extends HorizonsResponse {
+  query: string;
+}
+
+interface HorizonsQueryRecord {
+  target: string;
+  epoch: {
+    start: string;
+    stop: string;
+    step: string;
+    timeType: string;
+  } | null;
+  center: string | null;
+  referenceFrame: string | null;
+  units: string;
+  query: string;
+}
+
+async function horizons(params: Record<string, string>): Promise<HorizonsResult> {
   const url = new URL(API);
   url.searchParams.set('format', 'json');
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, `'${v}'`);
-  const res = await fetch(url);
+  const query = url.toString();
+  const res = await fetch(query);
   if (!res.ok) throw new Error(`Horizons HTTP ${res.status} for ${url}`);
   const body = (await res.json()) as HorizonsResponse;
   if (!body.result.includes('$$SOE') && params.MAKE_EPHEM !== 'NO') {
     throw new Error(`Horizons returned no ephemeris:\n${body.result.slice(0, 800)}`);
   }
-  return body;
+  return { ...body, query };
 }
 
 /** Reads "Solar Constant (W/m^2)  perihelion  aphelion  mean" from a body data page. */
@@ -71,19 +90,31 @@ function parseElevations(text: string): Sample[] {
 }
 
 async function sunElevations(body: string, lonE: number, lat: number, start: string, stop: string, step: string) {
+  const center = `coord@${body}`;
   const r = await horizons({
     COMMAND: '10',
-    CENTER: `coord@${body}`,
+    EPHEM_TYPE: 'OBSERVER',
+    CENTER: center,
     COORD_TYPE: 'GEODETIC',
     SITE_COORD: `${lonE},${lat},0`,
     START_TIME: start,
     STOP_TIME: stop,
     STEP_SIZE: step,
+    TIME_TYPE: 'UT',
+    REF_SYSTEM: 'ICRF',
     QUANTITIES: '4',
     CSV_FORMAT: 'YES',
     OBJ_DATA: 'NO',
   });
-  return { samples: parseElevations(r.result), version: r.signature.version };
+  const query: HorizonsQueryRecord = {
+    target: '10 (Sun)',
+    epoch: { start, stop, step, timeType: 'UT' },
+    center,
+    referenceFrame: 'REF_SYSTEM=ICRF (for geometric/astrometric quantities); topocentric local-horizon airless apparent azimuth/elevation of target center (QUANTITIES=4)',
+    units: 'Site longitude/latitude: degrees; site elevation: km; time: UT; airless apparent azimuth/elevation: degrees',
+    query: r.query,
+  };
+  return { samples: parseElevations(r.result), version: r.signature.version, query };
 }
 
 /** Share of samples in each day-long bin with the Sun above the horizon. */
@@ -102,8 +133,10 @@ function dailySunFraction(samples: Sample[], start: number, daySeconds: number, 
 const round = (n: number, p = 3) => Math.round(n * 10 ** p) / 10 ** p;
 const DAYS = 30;
 
-const moonData = (await horizons({ COMMAND: '301', OBJ_DATA: 'YES', MAKE_EPHEM: 'NO' })).result;
-const marsData = (await horizons({ COMMAND: '499', OBJ_DATA: 'YES', MAKE_EPHEM: 'NO' })).result;
+const moonObjectQuery = await horizons({ COMMAND: '301', OBJ_DATA: 'YES', MAKE_EPHEM: 'NO' });
+const marsObjectQuery = await horizons({ COMMAND: '499', OBJ_DATA: 'YES', MAKE_EPHEM: 'NO' });
+const moonData = moonObjectQuery.result;
+const marsData = marsObjectQuery.result;
 const moonSolar = solarConstant(moonData);
 const marsSolar = solarConstant(marsData);
 const moonDay = meanSolarDaySeconds(moonData);
@@ -117,7 +150,9 @@ const sunriseIdx = moonSearch.samples.findIndex((s, i) => i > 0 && moonSearch.sa
 if (sunriseIdx < 0) throw new Error('No lunar sunrise found');
 const moonStart = moonSearch.samples[sunriseIdx].t + 3 * 86400 * 1000;
 const moonEnd = new Date(moonStart + (DAYS + 1) * 86400 * 1000);
-const moonEph = await sunElevations('301', MOON.lonE, MOON.lat, new Date(moonStart).toISOString().slice(0, 16).replace('T', ' '), moonEnd.toISOString().slice(0, 16).replace('T', ' '), '1h');
+const moonStartTime = new Date(moonStart).toISOString().slice(0, 16).replace('T', ' ');
+const moonStopTime = moonEnd.toISOString().slice(0, 16).replace('T', ' ');
+const moonEph = await sunElevations('301', MOON.lonE, MOON.lat, moonStartTime, moonStopTime, '1h');
 const moonSun = dailySunFraction(moonEph.samples, moonStart, 86400, DAYS);
 
 // Mars: Jezero Crater (Perseverance landing site). One sample every 30 min.
@@ -125,17 +160,44 @@ const MARS = { name: 'Jezero Crater, Mars', lonE: 77.45, lat: 18.44 };
 const marsStart = Date.parse('2027-01-01T00:00:00Z');
 const marsEnd = new Date(marsStart + (DAYS * marsSol + 86400) * 1000);
 // Horizons treats Mars as an IAU west-positive body and asks for east longitude as a negative number.
-const marsEph = await sunElevations('499', -MARS.lonE, MARS.lat, '2027-01-01 00:00', marsEnd.toISOString().slice(0, 16).replace('T', ' '), '30m');
+const marsStartTime = '2027-01-01 00:00';
+const marsStopTime = marsEnd.toISOString().slice(0, 16).replace('T', ' ');
+const marsEph = await sunElevations('499', -MARS.lonE, MARS.lat, marsStartTime, marsStopTime, '30m');
 const marsSun = dailySunFraction(marsEph.samples, marsStart, marsSol, DAYS);
 
 const marsScale = marsSolar.mean / moonSolar.mean;
 
 const snapshot = {
   source: 'NASA/JPL Horizons System (https://ssd.jpl.nasa.gov/horizons/)',
+  apiEndpoint: API,
+  apiDocumentation: 'https://ssd-api.jpl.nasa.gov/doc/horizons.html',
   apiVersion: moonEph.version,
   retrieved: new Date().toISOString().slice(0, 10),
   method:
-    'Sun elevation from a surface site (QUANTITIES=4). Daily sunlight = share of samples with the Sun above the horizon, times the body mean solar constant divided by the Moon mean solar constant. Assumes sun-tracking panels; dust and atmosphere are handled as game events.',
+    'Horizons observer quantity 4 returns airless apparent azimuth/elevation of the Sun center. Daily sunlight = share of samples with center elevation above 0 degrees, times the body mean solar constant divided by the Moon mean solar constant. Assumes sun-tracking panels; dust and atmosphere are handled as game events.',
+  queries: {
+    bodyData: {
+      moon: {
+        target: '301 (Moon)',
+        epoch: null,
+        center: null,
+        referenceFrame: null,
+        units: 'solar constant: W/m^2; mean solar day: s',
+        query: moonObjectQuery.query,
+      },
+      mars: {
+        target: '499 (Mars)',
+        epoch: null,
+        center: null,
+        referenceFrame: null,
+        units: 'solar constant: W/m^2; mean solar day: s',
+        query: marsObjectQuery.query,
+      },
+    },
+    moonSunriseSearch: moonSearch.query,
+    moonSunlight: moonEph.query,
+    marsSunlight: marsEph.query,
+  },
   moon: {
     site: MOON.name,
     lonE: MOON.lonE,
@@ -183,11 +245,28 @@ export interface SiteSunlight {
   sunlight: readonly number[];
 }
 
+export interface HorizonsQueryRecord {
+  target: string;
+  epoch: { start: string; stop: string; step: string; timeType: string } | null;
+  center: string | null;
+  referenceFrame: string | null;
+  units: string;
+  query: string;
+}
+
 export const HORIZONS_SNAPSHOT: {
   source: string;
+  apiEndpoint: string;
+  apiDocumentation: string;
   apiVersion: string;
   retrieved: string;
   method: string;
+  queries: {
+    bodyData: { moon: HorizonsQueryRecord; mars: HorizonsQueryRecord };
+    moonSunriseSearch: HorizonsQueryRecord;
+    moonSunlight: HorizonsQueryRecord;
+    marsSunlight: HorizonsQueryRecord;
+  };
   moon: SiteSunlight;
   mars: SiteSunlight;
 } = ${JSON.stringify(snapshot, null, 2)};
