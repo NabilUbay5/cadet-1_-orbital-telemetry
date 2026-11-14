@@ -81,10 +81,61 @@ describe('NASA/JPL Horizons snapshot', () => {
 
   test('records its source and the body constants Horizons reported', () => {
     expect(HORIZONS_SNAPSHOT.source).toContain('ssd.jpl.nasa.gov/horizons');
+    expect(HORIZONS_SNAPSHOT.apiEndpoint).toBe('https://ssd.jpl.nasa.gov/api/horizons.api');
+    expect(HORIZONS_SNAPSHOT.apiDocumentation).toBe('https://ssd-api.jpl.nasa.gov/doc/horizons.html');
     expect(HORIZONS_SNAPSHOT.moon.solarConstantWm2.mean).toBeGreaterThan(1300);
     expect(HORIZONS_SNAPSHOT.mars.solarConstantWm2.mean).toBeLessThan(700);
     expect(HORIZONS_SNAPSHOT.mars.meanSolarDaySeconds).toBeGreaterThan(88000);
     expect(HORIZONS_SNAPSHOT.moon.meanSolarDaySeconds / 86400).toBeCloseTo(29.53, 1);
+  });
+
+  test('records the actual Horizons target, epoch, center, frame, units and request URLs', () => {
+    const bodyQueries = [
+      [HORIZONS_SNAPSHOT.queries.bodyData.moon, '301'],
+      [HORIZONS_SNAPSHOT.queries.bodyData.mars, '499'],
+    ] as const;
+    for (const [record, target] of bodyQueries) {
+      const url = new URL(record.query);
+      expect(url.origin + url.pathname).toBe(HORIZONS_SNAPSHOT.apiEndpoint);
+      expect(url.searchParams.get('COMMAND')).toBe(`'${target}'`);
+      expect(url.searchParams.get('OBJ_DATA')).toBe("'YES'");
+      expect(url.searchParams.get('MAKE_EPHEM')).toBe("'NO'");
+      expect(record.target).toContain(target);
+      expect(record.epoch).toBeNull();
+      expect(record.center).toBeNull();
+      expect(record.referenceFrame).toBeNull();
+      expect(record.units).toContain('W/m^2');
+    }
+
+    const siteQueries = [
+      [HORIZONS_SNAPSHOT.queries.moonSunriseSearch, 'coord@301'],
+      [HORIZONS_SNAPSHOT.queries.moonSunlight, 'coord@301'],
+      [HORIZONS_SNAPSHOT.queries.marsSunlight, 'coord@499'],
+    ] as const;
+    for (const [record, center] of siteQueries) {
+      const url = new URL(record.query);
+      expect(url.origin + url.pathname).toBe(HORIZONS_SNAPSHOT.apiEndpoint);
+      expect(record.target).toBe('10 (Sun)');
+      expect(record.center).toBe(center);
+      expect(record.referenceFrame).toContain('ICRF');
+      expect(record.referenceFrame).toContain('local-horizon');
+      expect(record.units).toContain('degrees');
+      expect(record.epoch).not.toBeNull();
+      if (!record.epoch) throw new Error('Site ephemeris provenance must include an epoch.');
+      expect(url.searchParams.get('COMMAND')).toBe("'10'");
+      expect(url.searchParams.get('EPHEM_TYPE')).toBe("'OBSERVER'");
+      expect(url.searchParams.get('CENTER')).toBe(`'${center}'`);
+      expect(url.searchParams.get('TIME_TYPE')).toBe("'UT'");
+      expect(url.searchParams.get('REF_SYSTEM')).toBe("'ICRF'");
+      expect(url.searchParams.get('QUANTITIES')).toBe("'4'");
+      expect(url.searchParams.get('START_TIME')).toBe(`'${record.epoch.start}'`);
+      expect(url.searchParams.get('STOP_TIME')).toBe(`'${record.epoch.stop}'`);
+      expect(url.searchParams.get('STEP_SIZE')).toBe(`'${record.epoch.step}'`);
+    }
+
+    const sunriseSearchUrl = new URL(HORIZONS_SNAPSHOT.queries.moonSunriseSearch.query);
+    expect(sunriseSearchUrl.searchParams.get('START_TIME')).toBe("'2027-01-01'");
+    expect(sunriseSearchUrl.searchParams.get('STOP_TIME')).toBe("'2027-02-15'");
   });
 
   test('the Moon site has a long night inside the mission and a sunrise before the end', () => {

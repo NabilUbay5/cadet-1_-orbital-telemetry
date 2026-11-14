@@ -43,23 +43,36 @@ Frame rate depends on the browser and renderer. Hardware rendering uses `request
 
 To be eligible for a Global Award, a project must use NASA data or resources. Only list a source on the submission form if its status below is *Integrated*.
 
-| Resource (form "Link Text")                 | Form "Link Url"                           | How the game uses it                                                                                             | Status         |
-| ------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------- |
-| NASA JPL Horizons System                    | https://ssd.jpl.nasa.gov/horizons/        | Sun elevation drives Outpost Ops solar power. In flight, the HUD replays geometric Moon/Earth range, relative speed, and radial velocity from a bundled ephemeris, with source and epoch labels. | **Integrated** |
-| NASA Curiosity RAD surface radiation (Hassler et al., 2014) | https://doi.org/10.1126/science.1244797 | Mars daily dose of 0.64 mSv in Outpost Ops ([outpostLogic.ts](src/game/outpostLogic.ts)). Value quoted from the paper; team to re-check before submitting. | Integrated (one constant) |
-| NASA Open APIs Portal                       | https://api.nasa.gov/                     | Planned for live space-weather events. Not used by any code yet, so do not list it on the form.                    | Not integrated |
+| Resource (form "Link Text") | Link | How the game uses it | Status |
+| --- | --- | --- | --- |
+| NASA/JPL Horizons System | [ssd.jpl.nasa.gov/horizons](https://ssd.jpl.nasa.gov/horizons/) | Provides the source service for the bundled outpost sunlight snapshot and the flight HUD Moon/Earth orbital reference replay. | **Integrated** |
+| NASA/JPL Horizons API | [ssd.jpl.nasa.gov/api/horizons.api](https://ssd.jpl.nasa.gov/api/horizons.api) and [API documentation](https://ssd-api.jpl.nasa.gov/doc/horizons.html) | The generator queries body summaries and site-specific solar ephemerides; details and exact saved requests are below. | **Integrated** |
+| NASA Open APIs portal | [api.nasa.gov](https://api.nasa.gov/) | No API endpoint or dataset from this portal is currently called by the project. Live space-weather data is a possible future integration. | **Planned only — not integrated** |
 
-#### How the Horizons data gets into the game
+#### Implemented Horizons queries and provenance
 
-- [scripts/fetch-horizons.ts](scripts/fetch-horizons.ts) calls the Horizons API (`bun run data:horizons`) and writes [src/data/nasa/horizonsSnapshot.ts](src/data/nasa/horizonsSnapshot.ts). The snapshot is committed, so the game works offline and never waits on the network.
-- **Moon site:** Mare Tranquillitatis (0.67° N, 23.47° E). **Mars site:** Jezero Crater (18.44° N, 77.45° E). For each, the script asks for the Sun's elevation every 30–60 minutes over the 30-day mission.
-- Daily sunlight is the share of the day the Sun is above the horizon, scaled by the body's mean solar constant relative to the Moon's (Horizons reports 1368 W/m² for the Moon and 589 W/m² for Mars).
-- The result: the Moon mission has 11 full days of sun, then a 14-day night with zero solar power. Mars gets about 23% of a lunar day's sunlight every sol.
-- [outpostLogic.ts](src/game/outpostLogic.ts) reads the snapshot as plain numbers. It is pure and has no network or DOM code, so [its tests](src/game/__tests__/outpostLogic.test.ts) run in `bun test`.
+- [scripts/fetch-horizons.ts](scripts/fetch-horizons.ts) calls the API with `bun run data:horizons` and generates [src/data/nasa/horizonsSnapshot.ts](src/data/nasa/horizonsSnapshot.ts). The committed snapshot keeps the game offline; the application does not make live Horizons requests.
+- The body-summary queries use target `301` (Moon) and `499` (Mars), with `OBJ_DATA=YES` and `MAKE_EPHEM=NO`. The generator extracts solar-constant values in W/m² and mean solar-day values in seconds. These summary requests have no epoch, center, or reference frame.
+- The site ephemeris queries use target `10` (Sun), `EPHEM_TYPE=OBSERVER`, `QUANTITIES=4`, and CSV output. Centers are `coord@301` for the Moon and `coord@499` for Mars. Sites are Mare Tranquillitatis (0.67° N, 23.47° E) and Jezero Crater (18.44° N, 77.45° E); the Mars query converts the site longitude to the west-positive convention required by Horizons.
+- Query time type is UT, and `REF_SYSTEM=ICRF` is explicit; Horizons documents that setting for geometric/astrometric quantities. Quantity 4 returns topocentric, airless apparent azimuth/elevation of the target center in the local horizon frame (degrees); site longitude/latitude are degrees and elevation is kilometers. The lunar sunrise search starts 2027-01-01 UT and ends 2027-02-15 UT; its result determines the 30-day lunar snapshot window. The Mars ephemeris starts 2027-01-01 UT and runs for 30 sols plus an Earth-day buffer. Generated snapshot metadata records the actual epochs, centers, frame/output description, units, and full request URLs for reproducibility.
+- At the recorded retrieval, Horizons body summaries reported mean solar constants of 1368 W/m² (Moon) and 589 W/m² (Mars), with mean solar days of 2,551,443.8 seconds and 88,775.24 seconds, respectively. These are service-reported body-summary values, distinct from gameplay tolerances.
+- Daily sunlight is the fraction of samples with the Sun-center elevation above 0° multiplied by the body's mean solar constant relative to the Moon's. This is a sample-based, sun-tracking-panel game input, not a direct power measurement; dust and atmospheric effects are game events, not Horizons data. [outpostLogic.ts](src/game/outpostLogic.ts) reads the snapshot as plain numbers and has no network or DOM code; its tests run in `bun test`.
 
-#### What is not NASA data
+#### Flight-stage gameplay tolerances (not NASA data)
 
-These are game-design values, chosen for playability and labelled as such in the code: the 30 mSv mission dose limit, the 16% dose cut per shield layer, flare doses and timing, dust-storm timing and its 75% sunlight cut, and every power, water, oxygen and food rate. Dust and atmosphere are not modelled from data. Flight physics and stage rules (Stages 1–3) still use hand-tuned constants. The NASA orbital reference displayed in the flight HUD does not drive the craft's trajectory.
+The pure rules in [src/game/missionLogic.ts](src/game/missionLogic.ts) use hand-tuned gameplay thresholds, not NASA vehicle limits, measurements, or Horizons mission constraints:
+
+| Stage | Gameplay rule |
+| --- | --- |
+| 1 — piloting | Stay within ±4.5° pitch/yaw; build a 4-second hold, losing 0.5 seconds per second when out of tolerance; each ring adds 1 second. |
+| 2 — retrieval | A cube is in range at less than 5 game-world units; collect 3 cubes. |
+| 3 — docking | Lock below 45 game-world units and under 8° alignment error; hold for 3 seconds, losing 0.6 seconds per second when misaligned. |
+
+Other game-design values include the 30 mSv scenario dose limit, 16% dose cut per shield layer, flare doses and timing, dust-storm timing and its 75% sunlight cut, and power, water, oxygen and food rates. None are represented as NASA mission standards. Dust and atmospheric effects are not modelled from NASA data.
+
+#### Radiation values: reference-only and unverified
+
+Outpost Ops currently uses static scenario inputs of 1.37 mSv per game day on the Moon and 0.64 mSv per sol on Mars. They are not Horizons data, API integrations, mission safety limits, or verified NASA calibration benchmarks. The referenced Chang'e-4 and Curiosity RAD primary full text could not be accessed to verify these exact numeric values during this work: the DOI publisher returned HTTP 403, PubMed required cookies, and NASA NTRS retrieval failed at the transport/DNS layer. Crossref metadata was accessible but did not establish the reported values. Treat both numbers as unverified scenario inputs, not authenticated measurements.
 
 #### Flight HUD orbital reference and export
 
@@ -112,7 +125,8 @@ For the submission form's "Space Agency Partner & Other Data" field. All are ope
 | Motion        | https://motion.dev                | UI animation                      |
 | Lucide        | https://lucide.dev                | Icons                             |
 | Bun           | https://bun.sh                    | Package manager and test runner   |
-| Chang'e-4 lunar surface radiation (Zhang et al., 2020) | https://doi.org/10.1126/sciadv.aaz1334 | Moon daily dose of 1.37 mSv in Outpost Ops. Measured by the LND instrument on China's Chang'e-4 lander; value quoted from the paper, team to re-check. |
+| Chang'e-4 lunar surface radiation (Zhang et al., 2020) | https://doi.org/10.1126/sciadv.aaz1334 | Reference for a literature-inspired Moon scenario input; the exact value is unverified here, as noted above. Not an API integration. |
+| Curiosity RAD surface radiation (Hassler et al., 2014) | https://doi.org/10.1126/science.1244797 | Reference for a literature-inspired Mars scenario input; the exact value is unverified here, as noted above. Not an API integration. |
 
 The banner, models and textures are generated in code or drawn for this project. No NASA logos, flags or mission identifiers are used.
 
@@ -124,6 +138,7 @@ Space Apps requires teams to state where AI tools were used. Code and data made 
 - OpenAI Codex assisted with the pooled procedural audio controller, visual effects, related tests, browser-capture automation, and their documentation. The preview GIF and screenshots are actual application captures.
 - OpenAI Codex assisted with NASA orbital reference ingestion/interpolation, HUD layout, flight-log export, validation, and the associated documentation. Orbital states were retrieved from NASA/JPL Horizons; they were not generated by AI.
 - The Outpost Ops mode was drafted with an AI coding assistant (Claude Code) and reviewed by the team: the game rules ([outpostLogic.ts](src/game/outpostLogic.ts)), its screen ([OutpostMode.tsx](src/components/OutpostMode.tsx)), its tests, the Horizons fetch script, and the related README text. The Horizons snapshot itself is NASA/JPL data, not AI-generated.
+- GitHub Copilot assisted with the expanded certification question pool, NASA source links, question selection, and quiz interaction tests. Each displayed question links to its cited source.
 - *Team: add every other place AI tools were used before submitting.*
 
 ### Submission form readiness

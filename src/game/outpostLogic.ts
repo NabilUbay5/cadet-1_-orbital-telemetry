@@ -24,10 +24,10 @@ export type ServiceKey = 'hab' | 'o2' | 'rec' | 'gh' | 'ice' | 'sci' | 'bld';
 export type LineKind = 'good' | 'warn' | 'bad' | 'info';
 
 export const MISSION_DAYS = 30;
-/** Game-scale mission radiation limit per astronaut, in mSv. Real career limits are far higher. */
+/** Game-scale mission radiation limit per astronaut, in mSv. */
 export const DOSE_LIMIT = 30;
 export const CAP = { o2: 120, water: 160, food: 120 } as const;
-/** kWh a solar array makes in one day of full lunar-distance sunlight (snapshot value 1). */
+/** Game-scale kWh output per day at full normalized snapshot sunlight (1.0). */
 export const PANEL_KWH = 12;
 export const REACTOR_KWH = 30;
 /** Extra heater load during the lunar night. */
@@ -39,7 +39,7 @@ export const SCIENCE_GOAL = 40;
 export interface DestinationInfo {
   name: string;
   site: string;
-  /** Surface dose equivalent rate, mSv per day (published rover/lander measurements). */
+  /** Unverified literature-inspired scenario input in mSv per game day; not a mission limit. */
   dose: number;
   /** Extra dose from one big unsheltered flare (game value). */
   flare: number;
@@ -49,9 +49,8 @@ export interface DestinationInfo {
 }
 
 export const DESTINATIONS: Record<Destination, DestinationInfo> = {
-  // Chang'e-4 Lunar Lander Neutron and Dosimetry: about 1.37 mSv/day on the lunar surface.
+  // Scenario inputs; cited publications and the source-access limitation are documented in README.
   moon: { name: 'Moon', site: HORIZONS_SNAPSHOT.moon.site, dose: 1.37, flare: 14, heat: 6, dayWord: 'Day' },
-  // Curiosity RAD: about 0.64 mSv/day on the Martian surface.
   mars: { name: 'Mars', site: HORIZONS_SNAPSHOT.mars.site, dose: 0.64, flare: 8, heat: 12, dayWord: 'Sol' },
 };
 

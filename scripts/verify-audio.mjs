@@ -55,16 +55,22 @@ try {
   await page.getByText('[ASTRONAUT CERTIFICATION: STAGE 1]', { exact: true }).waitFor({ timeout: 60000 });
   // Verify wrong-answer feedback, retry, and a complete successful certification.
   const questions = await page.evaluate(async () => (await import('/src/data/triviaBank.ts')).TRIVIA_QUESTIONS[1]);
-  for (let i = 0; i < questions.length; i++) {
-    const index = i === 0 ? (questions[i].correctIndex + 1) % 4 : questions[i].correctIndex;
-    await page.getByRole('button', { name: `${'ABCD'[index]} ${questions[i].options[index]}`, exact: true }).click();
+  const answerCurrentQuestion = async wrong => {
+    const id = await page.locator('[data-question-id]').getAttribute('data-question-id');
+    const question = questions.find(candidate => candidate.id === id);
+    assert(question, `Displayed question ${id} must belong to the Stage 1 bank`);
+    const index = wrong ? (question.correctIndex + 1) % 4 : question.correctIndex;
+    await page.getByRole('button', { name: `${'ABCD'[index]} ${question.options[index]}`, exact: true }).click();
+  };
+  // The current quiz draws three questions from a larger randomized bank.
+  for (let i = 0; i < 3; i++) {
+    await answerCurrentQuestion(i === 0);
     await page.getByRole('button', { name: i === 2 ? /SUBMIT CERTIFICATION/ : /NEXT QUESTION/ }).click();
   }
   await page.getByText('★ EXAM SCORE INSUFFICIENT ★', { exact: true }).waitFor();
   await page.getByRole('button', { name: /RE-ATTEMPT CERTIFICATION/ }).click();
-  for (let i = 0; i < questions.length; i++) {
-    const index = questions[i].correctIndex;
-    await page.getByRole('button', { name: `${'ABCD'[index]} ${questions[i].options[index]}`, exact: true }).click();
+  for (let i = 0; i < 3; i++) {
+    await answerCurrentQuestion(false);
     await page.getByRole('button', { name: i === 2 ? /SUBMIT CERTIFICATION/ : /NEXT QUESTION/ }).click();
   }
   await page.getByText('★ CERTIFICATION PASSED! ★', { exact: true }).waitFor();

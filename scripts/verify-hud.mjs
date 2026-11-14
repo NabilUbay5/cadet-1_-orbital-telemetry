@@ -10,19 +10,25 @@ try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 });
   page.setDefaultTimeout(30000);
   const errors = [];
+  let engineModuleUrl;
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/src/game/flightEngine.ts') engineModuleUrl = request.url();
+  });
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   page.on('response', response => { if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`); });
   await page.goto(process.env.APP_URL || 'http://127.0.0.1:3000', { waitUntil: 'networkidle' });
   // Capture the actual app engine without adding a test hook to production code.
-  await page.evaluate(async () => {
-    const { FlightEngine } = await import('/src/game/flightEngine.ts');
+  assert(engineModuleUrl, 'The application must load its flight engine module');
+  await page.evaluate(async moduleUrl => {
+    // Reuse Vite's exact URL, including any HMR cache-busting query.
+    const { FlightEngine } = await import(moduleUrl);
     const reset = FlightEngine.prototype.resetSimulation;
     FlightEngine.prototype.resetSimulation = function () {
       window.__hudTestEngine = this;
       return reset.call(this);
     };
-  });
+  }, engineModuleUrl);
   await page.getByRole('button', { name: /PRESS START/ }).click();
   await page.keyboard.down('r'); // Keep the automatic Stage 1 quiz from interrupting layout checks.
   await page.getByRole('button', { name: '[X]', exact: true }).click();
