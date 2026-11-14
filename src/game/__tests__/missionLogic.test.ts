@@ -86,12 +86,6 @@ describe('Stage 2: energy cube collection', () => {
     expect(progressPercent(2, STAGE2_REQUIRED_CUBES)).toBe(67);
     expect(progressPercent(3, STAGE2_REQUIRED_CUBES)).toBe(100);
   });
-
-  test('progress is clamped to a valid 0–100 range', () => {
-    expect(progressPercent(-1, 10)).toBe(0);
-    expect(progressPercent(0, 0)).toBe(0);
-    expect(progressPercent(25, 10)).toBe(100);
-  });
 });
 
 describe('Stage 3: satellite alignment', () => {

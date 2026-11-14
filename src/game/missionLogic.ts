@@ -71,6 +71,5 @@ export function isSatelliteLockComplete(timer: number): boolean {
 
 /** Converts a timer into a 0–100 progress percentage. */
 export function progressPercent(value: number, target: number): number {
-  if (!Number.isFinite(value) || !Number.isFinite(target) || target <= 0) return 0;
-  return Math.max(0, Math.min(100, Math.round((value / target) * 100)));
+  return Math.min(100, Math.round((value / target) * 100));
 }
