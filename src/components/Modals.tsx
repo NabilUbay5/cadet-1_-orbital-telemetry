@@ -6,6 +6,7 @@
 import React from 'react';
 import { MissionResult } from '../types/game.ts';
 import { PixelBadge } from './PixelBadge.tsx';
+import { ExportFlightLogButton } from './ExportFlightLogButton.tsx';
 
 const confettiColors = ['#00F0FF', '#00FF66', '#FFB000', '#FFFFFF'];
 const pixelConfetti = Array.from({ length: 48 }, (_, index) => ({
@@ -20,12 +21,13 @@ interface PauseModalProps {
   onResume: () => void;
   onRestart: () => void;
   onExit: () => void;
+  onExportFlightLog: () => void;
 }
 
-export const PauseModal: React.FC<PauseModalProps> = ({ onResume, onRestart, onExit }) => {
+export const PauseModal: React.FC<PauseModalProps> = ({ onResume, onRestart, onExit, onExportFlightLog }) => {
   return (
     <div className="absolute inset-0 bg-[#050508]/85 flex items-center justify-center p-4 z-30 pointer-events-auto font-pixel">
-      <div className="w-full max-w-md retro-window p-6 bg-[#0d111a] border-2 border-[#00F0FF] shadow-[4px_4px_0_#000]">
+      <div role="dialog" aria-modal="true" aria-label="Flight paused" className="flight-modal w-full max-w-md retro-window p-6 bg-[#0d111a] border-2 border-[#00F0FF] shadow-[4px_4px_0_#000]">
         {/* Header */}
         <div className="flex items-center justify-between border-b-2 border-[#2A3B5C] pb-3 mb-4">
           <div className="flex items-center gap-2">
@@ -72,6 +74,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({ onResume, onRestart, onE
           </div>
         </div>
 
+        <ExportFlightLogButton onExport={onExportFlightLog} />
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3">
           <button
@@ -102,9 +105,10 @@ interface VictoryModalProps {
   result: MissionResult;
   onRestart: () => void;
   onExit: () => void;
+  onExportFlightLog: () => void;
 }
 
-export const VictoryModal: React.FC<VictoryModalProps> = ({ result, onRestart, onExit }) => {
+export const VictoryModal: React.FC<VictoryModalProps> = ({ result, onRestart, onExit, onExportFlightLog }) => {
   return (
     <div className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-30 pointer-events-auto font-pixel">
       <div aria-hidden="true" className="pixel-confetti absolute inset-0 overflow-hidden pointer-events-none">
@@ -123,7 +127,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ result, onRestart, o
           />
         ))}
       </div>
-      <div className="relative z-10 w-full max-w-lg retro-window-green p-6 bg-[#0d111a] border-2 border-[#00FF66] shadow-[6px_6px_0_#000]">
+      <div role="dialog" aria-modal="true" aria-label="Mission complete" className="flight-modal relative z-10 w-full max-w-lg retro-window-green p-6 bg-[#0d111a] border-2 border-[#00FF66] shadow-[6px_6px_0_#000]">
         {/* Header */}
         <div className="flex items-center justify-between border-b-2 border-[#2A3B5C] pb-3 mb-4">
           <div className="flex items-center gap-2">
@@ -135,6 +139,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ result, onRestart, o
           <span className="text-[9px] text-[#FFB000]">TRAINING VERIFIED</span>
         </div>
 
+        <ExportFlightLogButton onExport={onExportFlightLog} />
         {/* Qualification Honors */}
         <div className="border border-[#2A3B5C] bg-[#050508] p-4 text-center mb-4">
           <div className="text-[9px] text-[#64748B] mb-2 uppercase">OFFICIAL RANK CONFERRED</div>
@@ -214,12 +219,13 @@ interface DefeatModalProps {
   result: MissionResult;
   onRestart: () => void;
   onExit: () => void;
+  onExportFlightLog: () => void;
 }
 
-export const DefeatModal: React.FC<DefeatModalProps> = ({ result, onRestart, onExit }) => {
+export const DefeatModal: React.FC<DefeatModalProps> = ({ result, onRestart, onExit, onExportFlightLog }) => {
   return (
     <div className="absolute inset-0 bg-[#050508]/90 flex items-center justify-center p-4 z-30 pointer-events-auto font-pixel">
-      <div className="w-full max-w-lg retro-window-red p-6 bg-[#0d111a] border-2 border-[#FF3344] shadow-[4px_4px_0_#000]">
+      <div role="dialog" aria-modal="true" aria-label="Mission ended" className="flight-modal w-full max-w-lg retro-window-red p-6 bg-[#0d111a] border-2 border-[#FF3344] shadow-[4px_4px_0_#000]">
         {/* Header */}
         <div className="flex items-center justify-between border-b-2 border-[#2A3B5C] pb-3 mb-4">
           <div className="flex items-center gap-2">
@@ -231,6 +237,7 @@ export const DefeatModal: React.FC<DefeatModalProps> = ({ result, onRestart, onE
           <span className="text-[9px] text-[#FF3344]">[ABORT]</span>
         </div>
 
+        <ExportFlightLogButton onExport={onExportFlightLog} />
         {/* Cause */}
         <div className="border border-[#FF3344]/50 bg-[#FF3344]/10 p-3 mb-4 text-[9px] text-[#ffdad6] leading-relaxed">
           <div className="text-[#FF3344] mb-1 font-bold">TERMINATION LOG:</div>

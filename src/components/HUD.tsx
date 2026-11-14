@@ -7,6 +7,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { audioEngine } from '../game/audioEngine.ts';
 import { TelemetryData } from '../types/game.ts';
 import { PixelBadge } from './PixelBadge.tsx';
+import { NasaTelemetryPanel } from './NasaTelemetryPanel.tsx';
 
 interface HUDProps {
   telemetry: TelemetryData;
@@ -99,11 +100,11 @@ export const HUD: React.FC<HUDProps> = ({
   const currentDirective = stageDirectives[telemetry.stage] || stageDirectives[1];
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between overflow-hidden font-pixel">
+    <div className="cockpit-hud absolute inset-0 pointer-events-none z-10 flex flex-col justify-between overflow-hidden font-pixel">
       {/* 1. TOP COMMAND DECK (Height 48px, 100% width) */}
-      <header className="w-full h-12 bg-[#0d111a]/95 border-b-2 border-[#00F0FF] px-3 md:px-4 flex items-center justify-between pointer-events-auto shadow-[0_3px_0_#000]">
+      <header className="hud-header w-full min-h-12 shrink-0 bg-[#0d111a]/95 border-b-2 border-[#00F0FF] px-3 md:px-4 flex flex-wrap gap-2 py-2 items-center justify-between pointer-events-auto shadow-[0_3px_0_#000]">
         {/* Left: MET & Stage Name */}
-        <div className="flex items-center gap-4 md:gap-6">
+        <div className="flex items-center gap-2 md:gap-6">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-[#00FF66] inline-block animate-pulse" />
             <span className="text-[9px] text-[#A0AEC0]">MET</span>
@@ -158,7 +159,7 @@ export const HUD: React.FC<HUDProps> = ({
                 ? 'border-[#00F0FF] bg-[#00F0FF] text-[#050508] font-bold'
                 : 'border-[#FFB000] bg-[#0d111a] text-[#FFB000] hover:bg-[#FFB000] hover:text-[#050508]'
             }`}
-            title="Toggle Mission Announcement [M]"
+            title="Toggle Mission Announcement"
           >
             <span>▶ DISPATCH</span>
             {!showAnnouncement && <span className="w-1.5 h-1.5 bg-[#FFB000] inline-block animate-ping" />}
@@ -184,7 +185,7 @@ export const HUD: React.FC<HUDProps> = ({
       {/* ========================================================================= */}
       {/* ★ MISSION ANNOUNCEMENT POPUP IN THE TOP RIGHT CORNER ★ */}
       {/* ========================================================================= */}
-      <div className="absolute top-14 right-4 z-40 max-w-[340px] md:max-w-[380px] pointer-events-auto">
+      <div className="hud-dispatch absolute top-14 right-4 z-40 max-w-[340px] md:max-w-[380px] pointer-events-auto">
         {showAnnouncement ? (
           <div className="retro-window p-3.5 bg-[#0d111a]/98 border-2 border-[#00F0FF] shadow-[5px_5px_0_#000] animate-in fade-in slide-in-from-top-2 duration-150">
             {/* Announcement Top Header */}
@@ -251,9 +252,10 @@ export const HUD: React.FC<HUDProps> = ({
       </div>
 
       {/* 2. MAIN COCKPIT VIEWPORT AREA */}
-      <div className="flex-1 relative flex items-center justify-between px-4 md:px-6 pointer-events-none">
+      <div className="hud-viewport flex-1 min-h-0 relative flex items-center justify-between gap-3 px-3 md:px-6 py-3 pointer-events-none">
         {/* LEFT WING TELEMETRY (Width 280px) */}
-        <aside className="w-[260px] md:w-[280px] flex flex-col gap-3 pointer-events-auto">
+        <aside aria-label="Left telemetry wing" className="hud-wing w-[260px] md:w-[280px] flex flex-col gap-3 pointer-events-auto">
+          <NasaTelemetryPanel metSeconds={telemetry.metSeconds} wing="state" />
           {/* Life Support & Hull Integrity Panel */}
           <div className="retro-window p-3 flex flex-col gap-2.5 bg-[#0d111a]/90">
             <div className="flex items-center justify-between">
@@ -329,7 +331,7 @@ export const HUD: React.FC<HUDProps> = ({
         </aside>
 
         {/* CENTER VIEWPORT RETICLE */}
-        <div className="relative flex flex-col items-center justify-center">
+        <div className="hud-reticle relative flex flex-col items-center justify-center">
           {/* Center Pixel Crosshair */}
           <div className="relative w-14 h-14 flex items-center justify-center opacity-85">
             <div className="absolute w-4 h-[2px] bg-[#00F0FF] -top-1" />
@@ -348,7 +350,8 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
 
         {/* RIGHT WING TELEMETRY (Width 300px) */}
-        <aside className="w-[270px] md:w-[300px] flex flex-col gap-3 pointer-events-auto">
+        <aside aria-label="Right telemetry wing" className="hud-wing w-[270px] md:w-[300px] flex flex-col gap-3 pointer-events-auto">
+          <NasaTelemetryPanel metSeconds={telemetry.metSeconds} wing="source" />
           {/* Mission Stage Objectives & Live Task Progress */}
           <div className="retro-window p-3 bg-[#0d111a]/90 text-[9px]">
             <div className="flex items-center justify-between text-[9px] text-[#A0AEC0] mb-2 uppercase">
@@ -504,7 +507,7 @@ export const HUD: React.FC<HUDProps> = ({
 
       {/* 3. BOTTOM FLIGHT DECK (Height 56px, max-w-640px centered) */}
       <footer className="w-full flex justify-center pb-3 pointer-events-auto">
-        <div className="w-full max-w-[640px] h-14 retro-window px-3 md:px-4 flex items-center justify-between bg-[#0d111a]/95">
+        <div className="hud-controls w-full max-w-[640px] min-h-14 retro-window px-3 md:px-4 py-2 flex flex-wrap gap-2 items-center justify-between bg-[#0d111a]/95">
           {/* Throttle Bar */}
           <div className="flex items-center gap-2">
             <span className="text-[9px] text-[#A0AEC0]">THR</span>

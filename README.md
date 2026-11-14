@@ -45,7 +45,7 @@ To be eligible for a Global Award, a project must use NASA data or resources. On
 
 | Resource (form "Link Text") | Link | How the game uses it | Status |
 | --- | --- | --- | --- |
-| NASA/JPL Horizons System | [ssd.jpl.nasa.gov/horizons](https://ssd.jpl.nasa.gov/horizons/) | Provides the source service for the bundled outpost sunlight snapshot. | **Integrated** |
+| NASA/JPL Horizons System | [ssd.jpl.nasa.gov/horizons](https://ssd.jpl.nasa.gov/horizons/) | Provides the source service for the bundled outpost sunlight snapshot and the flight HUD Moon/Earth orbital reference replay. | **Integrated** |
 | NASA/JPL Horizons API | [ssd.jpl.nasa.gov/api/horizons.api](https://ssd.jpl.nasa.gov/api/horizons.api) and [API documentation](https://ssd-api.jpl.nasa.gov/doc/horizons.html) | The generator queries body summaries and site-specific solar ephemerides; details and exact saved requests are below. | **Integrated** |
 | NASA Open APIs portal | [api.nasa.gov](https://api.nasa.gov/) | No API endpoint or dataset from this portal is currently called by the project. Live space-weather data is a possible future integration. | **Planned only — not integrated** |
 
@@ -74,6 +74,43 @@ Other game-design values include the 30 mSv scenario dose limit, 16% dose cut pe
 
 Outpost Ops currently uses static scenario inputs of 1.37 mSv per game day on the Moon and 0.64 mSv per sol on Mars. They are not Horizons data, API integrations, mission safety limits, or verified NASA calibration benchmarks. The referenced Chang'e-4 and Curiosity RAD primary full text could not be accessed to verify these exact numeric values during this work: the DOI publisher returned HTTP 403, PubMed required cookies, and NASA NTRS retrieval failed at the transport/DNS layer. Crossref metadata was accessible but did not establish the reported values. Treat both numbers as unverified scenario inputs, not authenticated measurements.
 
+#### Flight HUD orbital reference and export
+
+The amber panels in both flight HUD wings show a **bundled reference replay** of
+the Moon relative to Earth's center, separate from the craft's simulated gauges.
+The replay starts at **2027-01-16 07:00 TDB** and advances by flight mission elapsed
+time (MET), including pause/reset behavior. It is not a live API feed or spacecraft
+tracking data. The 145 geometric states cover 24 hours at 10-minute intervals in
+the **ICRF equatorial frame**, with position in **km**, velocity in **km/s**, and
+epochs in **Julian days TDB**. Cubic Hermite interpolation uses the positions and
+velocities; the HUD displays unavailable readings beyond the source interval.
+
+- Regenerate with `bun scripts/fetch-flight-ephemeris.ts`. The script saves the full
+  query URL, retrieval time and API version in
+  [flightEphemeris.ts](src/data/nasa/flightEphemeris.ts), plus the original NASA
+  response in [horizons-flight-raw.json](data/nasa/horizons-flight-raw.json).
+- **Export Flight Log** in pause, victory, or defeat downloads a JSON file through
+  `FlightEngine.exportTelemetryLog()`. It records craft speed, attitude, stage,
+  throttle, hull, oxygen, and energy once per simulation second, plus the latest
+  reading on export. At most 3,600 samples are retained; the file reports how many
+  older samples were dropped. Restart clears the prior flight. Each row includes
+  the corresponding NASA reference reading; source/frame/units/query metadata is
+  included once in the file.
+- Canvas drawing-buffer dimensions remain `max(280, floor(width / 3))` by
+  `max(180, floor(height / 3))` at pixel ratio 1, with pixelated CSS upscaling.
+  HUD wings scroll independently on small or short screens, and modals remain
+  scrollable so the export controls are reachable.
+
+With the dev server running, the optional browser smoke checks cover widths
+320, 390, 568, and 1280 px at device pixel ratio 2, reference epoch advancement,
+all three modal downloads, and log reset. Terminal screens are tested using
+controlled engine transitions, not a complete mission playthrough:
+
+```bash
+PLAYWRIGHT_MODULE=/path/to/playwright-core/index.mjs \
+  CHROMIUM_PATH=/usr/bin/chromium node scripts/verify-hud.mjs
+```
+
 ### Other data, libraries and tools
 
 For the submission form's "Space Agency Partner & Other Data" field. All are open source.
@@ -99,6 +136,7 @@ Space Apps requires teams to state where AI tools were used. Code and data made 
 
 - The unit tests added for `missionLogic.ts` and `fixedTimestep.ts`, and this section of the README, were drafted with an AI coding assistant (Claude Code) and reviewed by the team.
 - OpenAI Codex assisted with the pooled procedural audio controller, visual effects, related tests, browser-capture automation, and their documentation. The preview GIF and screenshots are actual application captures.
+- OpenAI Codex assisted with NASA orbital reference ingestion/interpolation, HUD layout, flight-log export, validation, and the associated documentation. Orbital states were retrieved from NASA/JPL Horizons; they were not generated by AI.
 - The Outpost Ops mode was drafted with an AI coding assistant (Claude Code) and reviewed by the team: the game rules ([outpostLogic.ts](src/game/outpostLogic.ts)), its screen ([OutpostMode.tsx](src/components/OutpostMode.tsx)), its tests, the Horizons fetch script, and the related README text. The Horizons snapshot itself is NASA/JPL data, not AI-generated.
 - GitHub Copilot assisted with the expanded certification question pool, NASA source links, question selection, and quiz interaction tests. Each displayed question links to its cited source.
 - *Team: add every other place AI tools were used before submitting.*

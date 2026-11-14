@@ -18,6 +18,8 @@ import {
   createWaypointRing,
 } from './proceduralModels.ts';
 import { ExhaustParticles } from './exhaustParticles.ts';
+import { FLIGHT_EPHEMERIS } from '../data/nasa/flightEphemeris.ts';
+import { FlightTelemetryLog } from './flightTelemetryLog.ts';
 import { FIXED_DT, FixedTimestep } from './fixedTimestep.ts';
 import {
   STAGE1_TARGET_TIME,
@@ -48,6 +50,7 @@ export class FlightEngine {
   private frameId: number = 0;
   private clock: THREE.Clock = new THREE.Clock();
   private readonly timestep = new FixedTimestep();
+  private readonly flightLog = new FlightTelemetryLog();
 
   // Scratch math objects, reused every physics step so the hot path never allocates.
   private readonly _tmpVec = new THREE.Vector3();
@@ -326,6 +329,7 @@ export class FlightEngine {
   }
 
   public resetSimulation() {
+    this.flightLog.clear();
     this.position.set(0, 0, 150);
     this.velocity.set(0, 0, 0);
     this.angularVelocity.set(0, 0, 0);
@@ -532,6 +536,7 @@ export class FlightEngine {
         this.updateSimulation(FIXED_DT);
       }
       this.flushTelemetry();
+      this.captureTelemetryLog();
       this.render();
 
       if (this.isSoftwareGl) {
@@ -1088,6 +1093,32 @@ export class FlightEngine {
     };
 
     this.onStateChange?.('DEFEAT', result);
+  }
+
+  private captureTelemetryLog(force = false) {
+    if (this.gameState === 'TITLE' || (!force && !this.flightLog.shouldRecord(this.metSeconds))) return;
+    this.flightLog.record({
+      metSeconds: this.metSeconds, stage: this.stage, speedMps: this.velocity.length(),
+      throttlePercent: this.throttle * 100, hullPercent: this.hullIntegrity,
+      oxygenPercent: this.oxygen, energyPercent: this.energy,
+      pitchDeg: this.lastPitchDeg, yawDeg: this.lastYawDeg, rollDeg: this.lastRollDeg,
+    }, force);
+  }
+
+  /** User-requested download; serialization and browser work stay outside the physics loop. */
+  public exportTelemetryLog(): void {
+    this.captureTelemetryLog(true);
+    const blob = new Blob([this.flightLog.serialize(FLIGHT_EPHEMERIS)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `cadet1-flight-log-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    document.body.appendChild(anchor);
+    try { anchor.click(); }
+    finally {
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
   }
 
   private render() {
