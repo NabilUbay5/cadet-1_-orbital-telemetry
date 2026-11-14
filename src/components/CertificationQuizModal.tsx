@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { soundManager } from '../audio/soundManager.ts';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { audioEngine } from '../game/audioEngine.ts';
 import { STAGE_BADGES, TRIVIA_QUESTIONS, TriviaQuestion } from '../data/triviaBank.ts';
 import { MissionStage } from '../types/game.ts';
 import { PixelBadge } from './PixelBadge.tsx';
@@ -15,11 +15,37 @@ interface CertificationQuizModalProps {
   onClose: () => void;
 }
 
+export function selectStageQuestions(
+  stage: MissionStage,
+  stageQuestions: readonly TriviaQuestion[] = TRIVIA_QUESTIONS[stage]
+): TriviaQuestion[] {
+  const uniqueQuestions = stageQuestions.filter(
+    (question, index, questions) =>
+      questions.findIndex((candidate) => candidate.id === question.id) === index
+  );
+
+  return uniqueQuestions.slice(0, 3);
+}
+
+export function createQuizState() {
+  return {
+    currentIdx: 0,
+    selectedOption: null as number | null,
+    answered: false,
+    score: 0,
+    quizFinished: false,
+  };
+}
+
+export function evaluateQuizResult(score: number, totalQuestions: number): boolean {
+  return score === totalQuestions;
+}
+
 export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
   stage,
   onPass,
 }) => {
-  const questions: TriviaQuestion[] = TRIVIA_QUESTIONS[stage];
+  const questions = useMemo(() => selectStageQuestions(stage), [stage]);
   const badge = STAGE_BADGES[stage];
 
   const [currentIdx, setCurrentIdx] = useState<number>(0);
@@ -27,37 +53,49 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
   const [answered, setAnswered] = useState<boolean>(false);
   const [score, setScore] = useState<number>(0);
   const [quizFinished, setQuizFinished] = useState<boolean>(false);
+  const scoreRef = useRef<number>(0);
+
+  useEffect(() => {
+    setCurrentIdx(0);
+    setSelectedOption(null);
+    setAnswered(false);
+    setScore(0);
+    scoreRef.current = 0;
+    setQuizFinished(false);
+  }, [stage]);
 
   const currentQ = questions[currentIdx];
 
   const handleSelectOption = (idx: number) => {
     if (answered) return;
+    audioEngine.ensureRunning();
     setSelectedOption(idx);
     setAnswered(true);
 
     const isCorrect = idx === currentQ.correctIndex;
+    const nextScore = scoreRef.current + (isCorrect ? 1 : 0);
+    scoreRef.current = nextScore;
+    setScore(nextScore);
+
     if (isCorrect) {
-      setScore((prev) => prev + 1);
-      soundManager.playItemCollect();
+      audioEngine.playQuizAnswer(true);
     } else {
-      soundManager.playWarning();
+      audioEngine.playQuizAnswer(false);
     }
   };
 
   const handleNext = () => {
+    const latestScore = scoreRef.current;
     if (currentIdx + 1 < questions.length) {
       setCurrentIdx((prev) => prev + 1);
       setSelectedOption(null);
       setAnswered(false);
     } else {
       setQuizFinished(true);
-      // Passing requires all 3 questions answered correctly
-      if (score === questions.length) {
-        if (stage < 3) {
-          soundManager.playDockSuccess();
-        }
+      if (evaluateQuizResult(latestScore, questions.length)) {
+        audioEngine.playQuizResult(true);
       } else {
-        soundManager.playWarning();
+        audioEngine.playQuizResult(false);
       }
     }
   };
@@ -67,11 +105,11 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
     setSelectedOption(null);
     setAnswered(false);
     setScore(0);
+    scoreRef.current = 0;
     setQuizFinished(false);
   };
 
-  // Must answer all 3 questions correctly to pass
-  const isPassed = score === questions.length;
+  const isPassed = evaluateQuizResult(scoreRef.current, questions.length);
 
   return (
     <div className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-40 pointer-events-auto font-pixel">

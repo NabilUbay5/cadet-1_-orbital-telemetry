@@ -20,7 +20,89 @@
 
 **CADET-1 Orbital Telemetry** is a browser-based flight simulation and astronaut training game built with **React 19**, **Vite 8**, **TypeScript 7**, and **Three.js r187**. It combines a WebGL 2.0 scene, arcade flight dynamics, live telemetry, three mission stages, and certification quizzes in an 8-bit CRT aesthetic.
 
+It has two modes. **Flight Academy** is the three-stage flight simulation. **Outpost Ops** answers the Space Apps challenge directly: the player runs a Moon or Mars outpost for 30 days and balances power, oxygen, water, food and radiation shielding for a crew of four, with day and night at each site taken from NASA/JPL Horizons data.
+
 Frame rate depends on the browser and renderer. Hardware rendering uses `requestAnimationFrame`; software rendering uses GPU synchronization and a timed fallback. The flight model is implemented in the project using Three.js math helpers, without a separate physics engine.
+
+---
+
+## 🛰 NASA Space Apps Challenge & Open Data Alignment
+
+### Target challenge
+
+| Item           | Detail                                                                                                     |
+| -------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Event**      | [NASA Space Apps Challenge 2026](https://www.spaceappschallenge.org/2026/)                                 |
+| **Local event**| Johor Bahru, Malaysia                                                                                      |
+| **Team page**  | [Innovation of Skudai](https://www.spaceappschallenge.org/2026/find-a-team/innovation-of-skudai/)          |
+| **Challenge**  | Build a Junior Astronaut Mission Trainer                                                                   |
+
+> Space-themed STEM content often oversimplifies the engineering trade-offs that define a real mission or presents them at a level too complex to hold a young learner's attention. Few tools make those trade-offs both tangible and fun. Your challenge is to design and build an interactive game or app that lets students run a lunar or Martian outpost, balancing competing demands like life support, radiation shielding, power, and food production, so they experience firsthand the decisions that determine whether a mission fails or succeeds.
+
+### NASA data and resources
+
+To be eligible for a Global Award, a project must use NASA data or resources. Only list a source on the submission form if its status below is *Integrated*.
+
+| Resource (form "Link Text")                 | Form "Link Url"                           | How the game uses it                                                                                             | Status         |
+| ------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------- |
+| NASA JPL Horizons System                    | https://ssd.jpl.nasa.gov/horizons/        | Sun elevation at the two outpost sites drives daily solar power in Outpost Ops, including the real lunar night. Body constants (solar constant, length of a solar day) come from the same API. | **Integrated** |
+| NASA Curiosity RAD surface radiation (Hassler et al., 2014) | https://doi.org/10.1126/science.1244797 | Mars daily dose of 0.64 mSv in Outpost Ops ([outpostLogic.ts](src/game/outpostLogic.ts)). Value quoted from the paper; team to re-check before submitting. | Integrated (one constant) |
+| NASA Open APIs Portal                       | https://api.nasa.gov/                     | Planned for live space-weather events. Not used by any code yet, so do not list it on the form.                    | Not integrated |
+
+#### How the Horizons data gets into the game
+
+- [scripts/fetch-horizons.ts](scripts/fetch-horizons.ts) calls the Horizons API (`bun run data:horizons`) and writes [src/data/nasa/horizonsSnapshot.ts](src/data/nasa/horizonsSnapshot.ts). The snapshot is committed, so the game works offline and never waits on the network.
+- **Moon site:** Mare Tranquillitatis (0.67° N, 23.47° E). **Mars site:** Jezero Crater (18.44° N, 77.45° E). For each, the script asks for the Sun's elevation every 30–60 minutes over the 30-day mission.
+- Daily sunlight is the share of the day the Sun is above the horizon, scaled by the body's mean solar constant relative to the Moon's (Horizons reports 1368 W/m² for the Moon and 589 W/m² for Mars).
+- The result: the Moon mission has 11 full days of sun, then a 14-day night with zero solar power. Mars gets about 23% of a lunar day's sunlight every sol.
+- [outpostLogic.ts](src/game/outpostLogic.ts) reads the snapshot as plain numbers. It is pure and has no network or DOM code, so [its tests](src/game/__tests__/outpostLogic.test.ts) run in `bun test`.
+
+#### What is not NASA data
+
+These are game-design values, chosen for playability and labelled as such in the code: the 30 mSv mission dose limit, the 16% dose cut per shield layer, flare doses and timing, dust-storm timing and its 75% sunlight cut, and every power, water, oxygen and food rate. Dust and atmosphere are not modelled from data. The flight stages (Stages 1–3) still use hand-tuned constants and no NASA data.
+
+### Other data, libraries and tools
+
+For the submission form's "Space Agency Partner & Other Data" field. All are open source.
+
+| Name          | URL                               | Used for                          |
+| ------------- | --------------------------------- | --------------------------------- |
+| React         | https://react.dev                 | UI, HUD and modals                |
+| Three.js      | https://threejs.org               | 3D scene, rendering, math helpers |
+| Vite          | https://vite.dev                  | Dev server and production build   |
+| TypeScript    | https://www.typescriptlang.org    | Strict type checking              |
+| Tailwind CSS  | https://tailwindcss.com           | Styling                           |
+| Motion        | https://motion.dev                | UI animation                      |
+| Lucide        | https://lucide.dev                | Icons                             |
+| Bun           | https://bun.sh                    | Package manager and test runner   |
+| Chang'e-4 lunar surface radiation (Zhang et al., 2020) | https://doi.org/10.1126/sciadv.aaz1334 | Moon daily dose of 1.37 mSv in Outpost Ops. Measured by the LND instrument on China's Chang'e-4 lander; value quoted from the paper, team to re-check. |
+
+The banner, models and textures are generated in code or drawn for this project. No NASA logos, flags or mission identifiers are used.
+
+### AI (SI) tool use
+
+Space Apps requires teams to state where AI tools were used. Code and data made with AI must say so in descriptive text, and AI images or videos need a visible watermark.
+
+- The unit tests added for `missionLogic.ts` and `fixedTimestep.ts`, and this section of the README, were drafted with an AI coding assistant (Claude Code) and reviewed by the team.
+- OpenAI Codex assisted with the pooled procedural audio controller, visual effects, related tests, browser-capture automation, and their documentation. The preview GIF and screenshots are actual application captures.
+- The Outpost Ops mode was drafted with an AI coding assistant (Claude Code) and reviewed by the team: the game rules ([outpostLogic.ts](src/game/outpostLogic.ts)), its screen ([OutpostMode.tsx](src/components/OutpostMode.tsx)), its tests, the Horizons fetch script, and the related README text. The Horizons snapshot itself is NASA/JPL data, not AI-generated.
+- *Team: add every other place AI tools were used before submitting.*
+
+### Submission form readiness
+
+| Form field                          | Required | Source                                       | Status                                         |
+| ----------------------------------- | -------- | -------------------------------------------- | ---------------------------------------------- |
+| Project Name                        | No       | Team decision                                | Placeholder on the form                        |
+| Summary (50–200 words)              | Yes      | Elevator Pitch above                         | To write                                       |
+| Project Demonstration               | Yes      | Video ≤ 30 s or ≤ 7 slides, public link       | GIF/PNG previews captured; final submission video/slides still needed          |
+| Project link                        | Yes      | This public repository or a deployed build   | Ready to paste once the repo is final          |
+| Project Details                     | Yes      | Architecture and Feature Matrix sections     | To write                                       |
+| Use of SI                           | Yes      | AI (SI) tool use, above                      | Team to complete                               |
+| NASA Data                           | Yes      | NASA data and resources, above               | Ready: list the rows marked *Integrated* only  |
+| Space Agency Partner & Other Data   | No       | Other data, libraries and tools, above       | Ready                                          |
+| Terms and originality checkboxes    | Yes      | Team                                         | Team to confirm                                |
+
+Submissions close **Sunday, November 15, 2026 at 11:59 PM** in the local event's time zone.
 
 ---
 
@@ -66,33 +148,66 @@ The engine owns the simulation state and renders the Three.js scene. It sends te
 
 ## 🎮 Simulation Preview
 
-> **WIP — preview captures are not yet available.** The filenames below are planned assets, not broken image links. Once a capture is added to `public/assets/`, replace its WIP status with a relative image embed (see **Contributing Visual Assets** below).
+These previews are captured from the running application in Chromium with software WebGL.
+The GIF is a **9-second, silent, accelerated visual preview** of thrust/boost, scanner,
+and camera modes; it is not a complete three-stage mission walkthrough.
 
-| View                   | Description                                                      | Status | Planned asset                          |
-| ---------------------- | ---------------------------------------------------------------- | ------ | -------------------------------------- |
-| **Live Demo**          | Full simulation run — launch, orbital entry, satellite alignment | WIP    | `public/assets/demo-preview.gif`       |
-| **Telemetry HUD**      | Left/right wing panels, center reticle, bottom flight deck       | WIP    | `public/assets/telemetry-hud.png`      |
-| **Orbital View**       | Chase camera showing craft, planet, waypoint rings, satellite    | WIP    | `public/assets/orbital-view.png`       |
-| **Cockpit View**       | First-person cockpit with HUD overlay                            | WIP    | `public/assets/cockpit-view.png`       |
-| **Radar Scope**        | 8-bit proximity radar with hazard/waypoint blips                 | WIP    | `public/assets/radar-scope.png`        |
-| **Certification Quiz** | Astronaut trivia gate between mission stages                     | WIP    | `public/assets/certification-quiz.png` |
+![Flight effects preview](public/assets/demo-preview.gif)
+
+| View | Preview |
+| --- | --- |
+| **Telemetry HUD / boost exhaust** | ![Telemetry HUD](public/assets/telemetry-hud.png) |
+| **Orbital camera / planetary limb** | ![Orbital view](public/assets/orbital-view.png) |
+
+Additional cockpit, radar, and certification close-ups remain planned captures.
+These repository assets support a project demonstration; they do not establish award
+eligibility or replace checking the official submission format and public access.
 
 ### Capturing Assets
 
+The capture script exercises the actual UI and writes the three assets above. Run
+from the repository root, with the development server running in another terminal:
+
 ```bash
-# 1. Start dev server
 bun run dev
 
-# 2. Record GIF (example using ffmpeg)
-ffmpeg -f x11grab -r 30 -s 1280x720 -i :0.0 -t 30 \
-  -vf "fps=15,scale=640:-1:flags=lanczos,palettegen" palette.png
-ffmpeg -f x11grab -r 30 -s 1280x720 -i :0.0 -t 30 \
-  -i palette.png -lavfi "fps=15,scale=640:-1:flags=lanczos [x]; [x][1:v] paletteuse" \
-  public/assets/demo-preview.gif
+# Install capture-only tooling outside the checkout; app dependencies stay unchanged.
+npm install --prefix /tmp/cadet-capture-tools --no-package-lock playwright-core@1.65.1
+PLAYWRIGHT_MODULE=/tmp/cadet-capture-tools/node_modules/playwright-core/index.mjs \
+  CHROMIUM_PATH=/usr/bin/chromium node scripts/capture-previews.mjs
 
-# 3. Screenshots (Press `P` in-game to pause, then OS screenshot)
-# Save to public/assets/ with names above
+# Browser audio and control checks (same tooling, running dev server)
+PLAYWRIGHT_MODULE=/tmp/cadet-capture-tools/node_modules/playwright-core/index.mjs \
+  CHROMIUM_PATH=/usr/bin/chromium node scripts/verify-audio.mjs
 ```
+
+Capturing requires Node 24, Chromium with WebGL2 (SwiftShader is supported), and
+FFmpeg on PATH. `APP_URL` optionally selects another running development server.
+PNG screenshots are 1280 × 800; the GIF samples 72 real browser frames at 8 fps
+and scales them to 800 × 500. Sampling/rendering time varies by machine, so GIF
+playback is accelerated rather than a measurement of simulation frame rate.
+
+### Audio and visual effects
+
+[`audioEngine.ts`](src/game/audioEngine.ts) synthesizes all sound locally using the
+Web Audio API; no audio files, service calls, keys, or new runtime dependencies are
+needed. It unlocks on a user gesture, reuses a quantized noise buffer and a bounded
+pool of 16 oscillator voices, and releases the graph on scene teardown. When all
+voices are reserved, additional one-shot notes are dropped rather than allocating
+new sources. Thruster level follows throttle; entering boost triggers ignition once.
+Proximity pings accelerate near debris. Quiz answers and certification results have
+distinct success/failure tones. **AUDIO / MUTE** in the HUD or **M** controls the
+master gain, including notes already playing. Without Web Audio, gameplay continues
+silently. The old `soundManager.ts` import remains a compatibility re-export.
+
+The twin exhaust trails reuse a fixed buffer of 96 particles. Throttle increases
+their length and opacity; boost changes them from cyan to amber and increases their
+reach. Waypoints have pulsing guide halos; the planet has a procedural atmospheric
+rim. These are stylized procedural visuals, **not NASA imagery or measured data**.
+
+AI assistance was used to develop/refine the procedural audio controller, visual
+FX, tests, capture automation, and this documentation. The preview assets are real
+browser captures of the application, not generated illustrations.
 
 ---
 
@@ -317,9 +432,10 @@ export interface TelemetryData {
 | **Oxygen and energy**    | Oxygen drains 0.2 percentage points/s; canisters restore 35; energy recharges 8 points/s.             | [Engine](src/game/flightEngine.ts)                                                    |
 | **Boost and scanner**    | Boost drains 26 charge points/s and recharges 14; scanner costs 15 energy and expands to 160 m.       | [Engine](src/game/flightEngine.ts)                                                    |
 | **Camera system**        | Chase, cockpit, and offset orbit views; interpolated positions and boost-dependent field of view.     | [Engine](src/game/flightEngine.ts)                                                    |
-| **Audio**                | Web Audio oscillators and noise for thrusters, RCS, collisions, scanner, and dispatch chirps.         | [Sound manager](src/audio/soundManager.ts)                                            |
+| **Audio**                | Pooled procedural thrusters, boost, proximity pings, quiz chimes, and master mute.                    | [Audio engine](src/game/audioEngine.ts)                                            |
 | **Procedural assets**    | Canvas textures with nearest filtering; low-poly craft, planet, stars, satellite, and debris.         | [Models](src/game/proceduralModels.ts)                                                |
 | **React integration**    | Engine stored in a ref; telemetry and UI in state; effect cleanup calls engine disposal.              | [App](src/App.tsx)                                                                    |
+| **Outpost Ops**          | Turn-based Moon/Mars base for a crew of four over 30 days: crew work blocks, seven buildable modules, power priority for life support, radiation dose and shielding, flares, dust storms, breakdowns, supply drones, and an end-of-mission debrief. Sunlight per day comes from NASA/JPL Horizons. | [Rules](src/game/outpostLogic.ts), [Screen](src/components/OutpostMode.tsx), [Data](src/data/nasa/horizonsSnapshot.ts) |
 
 ---
 
@@ -439,19 +555,26 @@ cadet-1_-orbital-telemetry/
 │   ├── index.css                       # Tailwind and CRT styling
 │   ├── types/game.ts                   # Telemetry and mission contracts
 │   ├── game/
+│   │   ├── audioEngine.ts              # Pooled procedural Web Audio controller
+│   │   ├── exhaustParticles.ts         # Fixed-size twin exhaust trails
 │   │   ├── flightEngine.ts             # Flight, missions, rendering, and input
 │   │   ├── fixedTimestep.ts            # 1/60 s fixed-step accumulator
 │   │   ├── missionLogic.ts             # Pure stage thresholds and timers
+│   │   ├── outpostLogic.ts             # Outpost Ops rules: power, life support, radiation
 │   │   ├── proceduralModels.ts         # Procedural textures and geometry
 │   │   └── __tests__/                  # bun:test unit tests
 │   ├── components/
 │   │   ├── HUD.tsx                     # Flight telemetry and controls
 │   │   ├── TitleScreen.tsx             # Mission lobby
+│   │   ├── OutpostMode.tsx             # Outpost Ops screen (Moon/Mars base)
 │   │   ├── Modals.tsx                  # Pause, victory, and defeat screens
 │   │   ├── CertificationQuizModal.tsx  # Three questions per stage
 │   │   └── PixelBadge.tsx              # Stage badge graphics
-│   ├── audio/soundManager.ts           # Procedural Web Audio synthesis
-│   └── data/triviaBank.ts              # Nine questions total, three per stage
+│   ├── audio/soundManager.ts           # Compatibility export for audioEngine
+│   └── data/
+│       ├── triviaBank.ts               # Nine questions total, three per stage
+│       └── nasa/horizonsSnapshot.ts    # Generated NASA/JPL Horizons sunlight data
+├── scripts/fetch-horizons.ts           # Regenerates the Horizons snapshot
 ├── index.html                          # HTML entry point and metadata
 ├── vite.config.ts                      # Vite, React, and Tailwind configuration
 ├── tsconfig.json                       # TypeScript configuration
@@ -481,11 +604,12 @@ CI runs all three on every push and pull request: strict TypeScript checking, th
 | Check                  | What it covers                                                                                                                       |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | **Strict TypeScript**  | `"strict": true` across the app and tests, with no `any` or `@ts-ignore`.                                                            |
-| **Stage thresholds**   | Stage 1 ±4.5° window, 4 s hold, half-rate decay, and +1 s ring bonus; Stage 2 5 m pickup radius and 3-cube goal; Stage 3 <45 m / <8° lock held for 3 s with 0.6× decay. |
-| **Fixed timestep**     | Same physics step count at 30, 60, 144, and 240 Hz; 0.05 s frame clamp prevents a spiral of death.                                   |
+| **Stage thresholds**   | Stage 1 ±4.5° window, 4 s hold, half-rate decay, and +1 s ring bonus; Stage 2 5 m pickup radius and 3-cube goal; Stage 3 <45 m / <8° lock held for 3 s with 0.6× decay. Also pins every exported constant, strict vs. inclusive boundaries, timer clamping under 5,000 random steps, and `progressPercent` rounding, capping, and monotonicity. |
+| **Fixed timestep**     | Same physics step count at 30, 60, 144, and 240 Hz; 0.05 s frame clamp prevents a spiral of death. Also covers remainder carry-over, zero and exact-clamp deltas, irregular frame jitter, per-instance state, and deterministic replay. |
 | **Trivia bank**        | Three questions per stage, unique ids, four distinct options, in-range `correctIndex`, and one badge per stage.                       |
+| **Outpost Ops**        | Horizons snapshot shape and the lunar night; solar output following the data; life support powered before jobs; shelter and shielding dose rules; build caps; stock limits; seeded replay; and a balance check that a sensible scripted player completes most missions while a neglected Moon base usually fails. |
 
-Tests live in [`src/game/__tests__/`](src/game/__tests__) and exercise the pure modules ([missionLogic.ts](src/game/missionLogic.ts), [fixedTimestep.ts](src/game/fixedTimestep.ts), [triviaBank.ts](src/data/triviaBank.ts)), so they run without WebGL or a browser. There is no visual-regression suite.
+Tests live in [`src/game/__tests__/`](src/game/__tests__) and exercise the pure modules ([missionLogic.ts](src/game/missionLogic.ts), [fixedTimestep.ts](src/game/fixedTimestep.ts), [triviaBank.ts](src/data/triviaBank.ts)), so they run without WebGL or a browser. Audio graph lifecycle and exhaust buffer reuse are also covered by Bun tests. The optional browser checks render audio using OfflineAudioContext and exercise mute, quiz retry/pass, stage transitions, and pause/resume. There is no automated visual-regression suite.
 
 For a manual smoke check, start the app and verify the title screen, WebGL canvas, live telemetry, start/pause/resume controls, and return to lobby. The fixed timestep makes physics refresh-rate independent, but randomized asteroid placement means deterministic replay is not provided.
 

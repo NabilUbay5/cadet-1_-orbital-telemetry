@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "data:horizons": "bun scripts/fetch-horizons.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -27,11 +28,13 @@
   "devDependencies": {
     "@types/bun": "1.4.4",
     "@types/express": "^4.17.21",
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
+    "jsdom": "^31.0.1",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2"

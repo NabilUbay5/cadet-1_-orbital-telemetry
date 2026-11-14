@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { soundManager } from '../audio/soundManager.ts';
+import { audioEngine } from './audioEngine.ts';
 import { CameraMode, GameState, MissionResult, MissionStage, TelemetryData } from '../types/game.ts';
 import {
   createAsteroidDebris,
@@ -17,6 +17,7 @@ import {
   createSpaceStationAlpha,
   createWaypointRing,
 } from './proceduralModels.ts';
+import { ExhaustParticles } from './exhaustParticles.ts';
 import { FIXED_DT, FixedTimestep } from './fixedTimestep.ts';
 import {
   STAGE1_TARGET_TIME,
@@ -70,6 +71,8 @@ export class FlightEngine {
 
   // Craft & Scene entities
   private craftGroup: THREE.Group;
+  private readonly exhaust = new ExhaustParticles();
+  private visualTime = 0;
   private leftFlame: THREE.Mesh;
   private rightFlame: THREE.Mesh;
   private leftThrusterLight: THREE.PointLight;
@@ -124,6 +127,7 @@ export class FlightEngine {
   private cameraShake: number = 0;
 
   // Input System (Held & JustPressed)
+  private inputEnabled = true;
   private heldKeys: Record<string, boolean> = {};
   // A Set is cleared in place each step instead of re-allocating an object literal.
   private readonly justPressedKeys = new Set<string>();
@@ -228,6 +232,9 @@ export class FlightEngine {
     this.rightThrusterLight = craft.rightThrusterLight;
     this.craftGroup.position.copy(this.position);
     this.scene.add(this.craftGroup);
+    this.craftGroup.add(this.exhaust.points);
+    this.leftFlame.visible = false;
+    this.rightFlame.visible = false;
 
     // 7. Space Station Alpha
     this.stationAlpha = createSpaceStationAlpha();
@@ -308,9 +315,9 @@ export class FlightEngine {
   public setGameState(state: GameState) {
     this.gameState = state;
     if (state === 'PLAYING') {
-      soundManager.ensureRunning();
+      audioEngine.ensureRunning();
     } else {
-      soundManager.setThruster(0, false);
+      audioEngine.setThruster(0, false);
     }
   }
 
@@ -327,6 +334,9 @@ export class FlightEngine {
     this.craftGroup.quaternion.copy(this.orientation);
 
     this.throttle = 0;
+    this.exhaust.update(0, 0, false);
+    this.leftFlame.visible = false;
+    this.rightFlame.visible = false;
     this.boostCharge = 100;
     this.isBoosting = false;
     this.hullIntegrity = 100;
@@ -370,8 +380,8 @@ export class FlightEngine {
   public advanceToStage(nextStage: MissionStage) {
     this.stage = nextStage;
     this.throttle = 0.22; // Gentle baseline cruise speed
-    soundManager.ensureRunning();
-    soundManager.playWaypointPass();
+    audioEngine.ensureRunning();
+    audioEngine.playWaypointPass();
 
     if (nextStage === 2) {
       this.position.set(0, 15, 0);
@@ -406,7 +416,7 @@ export class FlightEngine {
       totalTrivia: 9,
     };
 
-    soundManager.playDockSuccess();
+    audioEngine.playDockSuccess();
     this.onStateChange?.('VICTORY', result);
   }
 
@@ -434,10 +444,23 @@ export class FlightEngine {
       this.pulseSphere.position.copy(this.position);
       this.pulseSphere.visible = true;
     }
-    soundManager.playScannerPing();
+    audioEngine.playScannerPing();
+  }
+
+  /**
+   * Turns the engine's keyboard handling on or off. Outpost Ops turns it off so
+   * Space/Enter reach its buttons instead of starting a flight.
+   */
+  public setInputEnabled(enabled: boolean) {
+    this.inputEnabled = enabled;
+    if (!enabled) {
+      for (const key in this.heldKeys) this.heldKeys[key] = false;
+      this.justPressedKeys.clear();
+    }
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
+    if (!this.inputEnabled) return;
     if (PREVENT_DEFAULT_KEYS.has(e.code)) {
       e.preventDefault();
     }
@@ -448,8 +471,8 @@ export class FlightEngine {
     }
     this.heldKeys[key] = true;
 
-    if (e.code === 'KeyM') {
-      soundManager.toggleMute();
+    if (e.code === 'KeyM' && !e.repeat) {
+      audioEngine.toggleMute();
     }
     if (e.code === 'KeyC') {
       this.cycleCamera();
@@ -542,6 +565,13 @@ export class FlightEngine {
   }
 
   private updateSimulation(dt: number) {
+    this.visualTime += dt;
+    for (const ring of this.waypointRings) {
+      ring.halo.rotation.z += dt * 0.35;
+      ring.halo.material.opacity = 0.3 + Math.sin(this.visualTime * 2.5 + ring.phase) * 0.12;
+      ring.beacon.intensity = 1.6 + Math.sin(this.visualTime * 2.5 + ring.phase) * 0.5;
+    }
+
     // Rotate station & satellite dish
     if (this.stationAlpha) {
       this.stationAlpha.rotatingRing.rotation.z += 0.08 * dt;
@@ -649,7 +679,7 @@ export class FlightEngine {
 
 
     if (yawInput !== 0 || pitchInput !== 0 || rollInput !== 0) {
-      if (Math.random() < 0.25) soundManager.playRcsBurst();
+      if (Math.random() < 0.25) audioEngine.playRcsBurst();
     }
 
     const turnRate = 1.4;
@@ -683,8 +713,15 @@ export class FlightEngine {
     this.position.addScaledVector(this.velocity, dt);
     this.craftGroup.position.copy(this.position);
 
-    soundManager.setThruster(this.throttle, this.isBoosting);
+    audioEngine.setThruster(this.throttle, this.isBoosting);
 
+    this.exhaust.update(dt, this.throttle, this.isBoosting);
+    this.leftFlame.visible = this.throttle > 0.01;
+    this.rightFlame.visible = this.throttle > 0.01;
+    const flameColor = this.isBoosting ? 0xffb54a : 0x00f0ff;
+    (this.leftFlame.material as THREE.MeshBasicMaterial).color.setHex(flameColor);
+    this.leftThrusterLight.color.setHex(flameColor);
+    this.rightThrusterLight.color.setHex(flameColor);
     const flameScale = this.throttle * (this.isBoosting ? 2.4 : 1.2);
     this.leftFlame.scale.set(1, 1, Math.max(0.01, flameScale));
     this.rightFlame.scale.set(1, 1, Math.max(0.01, flameScale));
@@ -705,7 +742,7 @@ export class FlightEngine {
 
         this.hitstopDuration = 0.055;
         this.cameraShake = Math.min(1.4, 0.4 + damage * 0.03);
-        soundManager.playCollision(damage / 45);
+        audioEngine.playCollision(damage / 45);
 
         if (this.hullIntegrity <= 0) {
           this.triggerDefeat('HULL BREACH: SEVERE DEBRIS IMPACT');
@@ -721,7 +758,7 @@ export class FlightEngine {
           o2.collected = true;
           o2.group.visible = false;
           this.oxygen = Math.min(100, this.oxygen + 35);
-          soundManager.playItemCollect();
+          audioEngine.playItemCollect();
         }
       }
     }
@@ -757,7 +794,7 @@ export class FlightEngine {
             ring.group.visible = false;
             this.vectorRingsPassedCount++;
             this.stabilizationTimer = applyRingBonus(this.stabilizationTimer);
-            soundManager.playItemCollect();
+            audioEngine.playItemCollect();
 
             if (!this.stage1Complete && isStabilizationComplete(this.stabilizationTimer)) {
               this.completeStageTask(1);
@@ -774,7 +811,7 @@ export class FlightEngine {
           cube.collected = true;
           cube.group.visible = false;
           this.energyCubesCollectedCount++;
-          soundManager.playItemCollect();
+          audioEngine.playItemCollect();
 
           if (isEnergyHarvestComplete(this.energyCubesCollectedCount)) {
             this.completeStageTask(2);
@@ -817,7 +854,7 @@ export class FlightEngine {
     if (stage === 1) this.stage1Complete = true;
     else if (stage === 2) this.stage2Complete = true;
     else this.stage3Complete = true;
-    soundManager.playWaypointPass();
+    audioEngine.playWaypointPass();
     this.onStageTaskCompleted?.(stage);
   }
 
@@ -913,11 +950,13 @@ export class FlightEngine {
     // Proximity Radar
     let hazardWarning = false;
     let hazardDistance = 999;
+    let nearestHazard = Infinity;
     const radarBlips: TelemetryData['radarBlips'] = [];
     const craftInvQuat = this._invOrientation.copy(this.orientation).invert();
 
     for (const ast of this.asteroids) {
       const dist = this.position.distanceTo(ast.mesh.position);
+      nearestHazard = Math.min(nearestHazard, dist);
       if (dist < 120) {
         if (dist < 28) {
           hazardWarning = true;
@@ -932,6 +971,8 @@ export class FlightEngine {
         });
       }
     }
+
+    if (this.gameState === 'PLAYING') audioEngine.updateProximity(nearestHazard);
 
     if (this.stage === 1) {
       for (const ring of this.waypointRings) {
@@ -988,7 +1029,7 @@ export class FlightEngine {
       missionReadiness: readiness,
       cameraMode: this.cameraMode,
       flightAssist: this.flightAssist,
-      isMuted: soundManager.getIsMuted(),
+      isMuted: audioEngine.getIsMuted(),
 
       stage: this.stage,
       stageTitle,
@@ -1026,7 +1067,7 @@ export class FlightEngine {
 
   private triggerDefeat(reason: string) {
     this.setGameState('DEFEAT');
-    soundManager.setThruster(0, false);
+    audioEngine.setThruster(0, false);
 
     const mins = Math.floor(this.metSeconds / 60);
     const secs = (this.metSeconds % 60).toFixed(1);
@@ -1063,7 +1104,8 @@ export class FlightEngine {
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('blur', this.onWindowBlur);
 
-    soundManager.setThruster(0, false);
+    audioEngine.dispose();
+    this.exhaust.dispose();
     this.renderer.dispose();
   }
 }
