@@ -9,6 +9,7 @@ import {
   evaluateQuizResult,
   selectStageQuestions,
 } from '../CertificationQuizModal.tsx';
+import { TRIVIA_QUESTIONS } from '../../data/triviaBank.ts';
 import type { TriviaQuestion } from '../../data/triviaBank.ts';
 
 let dom: JSDOM;
@@ -49,6 +50,24 @@ function getQuestionButton(container: HTMLElement, question: TriviaQuestion) {
   ) as HTMLElement | null;
 }
 
+function getCurrentQuestion(container: HTMLElement, stage: 1 | 2 | 3) {
+  const questionId = container.querySelector('[data-question-id]')?.getAttribute('data-question-id');
+  const question = TRIVIA_QUESTIONS[stage].find((item) => item.id === questionId);
+  expect(question).toBeTruthy();
+  if (!question) throw new Error(`No stage ${stage} question found for ${questionId}.`);
+  return question;
+}
+
+function getButtonContaining(container: HTMLElement, text: string) {
+  return Array.from(container.querySelectorAll('button')).find((button) =>
+    button.textContent?.includes(text)
+  ) ?? null;
+}
+
+function getSelectedQuestionIds(container: HTMLElement) {
+  return container.firstElementChild?.getAttribute('data-selected-question-ids')?.split(',') ?? [];
+}
+
 function renderQuiz(stage: 1 | 2 | 3, onPass: (stage: 1 | 2 | 3) => void = () => undefined) {
   const container = document.createElement('div');
   document.body.appendChild(container);
@@ -70,26 +89,35 @@ function renderQuiz(stage: 1 | 2 | 3, onPass: (stage: 1 | 2 | 3) => void = () =>
 describe('CertificationQuizModal helper logic', () => {
   test('selects exactly three unique questions from a fixture with more than three questions', () => {
     const fixture: TriviaQuestion[] = [
-      { id: 'a', stage: 1, question: 'Q1', options: ['A', 'B', 'C', 'D'], correctIndex: 0, explanation: '1' },
-      { id: 'b', stage: 1, question: 'Q2', options: ['A', 'B', 'C', 'D'], correctIndex: 1, explanation: '2' },
-      { id: 'c', stage: 1, question: 'Q3', options: ['A', 'B', 'C', 'D'], correctIndex: 2, explanation: '3' },
-      { id: 'd', stage: 1, question: 'Q4', options: ['A', 'B', 'C', 'D'], correctIndex: 3, explanation: '4' },
+      { id: 'a', stage: 1, question: 'Q1', options: ['A', 'B', 'C', 'D'], correctIndex: 0, explanation: '1', source: { title: 'NASA', url: 'https://science.nasa.gov/' } },
+      { id: 'a', stage: 1, question: 'Q1 duplicate', options: ['A', 'B', 'C', 'D'], correctIndex: 0, explanation: 'duplicate', source: { title: 'NASA', url: 'https://science.nasa.gov/' } },
+      { id: 'b', stage: 1, question: 'Q2', options: ['A', 'B', 'C', 'D'], correctIndex: 1, explanation: '2', source: { title: 'NASA', url: 'https://science.nasa.gov/' } },
+      { id: 'c', stage: 1, question: 'Q3', options: ['A', 'B', 'C', 'D'], correctIndex: 2, explanation: '3', source: { title: 'NASA', url: 'https://science.nasa.gov/' } },
+      { id: 'd', stage: 1, question: 'Q4', options: ['A', 'B', 'C', 'D'], correctIndex: 3, explanation: '4', source: { title: 'NASA', url: 'https://science.nasa.gov/' } },
+      { id: 'e', stage: 1, question: 'Q5', options: ['A', 'B', 'C', 'D'], correctIndex: 0, explanation: '5', source: { title: 'NASA', url: 'https://science.nasa.gov/' } },
+      { id: 'other-stage', stage: 2, question: 'Q6', options: ['A', 'B', 'C', 'D'], correctIndex: 0, explanation: '6', source: { title: 'NASA', url: 'https://science.nasa.gov/' } },
     ];
 
-    const selected = selectStageQuestions(1, fixture);
+    const selected = selectStageQuestions(1, fixture, () => 0.5);
 
     expect(selected).toHaveLength(3);
     expect(new Set(selected.map((question) => question.id)).size).toBe(3);
     expect(selected.every((question) => question.stage === 1)).toBe(true);
+    expect(selected.every((question) => fixture.some((item) => item.id === question.id))).toBe(true);
   });
 
-  test('selection remains unchanged after answering a question', () => {
-    const firstSelection = selectStageQuestions(3);
-    const selectedQuestionIds = firstSelection.map((question) => question.id);
-    const firstAnswerIndex = firstSelection[0].correctIndex;
+  test('samples different unique questions from the expanded pool', () => {
+    const stageQuestions = TRIVIA_QUESTIONS[3];
+    const firstSelection = selectStageQuestions(3, stageQuestions, () => 0);
+    const secondSelection = selectStageQuestions(3, stageQuestions, () => 0.999);
 
-    expect(firstSelection[0].options[firstAnswerIndex]).toBeDefined();
-    expect(selectStageQuestions(3).map((question) => question.id)).toEqual(selectedQuestionIds);
+    expect(firstSelection).toHaveLength(3);
+    expect(secondSelection).toHaveLength(3);
+    expect(new Set(firstSelection.map((question) => question.id)).size).toBe(3);
+    expect(new Set(secondSelection.map((question) => question.id)).size).toBe(3);
+    expect(firstSelection.map((question) => question.id)).not.toEqual(
+      secondSelection.map((question) => question.id)
+    );
   });
 
   test('three correct answers pass and any incorrect answer fails', () => {
@@ -114,36 +142,36 @@ describe('CertificationQuizModal helper logic', () => {
 
 describe('CertificationQuizModal component interaction', () => {
   test('completes a fully correct quiz and counts the final answer before passing', () => {
-    let passedStage: number | null = null;
+    const passedStages: number[] = [];
     const { container, root } = renderQuiz(1, (stage) => {
-      passedStage = stage;
+      passedStages.push(stage);
     });
 
-    const selectedQuestions = selectStageQuestions(1);
-    for (let questionIndex = 0; questionIndex < selectedQuestions.length; questionIndex += 1) {
-      const currentQuestion = selectedQuestions[questionIndex];
+    const selectedQuestionIds = getSelectedQuestionIds(container);
+    expect(selectedQuestionIds).toHaveLength(3);
+    for (let questionIndex = 0; questionIndex < selectedQuestionIds.length; questionIndex += 1) {
+      const currentQuestion = getCurrentQuestion(container, 1);
+      expect(currentQuestion.id).toBe(selectedQuestionIds[questionIndex]);
       const correctButton = getQuestionButton(container, currentQuestion);
       clickButton(correctButton);
 
-      if (questionIndex < selectedQuestions.length - 1) {
-        const nextButton = Array.from(container.querySelectorAll('button')).find((button) =>
-          button.textContent?.includes('NEXT QUESTION')
-        ) as HTMLElement | null;
-        clickButton(nextButton);
+      expect(getSelectedQuestionIds(container)).toEqual(selectedQuestionIds);
+      expect(container.querySelector('a[href]')?.getAttribute('href')).toBe(currentQuestion.source.url);
+
+      if (questionIndex < selectedQuestionIds.length - 1) {
+        clickButton(getButtonContaining(container, 'NEXT QUESTION'));
       }
     }
 
-    const submitButton = Array.from(container.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('SUBMIT CERTIFICATION EXAM')
-    ) as HTMLElement | null;
-    clickButton(submitButton);
+    clickButton(getButtonContaining(container, 'SUBMIT CERTIFICATION EXAM'));
 
-    const passButton = Array.from(container.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('PROCEED TO NEXT MISSION STAGE')
-    ) as HTMLElement | null;
-    clickButton(passButton);
+    expect(container.textContent).toContain('SCORE:');
+    expect(container.textContent).toContain('3 / 3');
+    expect(container.textContent).toContain('CERTIFICATION PASSED');
+    expect(passedStages).toEqual([]);
+    clickButton(getButtonContaining(container, 'PROCEED TO NEXT MISSION STAGE'));
 
-    expect(passedStage === 1).toBe(true);
+    expect(passedStages).toEqual([1]);
     act(() => {
       root.unmount();
     });
@@ -151,39 +179,30 @@ describe('CertificationQuizModal component interaction', () => {
   });
 
   test('a single incorrect answer prevents the quiz from passing', () => {
-    let passedStage: number | null = null;
+    const passedStages: number[] = [];
     const { container, root } = renderQuiz(1, (stage) => {
-      passedStage = stage;
+      passedStages.push(stage);
     });
 
-    const selectedQuestions = selectStageQuestions(1);
-    const wrongButton = Array.from(container.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes(selectedQuestions[0].options[(selectedQuestions[0].correctIndex + 1) % 4])
-    ) as HTMLElement | null;
-    clickButton(wrongButton);
+    const selectedQuestionIds = getSelectedQuestionIds(container);
+    for (let questionIndex = 0; questionIndex < selectedQuestionIds.length; questionIndex += 1) {
+      const question = getCurrentQuestion(container, 1);
+      expect(question.id).toBe(selectedQuestionIds[questionIndex]);
+      const option = questionIndex === selectedQuestionIds.length - 1
+        ? question.options[(question.correctIndex + 1) % question.options.length]
+        : question.options[question.correctIndex];
+      clickButton(getButtonContaining(container, option));
+      if (questionIndex < selectedQuestionIds.length - 1) {
+        clickButton(getButtonContaining(container, 'NEXT QUESTION'));
+      }
+    }
 
-    const nextButton = Array.from(container.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('NEXT QUESTION')
-    ) as HTMLElement | null;
-    clickButton(nextButton);
+    clickButton(getButtonContaining(container, 'SUBMIT CERTIFICATION EXAM'));
 
-    const correctButtonForSecond = getQuestionButton(container, selectedQuestions[1]);
-    clickButton(correctButtonForSecond);
-    const nextButtonTwo = Array.from(container.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('NEXT QUESTION')
-    ) as HTMLElement | null;
-    clickButton(nextButtonTwo);
-
-    const correctButtonForThird = getQuestionButton(container, selectedQuestions[2]);
-    clickButton(correctButtonForThird);
-
-    const submitButton = Array.from(container.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('SUBMIT CERTIFICATION EXAM')
-    ) as HTMLElement | null;
-    clickButton(submitButton);
-
-    expect(passedStage).toBeNull();
+    expect(passedStages).toEqual([]);
     expect(container.textContent).toContain('INSUFFICIENT');
+    expect(container.textContent).toContain('2 / 3');
+    expect(getButtonContaining(container, 'PROCEED TO NEXT MISSION STAGE')).toBeNull();
     act(() => {
       root.unmount();
     });
@@ -194,15 +213,13 @@ describe('CertificationQuizModal component interaction', () => {
     const onPass = () => undefined;
     const { container, root } = renderQuiz(1, onPass);
 
-    const firstQuestion = selectStageQuestions(1)[0];
+    const firstQuestion = getCurrentQuestion(container, 1);
     clickButton(getQuestionButton(container, firstQuestion));
 
-    const nextButton = Array.from(container.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('NEXT QUESTION')
-    ) as HTMLElement | null;
-    clickButton(nextButton);
+    clickButton(getButtonContaining(container, 'NEXT QUESTION'));
 
     expect(container.textContent).toContain('QUESTION 2 OF 3');
+    const priorQuestionIds = getSelectedQuestionIds(container);
 
     act(() => {
       root.render(
@@ -216,7 +233,14 @@ describe('CertificationQuizModal component interaction', () => {
 
     expect(container.textContent).toContain('QUESTION 1 OF 3');
     expect(container.textContent).toContain('STAGE 2');
+    expect(container.textContent).toContain('ACCURACY: 0 / 0');
     expect(Array.from(container.querySelectorAll('button')).some((button) => button.disabled)).toBe(false);
+    expect(container.querySelector('a[href]')).toBeNull();
+    const newQuestionIds = getSelectedQuestionIds(container);
+    expect(newQuestionIds).toHaveLength(3);
+    expect(new Set(newQuestionIds).size).toBe(3);
+    expect(newQuestionIds.every((id) => TRIVIA_QUESTIONS[2].some((question) => question.id === id))).toBe(true);
+    expect(newQuestionIds).not.toEqual(priorQuestionIds);
 
     act(() => {
       root.unmount();

@@ -17,12 +17,28 @@ interface CertificationQuizModalProps {
 
 export function selectStageQuestions(
   stage: MissionStage,
-  stageQuestions: readonly TriviaQuestion[] = TRIVIA_QUESTIONS[stage]
+  stageQuestions: readonly TriviaQuestion[] = TRIVIA_QUESTIONS[stage],
+  random: () => number = Math.random
 ): TriviaQuestion[] {
-  const uniqueQuestions = stageQuestions.filter(
-    (question, index, questions) =>
-      questions.findIndex((candidate) => candidate.id === question.id) === index
-  );
+  const seenIds = new Set<string>();
+  const uniqueQuestions: TriviaQuestion[] = [];
+  for (const question of stageQuestions) {
+    if (question.stage !== stage || seenIds.has(question.id)) continue;
+    seenIds.add(question.id);
+    uniqueQuestions.push(question);
+  }
+
+  if (uniqueQuestions.length < 3) {
+    throw new RangeError(`Stage ${stage} requires at least three unique questions.`);
+  }
+
+  for (let index = uniqueQuestions.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [uniqueQuestions[index], uniqueQuestions[swapIndex]] = [
+      uniqueQuestions[swapIndex],
+      uniqueQuestions[index],
+    ];
+  }
 
   return uniqueQuestions.slice(0, 3);
 }
@@ -46,6 +62,10 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
   onPass,
 }) => {
   const questions = useMemo(() => selectStageQuestions(stage), [stage]);
+  const selectedQuestionIds = useMemo(
+    () => questions.map((question) => question.id).join(','),
+    [questions]
+  );
   const badge = STAGE_BADGES[stage];
 
   const [currentIdx, setCurrentIdx] = useState<number>(0);
@@ -112,7 +132,10 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
   const isPassed = evaluateQuizResult(scoreRef.current, questions.length);
 
   return (
-    <div className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-40 pointer-events-auto font-pixel">
+    <div
+      data-selected-question-ids={selectedQuestionIds}
+      className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-40 pointer-events-auto font-pixel"
+    >
       <div className="w-full max-w-xl retro-window p-6 bg-[#0d111a] border-2 border-[#00F0FF] shadow-[6px_6px_0_#000]">
         {/* Terminal Header */}
         <div className="flex items-center justify-between border-b-2 border-[#2A3B5C] pb-3 mb-5">
@@ -136,7 +159,10 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
             </div>
 
             {/* Question Prompt */}
-            <div className="border-2 border-[#2A3B5C] bg-[#050508] p-4 mb-4">
+            <div
+              className="border-2 border-[#2A3B5C] bg-[#050508] p-4 mb-4"
+              data-question-id={currentQ.id}
+            >
               <div className="text-[9px] text-[#FFB000] mb-2 uppercase tracking-wide">
                 ▶ TOPIC: {badge.title}
               </div>
@@ -182,6 +208,14 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
               <div className="border border-[#2A3B5C] bg-[#050508] p-3 mb-4 text-[9px] leading-relaxed">
                 <span className="text-[#00FF66] font-bold">FLIGHT LOG: </span>
                 <span className="text-[#A0AEC0]">{currentQ.explanation}</span>
+                <a
+                  href={currentQ.source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block mt-2 text-[8px] text-[#00F0FF] underline"
+                >
+                  SOURCE: {currentQ.source.title}
+                </a>
               </div>
             )}
 
