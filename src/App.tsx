@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CertificationQuizModal } from './components/CertificationQuizModal.tsx';
 import { HUD } from './components/HUD.tsx';
+import { OutpostMode } from './components/OutpostMode.tsx';
 import { DefeatModal, PauseModal, VictoryModal } from './components/Modals.tsx';
 import { TitleScreen } from './components/TitleScreen.tsx';
 import { audioEngine } from './game/audioEngine.ts';
@@ -75,6 +76,7 @@ export default function App() {
   const [missionResult, setMissionResult] = useState<MissionResult | null>(null);
   const [activeQuizStage, setActiveQuizStage] = useState<MissionStage | null>(null);
   const [badgesUnlocked, setBadgesUnlocked] = useState<string[]>([]);
+  const [outpostOpen, setOutpostOpen] = useState(false);
 
   // Mount Three.js Engine once
   useEffect(() => {
@@ -120,6 +122,18 @@ export default function App() {
     setBadgesUnlocked([]);
     engineRef.current?.resetSimulation();
     setGameState('PLAYING');
+  };
+
+  // Outpost Ops is a separate turn-based mode drawn over the title scene.
+  // The flight engine's keyboard handling is switched off while it is open.
+  const handleOpenOutpost = () => {
+    engineRef.current?.setInputEnabled(false);
+    setOutpostOpen(true);
+  };
+
+  const handleCloseOutpost = () => {
+    engineRef.current?.setInputEnabled(true);
+    setOutpostOpen(false);
   };
 
   const handleResume = () => {
@@ -203,7 +217,12 @@ export default function App() {
       <div className="absolute inset-0 pointer-events-none crt-overlay z-[5] opacity-45" />
 
       {/* Title Screen Overlay */}
-      {gameState === 'TITLE' && <TitleScreen onStart={handleStart} />}
+      {gameState === 'TITLE' && !outpostOpen && (
+        <TitleScreen onStart={handleStart} onOutpost={handleOpenOutpost} />
+      )}
+
+      {/* Outpost Ops: Moon/Mars base management mode */}
+      {gameState === 'TITLE' && outpostOpen && <OutpostMode onExit={handleCloseOutpost} />}
 
       {/* Active Flight Telemetry HUD */}
       {gameState === 'PLAYING' && (

@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "data:horizons": "bun scripts/fetch-horizons.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
