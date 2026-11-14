@@ -10,6 +10,7 @@ import { DefeatModal, PauseModal, VictoryModal } from './components/Modals.tsx';
 import { TitleScreen } from './components/TitleScreen.tsx';
 import { audioEngine } from './game/audioEngine.ts';
 import { FlightEngine } from './game/flightEngine.ts';
+import { isValidTelemetryData } from './game/telemetryValidation.ts';
 import { GameState, MissionResult, MissionStage, TelemetryData } from './types/game.ts';
 
 const initialTelemetry: TelemetryData = {
@@ -82,6 +83,11 @@ export default function App() {
     let lastUpdate = 0;
     const engine = new FlightEngine(canvasMountRef.current, {
       onTelemetryUpdate: (data) => {
+        if (!isValidTelemetryData(data)) {
+          console.error('Flight engine emitted invalid telemetry; update skipped.', data);
+          return;
+        }
+
         const now = performance.now();
         if (now - lastUpdate >= 45) {
           lastUpdate = now;
