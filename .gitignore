@@ -5,7 +5,6 @@ coverage/
 .DS_Store
 *.log
 .env*
-!.env.example
 
 # Ignore local captures except the named README preview assets
 public/assets/*
