@@ -74,6 +74,7 @@ The banner, models and textures are generated in code or drawn for this project.
 Space Apps requires teams to state where AI tools were used. Code and data made with AI must say so in descriptive text, and AI images or videos need a visible watermark.
 
 - The unit tests added for `missionLogic.ts` and `fixedTimestep.ts`, and this section of the README, were drafted with an AI coding assistant (Claude Code) and reviewed by the team.
+- OpenAI Codex assisted with the pooled procedural audio controller, visual effects, related tests, browser-capture automation, and their documentation. The preview GIF and screenshots are actual application captures.
 - *Team: add every other place AI tools were used before submitting.*
 
 ### Submission form readiness
@@ -82,7 +83,7 @@ Space Apps requires teams to state where AI tools were used. Code and data made 
 | ----------------------------------- | -------- | -------------------------------------------- | ---------------------------------------------- |
 | Project Name                        | No       | Team decision                                | Placeholder on the form                        |
 | Summary (50–200 words)              | Yes      | Elevator Pitch above                         | To write                                       |
-| Project Demonstration               | Yes      | Video ≤ 30 s or ≤ 7 slides, public link       | Not recorded (see Simulation Preview)          |
+| Project Demonstration               | Yes      | Video ≤ 30 s or ≤ 7 slides, public link       | GIF/PNG previews captured; final submission video/slides still needed          |
 | Project link                        | Yes      | This public repository or a deployed build   | Ready to paste once the repo is final          |
 | Project Details                     | Yes      | Architecture and Feature Matrix sections     | To write                                       |
 | Use of SI                           | Yes      | AI (SI) tool use, above                      | Team to complete                               |
@@ -136,33 +137,66 @@ The engine owns the simulation state and renders the Three.js scene. It sends te
 
 ## 🎮 Simulation Preview
 
-> **WIP — preview captures are not yet available.** The filenames below are planned assets, not broken image links. Once a capture is added to `public/assets/`, replace its WIP status with a relative image embed (see **Contributing Visual Assets** below).
+These previews are captured from the running application in Chromium with software WebGL.
+The GIF is a **9-second, silent, accelerated visual preview** of thrust/boost, scanner,
+and camera modes; it is not a complete three-stage mission walkthrough.
 
-| View                   | Description                                                      | Status | Planned asset                          |
-| ---------------------- | ---------------------------------------------------------------- | ------ | -------------------------------------- |
-| **Live Demo**          | Full simulation run — launch, orbital entry, satellite alignment | WIP    | `public/assets/demo-preview.gif`       |
-| **Telemetry HUD**      | Left/right wing panels, center reticle, bottom flight deck       | WIP    | `public/assets/telemetry-hud.png`      |
-| **Orbital View**       | Chase camera showing craft, planet, waypoint rings, satellite    | WIP    | `public/assets/orbital-view.png`       |
-| **Cockpit View**       | First-person cockpit with HUD overlay                            | WIP    | `public/assets/cockpit-view.png`       |
-| **Radar Scope**        | 8-bit proximity radar with hazard/waypoint blips                 | WIP    | `public/assets/radar-scope.png`        |
-| **Certification Quiz** | Astronaut trivia gate between mission stages                     | WIP    | `public/assets/certification-quiz.png` |
+![Flight effects preview](public/assets/demo-preview.gif)
+
+| View | Preview |
+| --- | --- |
+| **Telemetry HUD / boost exhaust** | ![Telemetry HUD](public/assets/telemetry-hud.png) |
+| **Orbital camera / planetary limb** | ![Orbital view](public/assets/orbital-view.png) |
+
+Additional cockpit, radar, and certification close-ups remain planned captures.
+These repository assets support a project demonstration; they do not establish award
+eligibility or replace checking the official submission format and public access.
 
 ### Capturing Assets
 
+The capture script exercises the actual UI and writes the three assets above. Run
+from the repository root, with the development server running in another terminal:
+
 ```bash
-# 1. Start dev server
 bun run dev
 
-# 2. Record GIF (example using ffmpeg)
-ffmpeg -f x11grab -r 30 -s 1280x720 -i :0.0 -t 30 \
-  -vf "fps=15,scale=640:-1:flags=lanczos,palettegen" palette.png
-ffmpeg -f x11grab -r 30 -s 1280x720 -i :0.0 -t 30 \
-  -i palette.png -lavfi "fps=15,scale=640:-1:flags=lanczos [x]; [x][1:v] paletteuse" \
-  public/assets/demo-preview.gif
+# Install capture-only tooling outside the checkout; app dependencies stay unchanged.
+npm install --prefix /tmp/cadet-capture-tools --no-package-lock playwright-core@1.65.1
+PLAYWRIGHT_MODULE=/tmp/cadet-capture-tools/node_modules/playwright-core/index.mjs \
+  CHROMIUM_PATH=/usr/bin/chromium node scripts/capture-previews.mjs
 
-# 3. Screenshots (Press `P` in-game to pause, then OS screenshot)
-# Save to public/assets/ with names above
+# Browser audio and control checks (same tooling, running dev server)
+PLAYWRIGHT_MODULE=/tmp/cadet-capture-tools/node_modules/playwright-core/index.mjs \
+  CHROMIUM_PATH=/usr/bin/chromium node scripts/verify-audio.mjs
 ```
+
+Capturing requires Node 24, Chromium with WebGL2 (SwiftShader is supported), and
+FFmpeg on PATH. `APP_URL` optionally selects another running development server.
+PNG screenshots are 1280 × 800; the GIF samples 72 real browser frames at 8 fps
+and scales them to 800 × 500. Sampling/rendering time varies by machine, so GIF
+playback is accelerated rather than a measurement of simulation frame rate.
+
+### Audio and visual effects
+
+[`audioEngine.ts`](src/game/audioEngine.ts) synthesizes all sound locally using the
+Web Audio API; no audio files, service calls, keys, or new runtime dependencies are
+needed. It unlocks on a user gesture, reuses a quantized noise buffer and a bounded
+pool of 16 oscillator voices, and releases the graph on scene teardown. When all
+voices are reserved, additional one-shot notes are dropped rather than allocating
+new sources. Thruster level follows throttle; entering boost triggers ignition once.
+Proximity pings accelerate near debris. Quiz answers and certification results have
+distinct success/failure tones. **AUDIO / MUTE** in the HUD or **M** controls the
+master gain, including notes already playing. Without Web Audio, gameplay continues
+silently. The old `soundManager.ts` import remains a compatibility re-export.
+
+The twin exhaust trails reuse a fixed buffer of 96 particles. Throttle increases
+their length and opacity; boost changes them from cyan to amber and increases their
+reach. Waypoints have pulsing guide halos; the planet has a procedural atmospheric
+rim. These are stylized procedural visuals, **not NASA imagery or measured data**.
+
+AI assistance was used to develop/refine the procedural audio controller, visual
+FX, tests, capture automation, and this documentation. The preview assets are real
+browser captures of the application, not generated illustrations.
 
 ---
 
@@ -387,7 +421,7 @@ export interface TelemetryData {
 | **Oxygen and energy**    | Oxygen drains 0.2 percentage points/s; canisters restore 35; energy recharges 8 points/s.             | [Engine](src/game/flightEngine.ts)                                                    |
 | **Boost and scanner**    | Boost drains 26 charge points/s and recharges 14; scanner costs 15 energy and expands to 160 m.       | [Engine](src/game/flightEngine.ts)                                                    |
 | **Camera system**        | Chase, cockpit, and offset orbit views; interpolated positions and boost-dependent field of view.     | [Engine](src/game/flightEngine.ts)                                                    |
-| **Audio**                | Web Audio oscillators and noise for thrusters, RCS, collisions, scanner, and dispatch chirps.         | [Sound manager](src/audio/soundManager.ts)                                            |
+| **Audio**                | Pooled procedural thrusters, boost, proximity pings, quiz chimes, and master mute.                    | [Audio engine](src/game/audioEngine.ts)                                            |
 | **Procedural assets**    | Canvas textures with nearest filtering; low-poly craft, planet, stars, satellite, and debris.         | [Models](src/game/proceduralModels.ts)                                                |
 | **React integration**    | Engine stored in a ref; telemetry and UI in state; effect cleanup calls engine disposal.              | [App](src/App.tsx)                                                                    |
 
@@ -509,6 +543,8 @@ cadet-1_-orbital-telemetry/
 │   ├── index.css                       # Tailwind and CRT styling
 │   ├── types/game.ts                   # Telemetry and mission contracts
 │   ├── game/
+│   │   ├── audioEngine.ts              # Pooled procedural Web Audio controller
+│   │   ├── exhaustParticles.ts         # Fixed-size twin exhaust trails
 │   │   ├── flightEngine.ts             # Flight, missions, rendering, and input
 │   │   ├── fixedTimestep.ts            # 1/60 s fixed-step accumulator
 │   │   ├── missionLogic.ts             # Pure stage thresholds and timers
@@ -520,7 +556,7 @@ cadet-1_-orbital-telemetry/
 │   │   ├── Modals.tsx                  # Pause, victory, and defeat screens
 │   │   ├── CertificationQuizModal.tsx  # Three questions per stage
 │   │   └── PixelBadge.tsx              # Stage badge graphics
-│   ├── audio/soundManager.ts           # Procedural Web Audio synthesis
+│   ├── audio/soundManager.ts           # Compatibility export for audioEngine
 │   └── data/triviaBank.ts              # Nine questions total, three per stage
 ├── index.html                          # HTML entry point and metadata
 ├── vite.config.ts                      # Vite, React, and Tailwind configuration
@@ -555,7 +591,7 @@ CI runs all three on every push and pull request: strict TypeScript checking, th
 | **Fixed timestep**     | Same physics step count at 30, 60, 144, and 240 Hz; 0.05 s frame clamp prevents a spiral of death. Also covers remainder carry-over, zero and exact-clamp deltas, irregular frame jitter, per-instance state, and deterministic replay. |
 | **Trivia bank**        | Three questions per stage, unique ids, four distinct options, in-range `correctIndex`, and one badge per stage.                       |
 
-Tests live in [`src/game/__tests__/`](src/game/__tests__) and exercise the pure modules ([missionLogic.ts](src/game/missionLogic.ts), [fixedTimestep.ts](src/game/fixedTimestep.ts), [triviaBank.ts](src/data/triviaBank.ts)), so they run without WebGL or a browser. There is no visual-regression suite.
+Tests live in [`src/game/__tests__/`](src/game/__tests__) and exercise the pure modules ([missionLogic.ts](src/game/missionLogic.ts), [fixedTimestep.ts](src/game/fixedTimestep.ts), [triviaBank.ts](src/data/triviaBank.ts)), so they run without WebGL or a browser. Audio graph lifecycle and exhaust buffer reuse are also covered by Bun tests. The optional browser checks render audio using OfflineAudioContext and exercise mute, quiz retry/pass, stage transitions, and pause/resume. There is no automated visual-regression suite.
 
 For a manual smoke check, start the app and verify the title screen, WebGL canvas, live telemetry, start/pause/resume controls, and return to lobby. The fixed timestep makes physics refresh-rate independent, but randomized asteroid placement means deterministic replay is not provided.
 

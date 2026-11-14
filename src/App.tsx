@@ -8,6 +8,7 @@ import { CertificationQuizModal } from './components/CertificationQuizModal.tsx'
 import { HUD } from './components/HUD.tsx';
 import { DefeatModal, PauseModal, VictoryModal } from './components/Modals.tsx';
 import { TitleScreen } from './components/TitleScreen.tsx';
+import { audioEngine } from './game/audioEngine.ts';
 import { FlightEngine } from './game/flightEngine.ts';
 import { GameState, MissionResult, MissionStage, TelemetryData } from './types/game.ts';
 
@@ -151,7 +152,9 @@ export default function App() {
   };
 
   const handleToggleMute = () => {
-    setTelemetry((prev) => ({ ...prev, isMuted: !prev.isMuted }));
+    audioEngine.ensureRunning();
+    const isMuted = audioEngine.toggleMute();
+    setTelemetry((prev) => ({ ...prev, isMuted }));
   };
 
   const handleTriggerPulse = () => {

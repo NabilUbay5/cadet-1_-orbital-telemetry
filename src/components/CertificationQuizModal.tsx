@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { soundManager } from '../audio/soundManager.ts';
+import { audioEngine } from '../game/audioEngine.ts';
 import { STAGE_BADGES, TRIVIA_QUESTIONS, TriviaQuestion } from '../data/triviaBank.ts';
 import { MissionStage } from '../types/game.ts';
 import { PixelBadge } from './PixelBadge.tsx';
@@ -32,15 +32,16 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
 
   const handleSelectOption = (idx: number) => {
     if (answered) return;
+    audioEngine.ensureRunning();
     setSelectedOption(idx);
     setAnswered(true);
 
     const isCorrect = idx === currentQ.correctIndex;
     if (isCorrect) {
       setScore((prev) => prev + 1);
-      soundManager.playItemCollect();
+      audioEngine.playQuizAnswer(true);
     } else {
-      soundManager.playWarning();
+      audioEngine.playQuizAnswer(false);
     }
   };
 
@@ -53,11 +54,9 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
       setQuizFinished(true);
       // Passing requires all 3 questions answered correctly
       if (score === questions.length) {
-        if (stage < 3) {
-          soundManager.playDockSuccess();
-        }
+        audioEngine.playQuizResult(true);
       } else {
-        soundManager.playWarning();
+        audioEngine.playQuizResult(false);
       }
     }
   };
