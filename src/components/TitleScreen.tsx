@@ -8,9 +8,10 @@ import { PixelBadge } from './PixelBadge.tsx';
 
 interface TitleScreenProps {
   onStart: () => void;
+  onOutpost: () => void;
 }
 
-export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart }) => {
+export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) => {
   return (
     <div className="absolute inset-0 flex flex-col justify-between p-4 md:p-8 pointer-events-none z-20 font-pixel">
       {/* Top Arcade Marquee Stamp */}
@@ -81,6 +82,14 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart }) => {
               </div>
               <span className="text-[8px] text-[#FFB000] shrink-0">[QUIZ GATE 3]</span>
             </div>
+
+            <div className="border border-[#FFB000] bg-[#050508] p-2.5 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[9px] text-[#FFB000] font-bold">OUTPOST OPS: RUN A MOON OR MARS BASE</div>
+                <div className="text-[8px] text-[#A0AEC0]">Task: Balance power, oxygen, water, food & radiation shielding for 30 days.</div>
+              </div>
+              <span className="text-[8px] text-[#00F0FF] shrink-0">[NASA JPL HORIZONS DATA]</span>
+            </div>
           </div>
 
           {/* Primary Arcade Start CTA */}
@@ -91,6 +100,14 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart }) => {
             >
               <span>PRESS START</span>
               <span className="text-[10px] opacity-80">[ENTER / SPACE]</span>
+            </button>
+
+            <button
+              onClick={onOutpost}
+              className="retro-btn-secondary h-12 px-5 text-[10px] md:text-xs tracking-wider flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>OUTPOST OPS</span>
+              <span className="text-[9px] text-[#FFB000]">MOON / MARS BASE</span>
             </button>
 
             <div className="text-[10px] text-[#FFB000] animate-arcade-blink text-center sm:text-left">

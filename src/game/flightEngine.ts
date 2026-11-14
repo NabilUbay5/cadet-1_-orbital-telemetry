@@ -127,6 +127,7 @@ export class FlightEngine {
   private cameraShake: number = 0;
 
   // Input System (Held & JustPressed)
+  private inputEnabled = true;
   private heldKeys: Record<string, boolean> = {};
   // A Set is cleared in place each step instead of re-allocating an object literal.
   private readonly justPressedKeys = new Set<string>();
@@ -446,7 +447,20 @@ export class FlightEngine {
     audioEngine.playScannerPing();
   }
 
+  /**
+   * Turns the engine's keyboard handling on or off. Outpost Ops turns it off so
+   * Space/Enter reach its buttons instead of starting a flight.
+   */
+  public setInputEnabled(enabled: boolean) {
+    this.inputEnabled = enabled;
+    if (!enabled) {
+      for (const key in this.heldKeys) this.heldKeys[key] = false;
+      this.justPressedKeys.clear();
+    }
+  }
+
   private onKeyDown = (e: KeyboardEvent) => {
+    if (!this.inputEnabled) return;
     if (PREVENT_DEFAULT_KEYS.has(e.code)) {
       e.preventDefault();
     }
