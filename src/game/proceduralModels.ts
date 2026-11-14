@@ -459,10 +459,13 @@ export function createSpaceStationAlpha(): {
 /**
  * 8-Bit Holographic Vector Waypoint Gate
  */
-export function createWaypointRing(_index: number, position: THREE.Vector3): {
+export function createWaypointRing(index: number, position: THREE.Vector3): {
   group: THREE.Group;
   passed: boolean;
   radius: number;
+  halo: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>;
+  beacon: THREE.PointLight;
+  phase: number;
 } {
   const group = new THREE.Group();
   group.position.copy(position);
@@ -480,6 +483,22 @@ export function createWaypointRing(_index: number, position: THREE.Vector3): {
   const ringMesh = new THREE.Mesh(ringGeo, ringMat);
   group.add(ringMesh);
 
+  // A separate outer guide pulses without changing the collision radius.
+  const halo = new THREE.Mesh(
+    new THREE.TorusGeometry(7.4, 0.09, 3, 24),
+    new THREE.MeshBasicMaterial({ color: 0xffb000, transparent: true, opacity: 0.3, depthWrite: false }),
+  );
+  group.add(halo);
+  const markerGeometry = new THREE.BoxGeometry(0.25, 1.2, 0.25);
+  const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xffb000 });
+  for (let i = 0; i < 6; i++) {
+    const angle = i * Math.PI / 3;
+    const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+    marker.position.set(Math.sin(angle) * 7.6, Math.cos(angle) * 7.6, 0);
+    marker.rotation.z = -angle;
+    group.add(marker);
+  }
+
   // Retro Chevron directional arrows
   for (let c = 0; c < 3; c++) {
     const chevronGeo = new THREE.ConeGeometry(0.9, 1.4, 4);
@@ -496,6 +515,9 @@ export function createWaypointRing(_index: number, position: THREE.Vector3): {
     group,
     passed: false,
     radius: 6.8,
+    halo,
+    beacon: light,
+    phase: index * 1.2,
   };
 }
 
@@ -687,6 +709,35 @@ export function createCelestialEnvironment(): {
   planet.position.set(200, -820, -550);
   planet.rotation.y = 0.6;
   planet.rotation.x = 0.2;
+
+  const atmosphere = new THREE.Mesh(
+    new THREE.SphereGeometry(662, 32, 20),
+    new THREE.ShaderMaterial({
+      uniforms: { tint: { value: new THREE.Color(0x36bfff) } },
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vView;
+        void main() {
+          vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
+          vNormal = normalize(normalMatrix * normal);
+          vView = -viewPosition.xyz;
+          gl_Position = projectionMatrix * viewPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 tint;
+        varying vec3 vNormal;
+        varying vec3 vView;
+        void main() {
+          float rim = pow(1.0 - abs(dot(normalize(vNormal), normalize(vView))), 3.0);
+          gl_FragColor = vec4(tint, rim * 0.55);
+        }
+      `,
+      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+    }),
+  );
+  atmosphere.name = 'ProceduralAtmosphere';
+  planet.add(atmosphere);
 
   return {
     stars,

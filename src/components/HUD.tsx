@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { soundManager } from '../audio/soundManager.ts';
+import { audioEngine } from '../game/audioEngine.ts';
 import { TelemetryData } from '../types/game.ts';
 import { PixelBadge } from './PixelBadge.tsx';
 
@@ -34,7 +34,7 @@ export const HUD: React.FC<HUDProps> = ({
     if (telemetry.stage !== prevStageRef.current) {
       prevStageRef.current = telemetry.stage;
       setShowAnnouncement(true);
-      soundManager.playRadioDispatch();
+      audioEngine.playRadioDispatch();
     }
   }, [telemetry.stage]);
 
@@ -42,7 +42,7 @@ export const HUD: React.FC<HUDProps> = ({
     if (telemetry.stageTaskComplete && !prevTaskCompleteRef.current) {
       prevTaskCompleteRef.current = true;
       setShowAnnouncement(true);
-      soundManager.playRadioDispatch();
+      audioEngine.playRadioDispatch();
     } else if (!telemetry.stageTaskComplete) {
       prevTaskCompleteRef.current = false;
     }
@@ -151,7 +151,7 @@ export const HUD: React.FC<HUDProps> = ({
           <button
             onClick={() => {
               setShowAnnouncement((prev) => !prev);
-              if (!showAnnouncement) soundManager.playRadioDispatch();
+              if (!showAnnouncement) audioEngine.playRadioDispatch();
             }}
             className={`h-8 px-2.5 text-[9px] border flex items-center gap-1 cursor-pointer transition-none ${
               showAnnouncement
@@ -240,7 +240,7 @@ export const HUD: React.FC<HUDProps> = ({
           <button
             onClick={() => {
               setShowAnnouncement(true);
-              soundManager.playRadioDispatch();
+              audioEngine.playRadioDispatch();
             }}
             className="retro-btn-secondary px-3 py-1.5 text-[9px] text-[#00F0FF] border-2 border-[#00F0FF] bg-[#0d111a] shadow-[3px_3px_0_#000] flex items-center gap-2 cursor-pointer hover:bg-[#00F0FF] hover:text-[#050508]"
           >
@@ -558,6 +558,8 @@ export const HUD: React.FC<HUDProps> = ({
               onClick={onToggleMute}
               className="retro-btn-secondary h-8 px-2 text-[8px] text-[#A0AEC0] cursor-pointer"
               title="Toggle Audio [M]"
+              aria-label="Mute audio"
+              aria-pressed={telemetry.isMuted}
             >
               {telemetry.isMuted ? 'MUTE' : 'AUDIO'}
             </button>
