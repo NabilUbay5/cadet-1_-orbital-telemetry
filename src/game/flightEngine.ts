@@ -39,6 +39,25 @@ import {
 const RAD_TO_DEG = 180 / Math.PI;
 const PREVENT_DEFAULT_KEYS = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
+export function getMissionProgressCounters({
+  vectorRingsPassed,
+  energyCubesCollected,
+  oxygenCanistersCollected,
+}: {
+  vectorRingsPassed: number;
+  energyCubesCollected: number;
+  oxygenCanistersCollected: number;
+}) {
+  return {
+    telemetryPodsCollected: oxygenCanistersCollected,
+    totalTelemetryPods: 3,
+    energyCoresCollected: energyCubesCollected,
+    totalEnergyCores: STAGE2_REQUIRED_CUBES,
+    waypointsPassed: vectorRingsPassed,
+    totalWaypoints: STAGE1_TOTAL_RINGS,
+  };
+}
+
 export class FlightEngine {
   private container: HTMLElement;
   private renderer: THREE.WebGLRenderer;
@@ -383,14 +402,28 @@ export class FlightEngine {
     audioEngine.ensureRunning();
     audioEngine.playWaypointPass();
 
-    if (nextStage === 2) {
+    if (nextStage === 1) {
+      this.stabilizationTimer = 0;
+      this.vectorRingsPassedCount = 0;
+      this.waypointRings.forEach((ring) => {
+        ring.passed = false;
+        ring.group.visible = true;
+      });
+    } else if (nextStage === 2) {
       this.position.set(0, 15, 0);
       this.velocity.set(0, 0, -12);
       this.orientation.identity();
+      this.energyCubesCollectedCount = 0;
+      this.energyCubes.forEach((cube) => {
+        cube.collected = false;
+        cube.group.visible = true;
+      });
     } else if (nextStage === 3) {
       this.position.set(0, 25, -180);
       this.velocity.set(0, 0, -10);
       this.orientation.identity();
+      this.satelliteLockTimer = 0;
+      this.stage3Complete = false;
     }
     this.craftGroup.position.copy(this.position);
     this.craftGroup.quaternion.copy(this.orientation);
@@ -1009,6 +1042,12 @@ export class FlightEngine {
       });
     }
 
+    const missionProgress = getMissionProgressCounters({
+      vectorRingsPassed: this.vectorRingsPassedCount,
+      energyCubesCollected: this.energyCubesCollectedCount,
+      oxygenCanistersCollected: this.o2Cans.filter((canister) => canister.collected).length,
+    });
+
     const telemetry: TelemetryData = {
       metSeconds: this.metSeconds,
       velocity: Math.round(currentSpeed * 10) / 10,
@@ -1050,12 +1089,12 @@ export class FlightEngine {
       satelliteAlignment: Math.round(alignErrorDeg),
       satelliteLockProgress,
 
-      telemetryPodsCollected: this.energyCubesCollectedCount,
-      totalTelemetryPods: 3,
-      energyCoresCollected: this.stage1Complete ? 1 : 0,
-      totalEnergyCores: 3,
-      waypointsPassed: this.stage,
-      totalWaypoints: 3,
+      telemetryPodsCollected: missionProgress.telemetryPodsCollected,
+      totalTelemetryPods: missionProgress.totalTelemetryPods,
+      energyCoresCollected: missionProgress.energyCoresCollected,
+      totalEnergyCores: missionProgress.totalEnergyCores,
+      waypointsPassed: missionProgress.waypointsPassed,
+      totalWaypoints: missionProgress.totalWaypoints,
 
       hazardWarning,
       hazardDistance,

@@ -7,6 +7,7 @@ import {
   CertificationQuizModal,
   createQuizState,
   evaluateQuizResult,
+  randomizeQuestionAnswers,
   selectStageQuestions,
 } from '../CertificationQuizModal.tsx';
 import { TRIVIA_QUESTIONS } from '../../data/triviaBank.ts';
@@ -118,6 +119,27 @@ describe('CertificationQuizModal helper logic', () => {
     expect(firstSelection.map((question) => question.id)).not.toEqual(
       secondSelection.map((question) => question.id)
     );
+  });
+
+  test('reorders answer choices while preserving the correct answer', () => {
+    const question = {
+      id: 'shuffle-test',
+      stage: 1,
+      question: 'WHY?',
+      options: ['A', 'B', 'C', 'D'],
+      correctIndex: 2,
+      explanation: 'Because',
+      source: { title: 'NASA', url: 'https://science.nasa.gov/' },
+    } satisfies TriviaQuestion;
+
+    const sequence = [0.49, 0.49, 0.49];
+    let index = 0;
+    const shuffled = randomizeQuestionAnswers(question, () => sequence[index++] ?? 0.49);
+
+    expect(shuffled).not.toEqual(question);
+    expect(shuffled.options).toHaveLength(4);
+    expect(new Set(shuffled.options).size).toBe(4);
+    expect(shuffled.options[shuffled.correctIndex]).toBe(question.options[question.correctIndex]);
   });
 
   test('three correct answers pass and any incorrect answer fails', () => {

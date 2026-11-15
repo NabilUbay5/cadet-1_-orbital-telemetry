@@ -15,6 +15,36 @@ interface CertificationQuizModalProps {
   onClose: () => void;
 }
 
+function shuffleItems<T>(items: readonly T[], random: () => number = Math.random): T[] {
+  const shuffled = [...items];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
+export function randomizeQuestionAnswers(
+  question: TriviaQuestion,
+  random: () => number = Math.random
+): TriviaQuestion {
+  const shuffledOptions = shuffleItems(question.options, random) as [string, string, string, string];
+  const correctAnswer = question.options[question.correctIndex];
+  const correctIndex = shuffledOptions.indexOf(correctAnswer);
+
+  if (correctIndex === -1) {
+    return question;
+  }
+
+  return {
+    ...question,
+    options: shuffledOptions,
+    correctIndex,
+  };
+}
+
 export function selectStageQuestions(
   stage: MissionStage,
   stageQuestions: readonly TriviaQuestion[] = TRIVIA_QUESTIONS[stage],
@@ -32,15 +62,11 @@ export function selectStageQuestions(
     throw new RangeError(`Stage ${stage} requires at least three unique questions.`);
   }
 
-  for (let index = uniqueQuestions.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(random() * (index + 1));
-    [uniqueQuestions[index], uniqueQuestions[swapIndex]] = [
-      uniqueQuestions[swapIndex],
-      uniqueQuestions[index],
-    ];
-  }
+  const randomizedQuestions = shuffleItems(uniqueQuestions, random).map((question) =>
+    randomizeQuestionAnswers(question, random)
+  );
 
-  return uniqueQuestions.slice(0, 3);
+  return randomizedQuestions.slice(0, 3);
 }
 
 export function createQuizState() {
