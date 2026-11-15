@@ -51,14 +51,13 @@ const initialTelemetry: TelemetryData = {
   energyCubesCollected: 0,
   totalEnergyCubes: 3,
 
+  telemetryPodsCollected: 0,
+  totalTelemetryPods: 3,
+
   satelliteDistance: 340,
   satelliteAlignment: 0,
   satelliteLockProgress: 0,
 
-  telemetryPodsCollected: 0,
-  totalTelemetryPods: 3,
-  energyCoresCollected: 0,
-  totalEnergyCores: 3,
   waypointsPassed: 1,
   totalWaypoints: 3,
 

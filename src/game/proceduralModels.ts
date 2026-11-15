@@ -524,7 +524,6 @@ export function createWaypointRing(index: number, position: THREE.Vector3): {
 /**
  * 8-Bit Telemetry Research Data Pod (Rotating Octahedron)
  */
-// REVIEW: Potential unused method - verify dynamic references
 export function createTelemetryPod(position: THREE.Vector3): {
   group: THREE.Group;
   core: THREE.Mesh;

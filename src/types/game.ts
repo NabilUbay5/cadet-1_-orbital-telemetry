@@ -49,16 +49,15 @@ export interface TelemetryData {
   energyCubesCollected: number;
   totalEnergyCubes: number;
 
+  telemetryPodsCollected: number;
+  totalTelemetryPods: number;
+
   // Stage 3: Deep Space Navigation (Satellite Alignment)
   satelliteDistance: number;
   satelliteAlignment: number; // degrees
   satelliteLockProgress: number; // 0 - 100 %
 
   // Resource Matrix
-  telemetryPodsCollected: number;
-  totalTelemetryPods: number;
-  energyCoresCollected: number;
-  totalEnergyCores: number;
   waypointsPassed: number;
   totalWaypoints: number;
 

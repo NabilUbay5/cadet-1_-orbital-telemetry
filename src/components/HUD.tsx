@@ -460,6 +460,13 @@ export const HUD: React.FC<HUDProps> = ({
                   </div>
                 </div>
               )}
+
+              <div className="flex items-center justify-between border-t border-[#2A3B5C]/60 pt-1.5 mt-2 text-[8px] text-[#A0AEC0]">
+                <span>TELEMETRY PODS</span>
+                <span className="text-[#00F0FF]">
+                  {telemetry.telemetryPodsCollected} / {telemetry.totalTelemetryPods}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -489,6 +496,8 @@ export const HUD: React.FC<HUDProps> = ({
                   className={`absolute w-2 h-2 ${
                     blip.type === 'cube'
                       ? 'bg-[#00F0FF]'
+                      : blip.type === 'pod'
+                      ? 'bg-[#FFB000]'
                       : blip.type === 'satellite'
                       ? 'bg-[#00FF66] border border-[#FFFFFF]'
                       : 'bg-[#FF3344]'

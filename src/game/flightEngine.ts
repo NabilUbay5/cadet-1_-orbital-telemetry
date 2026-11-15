@@ -15,6 +15,7 @@ import {
   createOxygenCanister,
   createSatelliteRelay,
   createSpaceStationAlpha,
+  createTelemetryPod,
   createWaypointRing,
 } from './proceduralModels.ts';
 import { ExhaustParticles } from './exhaustParticles.ts';
@@ -22,11 +23,12 @@ import { FLIGHT_EPHEMERIS } from '../data/nasa/flightEphemeris.ts';
 import { FlightTelemetryLog } from './flightTelemetryLog.ts';
 import { FIXED_DT, FixedTimestep } from './fixedTimestep.ts';
 import { isTelemetryUpdateDue } from './telemetrySchedule.ts';
+import { createTelemetrySnapshot } from './telemetrySnapshot.ts';
+import { TelemetryPodTracker, TOTAL_TELEMETRY_PODS } from './telemetryPods.ts';
 import {
   STAGE1_TARGET_TIME,
   STAGE1_TOTAL_RINGS,
   STAGE2_REQUIRED_CUBES,
-  STAGE3_LOCK_TIME,
   applyRingBonus,
   isCraftLevel,
   isEnergyCubeInRange,
@@ -34,7 +36,6 @@ import {
   isSatelliteAligned,
   isSatelliteLockComplete,
   isStabilizationComplete,
-  progressPercent,
   stepSatelliteLockTimer,
   stepStabilizationTimer,
 } from './missionLogic.ts';
@@ -105,6 +106,8 @@ export class FlightEngine {
   private satelliteRelay: ReturnType<typeof createSatelliteRelay>;
   private waypointRings: Array<ReturnType<typeof createWaypointRing>> = [];
   private energyCubes: Array<ReturnType<typeof createEnergyCube>> = [];
+  private telemetryPods: Array<ReturnType<typeof createTelemetryPod>> = [];
+  private readonly telemetryPodTracker = new TelemetryPodTracker();
   private o2Cans: Array<ReturnType<typeof createOxygenCanister>> = [];
   private asteroids: Array<ReturnType<typeof createAsteroidDebris>> = [];
   private pulseSphere: THREE.Mesh | null = null;
@@ -290,6 +293,18 @@ export class FlightEngine {
       return cube;
     });
 
+    // Telemetry research pods are optional pickups distributed along the flight route.
+    const telemetryPodPositions = [
+      new THREE.Vector3(-18, 20, 45),
+      new THREE.Vector3(20, 32, -100),
+      new THREE.Vector3(-8, 28, -280),
+    ];
+    this.telemetryPods = telemetryPodPositions.slice(0, TOTAL_TELEMETRY_PODS).map((pos) => {
+      const pod = createTelemetryPod(pos);
+      this.scene.add(pod.group);
+      return pod;
+    });
+
     // 10. Oxygen Canisters
     const o2Positions = [
       new THREE.Vector3(18, 12, 60),
@@ -388,6 +403,10 @@ export class FlightEngine {
     this.energyCubes.forEach((c) => {
       c.collected = false;
       c.group.visible = true;
+    });
+    this.telemetryPodTracker.reset(this.telemetryPods);
+    this.telemetryPods.forEach((pod) => {
+      pod.group.visible = true;
     });
 
     this.satelliteLockTimer = 0;
@@ -645,6 +664,12 @@ export class FlightEngine {
         cube.wire.rotation.z += 1.5 * dt;
       }
     }
+    for (const pod of this.telemetryPods) {
+      if (!pod.collected) {
+        pod.core.rotation.y += 1.4 * dt;
+        pod.halo.rotation.z += 0.9 * dt;
+      }
+    }
 
     // Pulse Scanner Expansion
     if (this.pulseActive && this.pulseSphere) {
@@ -813,6 +838,14 @@ export class FlightEngine {
       }
     }
 
+    // Telemetry research pods
+    for (const pod of this.telemetryPods) {
+      if (this.telemetryPodTracker.collect(pod, this.position.distanceTo(pod.group.position))) {
+        pod.group.visible = false;
+        audioEngine.playItemCollect();
+      }
+    }
+
     // === STAGE SPECIFIC TASK LOGIC ===
 
     this._attitudeEuler.setFromQuaternion(this.orientation, 'YXZ');
@@ -977,30 +1010,6 @@ export class FlightEngine {
 
     const gForce = 1.0 + this.throttle * (this.isBoosting ? 4.2 : 2.1) + this.angularVelocity.length() * 1.5;
 
-    // Stage Task Progress Calculation
-    let stageTitle = '01 // GROUND SCHOOL';
-    let stageTaskTitle = 'STABILIZE FLIGHT GYROS';
-    let stageTaskProgress = progressPercent(this.stabilizationTimer, STAGE1_TARGET_TIME);
-    let stageTaskComplete = this.stage1Complete;
-    const satelliteLockProgress = progressPercent(this.satelliteLockTimer, STAGE3_LOCK_TIME);
-
-    if (this.stage === 2) {
-      stageTitle = '02 // ORBITAL ENTRY';
-      stageTaskTitle = 'HARVEST 3 ENERGY CUBES';
-      stageTaskProgress = progressPercent(this.energyCubesCollectedCount, STAGE2_REQUIRED_CUBES);
-      stageTaskComplete = this.stage2Complete;
-    } else if (this.stage === 3) {
-      stageTitle = '03 // DEEP SPACE';
-      stageTaskTitle = 'ALIGN SATELLITE TELEMETRY';
-      stageTaskProgress = satelliteLockProgress;
-      stageTaskComplete = this.stage3Complete;
-    }
-
-    let readiness = 15;
-    if (this.stage1Complete) readiness += 25;
-    if (this.stage2Complete) readiness += 30;
-    if (this.stage3Complete) readiness += 30;
-
     // Proximity Radar
     let hazardWarning = false;
     let hazardDistance = 999;
@@ -1022,6 +1031,18 @@ export class FlightEngine {
           y: -this._tmpVec.z / 120,
           type: 'hazard',
           distance: Math.round(dist),
+        });
+      }
+    }
+
+    for (const pod of this.telemetryPods) {
+      if (!pod.collected) {
+        this._tmpVec.subVectors(pod.group.position, this.position).applyQuaternion(craftInvQuat);
+        radarBlips.push({
+          x: this._tmpVec.x / 160,
+          y: -this._tmpVec.z / 160,
+          type: 'pod',
+          distance: Math.round(this.position.distanceTo(pod.group.position)),
         });
       }
     }
@@ -1063,13 +1084,7 @@ export class FlightEngine {
       });
     }
 
-    const missionProgress = getMissionProgressCounters({
-      vectorRingsPassed: this.vectorRingsPassedCount,
-      energyCubesCollected: this.energyCubesCollectedCount,
-      oxygenCanistersCollected: this.o2Cans.filter((canister) => canister.collected).length,
-    });
-
-    const telemetry: TelemetryData = {
+    const telemetry = createTelemetrySnapshot({
       metSeconds: this.metSeconds,
       velocity: Math.round(currentSpeed * 10) / 10,
       maxVelocity: 55,
@@ -1086,41 +1101,31 @@ export class FlightEngine {
       boostCharge: Math.round(this.boostCharge),
       isBoosting: this.isBoosting,
       throttle: Math.round(this.throttle * 100),
-      missionReadiness: readiness,
       cameraMode: this.cameraMode,
       flightAssist: this.flightAssist,
       isMuted: audioEngine.getIsMuted(),
 
       stage: this.stage,
-      stageTitle,
-      stageTaskTitle,
-      stageTaskProgress,
-      stageTaskComplete,
       badgesUnlocked: this.badgesUnlocked,
-
-      stabilizationProgress: stageTaskProgress,
+      stabilizationTimer: this.stabilizationTimer,
+      satelliteLockTimer: this.satelliteLockTimer,
+      stage1Complete: this.stage1Complete,
+      stage2Complete: this.stage2Complete,
+      stage3Complete: this.stage3Complete,
       isStabilized: this.isCraftStabilized,
       vectorRingsPassed: this.vectorRingsPassedCount,
-      totalVectorRings: STAGE1_TOTAL_RINGS,
 
       energyCubesCollected: this.energyCubesCollectedCount,
-      totalEnergyCubes: STAGE2_REQUIRED_CUBES,
+      telemetryPodsCollected: this.telemetryPodTracker.count,
 
       satelliteDistance: Math.round(distToSat),
       satelliteAlignment: Math.round(alignErrorDeg),
-      satelliteLockProgress,
 
-      telemetryPodsCollected: missionProgress.telemetryPodsCollected,
-      totalTelemetryPods: missionProgress.totalTelemetryPods,
-      energyCoresCollected: missionProgress.energyCoresCollected,
-      totalEnergyCores: missionProgress.totalEnergyCores,
-      waypointsPassed: missionProgress.waypointsPassed,
-      totalWaypoints: missionProgress.totalWaypoints,
 
       hazardWarning,
       hazardDistance,
       radarBlips: radarBlips.slice(0, 10),
-    };
+    });
 
     this.onTelemetryUpdate(telemetry);
   }
