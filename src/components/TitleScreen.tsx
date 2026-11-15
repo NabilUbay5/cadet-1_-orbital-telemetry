@@ -5,6 +5,7 @@
 
 import React, { useRef } from 'react';
 import { PixelBadge } from './PixelBadge.tsx';
+import { ProjectCredits } from './ProjectCredits.tsx';
 
 interface TitleScreenProps {
   researchBalance: number;
@@ -194,7 +195,8 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
           <span className="text-[#00F0FF]">W/S</span> THROTTLE · <span className="text-[#00F0FF]">A/D</span> YAW · <span className="text-[#00F0FF]">R/F</span> PITCH · <span className="text-[#00F0FF]">Q/E</span> ROLL · <span className="text-[#FFB000]">SHIFT</span> BOOST · <span className="text-[#00FF66]">SPACE</span> SCAN · <span className="text-[#FFFFFF]">C</span> CAM · <span className="text-[#FF3344]">ESC</span> PAUSE
         </div>
         <div className="text-[#8494AD] mt-1 md:mt-0">
-          © 1989 CADET-1 ARCADE LABS
+          CADET-1 · MIT · 2026
+          <div className="mt-2"><ProjectCredits /></div>
           <div className="mt-1 leading-relaxed">
             Font: <a href="https://fontstruct.com/fontstructions/show/2368299" target="_blank" rel="noreferrer" className="underline">Determination by anonymous-1438277</a>
             {' · '}<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer" className="underline">CC BY 3.0</a>

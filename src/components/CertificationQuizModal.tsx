@@ -172,10 +172,10 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
       aria-label={`Astronaut certification: stage ${stage}`}
       tabIndex={-1}
       data-selected-question-ids={selectedQuestionIds}
-      className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-40 pointer-events-auto font-pixel"
+      className="absolute inset-0 bg-[#050508]/92 flex items-start justify-center overflow-y-auto p-4 z-40 pointer-events-auto font-pixel"
     >
       {isPassed && <PixelConfetti />}
-      <div className="relative z-10 w-full max-w-xl retro-window p-6 bg-[#0d111a] border-2 border-[#00F0FF] shadow-[6px_6px_0_#000]">
+      <div className="relative z-10 my-auto shrink-0 w-full max-w-xl retro-window p-6 bg-[#0d111a] border-2 border-[#00F0FF] shadow-[6px_6px_0_#000]">
         {/* Terminal Header */}
         <div className="flex items-center justify-between border-b-2 border-[#2A3B5C] pb-3 mb-5">
           <div className="flex items-center gap-2">
@@ -184,7 +184,7 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
               [ASTRONAUT CERTIFICATION: STAGE {stage}]
             </span>
           </div>
-          <span className="text-[9px] text-[#FFB000] tracking-wider">EXAM GATEWAY</span>
+          <span className="hidden sm:inline text-[9px] text-[#FFB000] tracking-wider">EXAM GATEWAY</span>
         </div>
 
         {!quizFinished ? (

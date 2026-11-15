@@ -16,7 +16,7 @@ try {
   const errors = [];
   const externalRequests = [];
   page.on('pageerror', error => errors.push(error.message));
-  page.on('console', message => { if (message.type() === 'error') errors.push(`${message.text()} (${message.location().url})`); });
+  page.on('console', message => { if (message.type() === 'error' || message.type() === 'warning') errors.push(`${message.text()} (${message.location().url})`); });
   page.on('requestfailed', request => errors.push(`${request.failure()?.errorText}: ${request.url()}`));
   page.on('response', response => {
     if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`);
@@ -51,15 +51,22 @@ try {
   assert(log.samples.every(sample => Number.isFinite(sample.nasaReference?.distanceKm)
     && sample.nasaReference.distanceKm > 350000 && sample.nasaReference.distanceKm < 410000));
   await page.getByRole('button', { name: 'EXIT TO LOBBY', exact: true }).click();
-  await page.getByRole('button', { name: /OUTPOST OPS/ }).click();
-  await page.getByText(/1\.37 mSv per game day \(unverified input\)/).waitFor();
-  await page.getByText(/0\.64 mSv per sol \(unverified input\)/).waitFor();
-  await page.getByRole('button', { name: 'START MISSION', exact: true }).click();
-  await page.getByText('SUNLIGHT AT YOUR SITE', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'CREDITS & SOURCES', exact: true }).click();
+  await page.getByRole('dialog', { name: 'CREDITS & SOURCES', exact: true }).getByText('Research or Information Gathering', { exact: true }).waitFor();
+  await page.keyboard.press('Escape');
+  for (const destination of ['THE MOON', 'MARS']) {
+    await page.getByRole('button', { name: /OUTPOST OPS/ }).click();
+    await page.getByText(/1\.37 mSv per game day \(unverified input\)/).waitFor();
+    await page.getByText(/0\.64 mSv per sol \(unverified input\)/).waitFor();
+    await page.getByRole('button').filter({ has: page.getByText(destination, { exact: true }) }).click();
+    await page.getByRole('button', { name: 'START MISSION', exact: true }).click();
+    await page.getByText('SUNLIGHT AT YOUR SITE', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'EXIT', exact: true }).click();
+  }
   assert.deepEqual(externalRequests, []);
   assert.deepEqual(errors, []);
   console.log('PASS: fresh production load from local server without external requests;');
-  console.log('disconnected NASA replay, real flight-log download with provenance, and Outpost Ops.');
+  console.log('disconnected NASA replay, real flight-log download with provenance, and Moon/Mars Outpost Ops with bundled credits.');
   console.log('Scope: local serving supports offline launch; remote-site offline reload requires an app cache, which is not provided.');
 } finally {
   await browser.close();

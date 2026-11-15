@@ -100,7 +100,7 @@ export class FlightEngine {
   private camera: THREE.PerspectiveCamera;
   private isSoftwareGl: boolean = false;
   private frameId: number = 0;
-  private clock: THREE.Clock = new THREE.Clock();
+  private readonly timer = new THREE.Timer();
   private readonly timestep = new FixedTimestep();
   private readonly flightLog = new FlightTelemetryLog();
 
@@ -399,7 +399,8 @@ export class FlightEngine {
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('blur', this.onWindowBlur);
 
-    this.clock.start();
+    this.timer.connect(document);
+    this.timer.reset();
     this.startLoop();
   }
 
@@ -717,7 +718,8 @@ export class FlightEngine {
     const tick = () => {
       // Fixed-timestep accumulator: the frame delta is clamped to MAX_FRAME_DT and
       // consumed in FIXED_DT slices, so physics is refresh-rate independent.
-      const steps = this.timestep.advance(this.clock.getDelta());
+      this.timer.update();
+      const steps = this.timestep.advance(this.timer.getDelta());
       for (let i = 0; i < steps; i++) {
         this.updateSimulation(FIXED_DT);
       }
@@ -814,7 +816,7 @@ export class FlightEngine {
     }
 
     if (this.gameState === 'TITLE') {
-      const time = this.clock.getElapsedTime();
+      const time = this.timer.getElapsed();
       this.craftGroup.position.set(0, Math.sin(time * 0.8) * 0.5, 150);
       this.craftGroup.rotation.set(0, Math.sin(time * 0.4) * 0.25, Math.cos(time * 0.5) * 0.08);
 
@@ -1368,6 +1370,7 @@ export class FlightEngine {
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('blur', this.onWindowBlur);
 
+    this.timer.dispose();
     audioEngine.dispose();
     this.exhaust.dispose();
     this.reducedMotionQuery?.removeEventListener('change', this.onReducedMotionChange);
