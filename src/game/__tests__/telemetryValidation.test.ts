@@ -104,10 +104,10 @@ describe('isValidTelemetryData', () => {
       getMissionProgressCounters({
         vectorRingsPassed: 2,
         energyCubesCollected: 1,
-        oxygenCanistersCollected: 3,
+        telemetryPodsCollected: 2,
       })
     ).toEqual({
-      telemetryPodsCollected: 3,
+      telemetryPodsCollected: 2,
       totalTelemetryPods: 3,
       energyCoresCollected: 1,
       totalEnergyCores: 3,

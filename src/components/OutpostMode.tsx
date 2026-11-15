@@ -33,6 +33,7 @@ import {
   newOutpost,
   nextLightChange,
   openCrate,
+  displayedResourceNet,
   projectedDose,
   startDay,
   usedBlocks,
@@ -192,7 +193,8 @@ const Bar: React.FC<{ pct: number; color: string; h?: number }> = ({ pct, color,
   </div>
 );
 
-function daysLeft(stock: number, net: number, remaining: number): { label: string; color: string } {
+function daysLeft(stock: number, cap: number, net: number, remaining: number): { label: string; color: string } {
+  if (stock >= cap && net >= 0) return { label: 'FULL', color: C.green };
   if (net > 0.05) return { label: 'GROWING', color: C.green };
   if (net >= -0.05) return { label: 'STEADY', color: C.green };
   const d = stock / -net;
@@ -201,14 +203,15 @@ function daysLeft(stock: number, net: number, remaining: number): { label: strin
 }
 
 const Gauge: React.FC<{ label: string; hint: string; color: string; value: number; cap: number; unit: string; net: number; remaining: number }> = ({ label, hint, color, value, cap, unit, net, remaining }) => {
-  const st = daysLeft(value, net, remaining);
+  const displayNet = displayedResourceNet(value, cap, net);
+  const st = daysLeft(value, cap, net, remaining);
   return (
     <div className="space-y-1">
       <div className="flex justify-between gap-2"><span style={{ color }} className="font-bold">{label}</span><span className="tabular-nums">{Math.round(value)}<span className="text-[#A0AEC0]"> / {cap} {unit}</span></span></div>
       <div className="text-[12px] text-[#A0AEC0]">{hint}</div>
       <Bar pct={(value / cap) * 100} color={color} />
       <div className="flex justify-between gap-2 text-[12px]">
-        <span style={{ color: net >= 0 ? C.green : C.amber }}>{net >= 0 ? '+' : '−'}{Math.abs(net).toFixed(1)} / day</span>
+        <span style={{ color: displayNet >= 0 ? C.green : C.amber }}>{displayNet >= 0 ? '+' : '−'}{Math.abs(displayNet).toFixed(1)} / day</span>
         <span className="font-pixel text-[9px] px-1.5 py-0.5 border" style={{ color: st.color, borderColor: st.color }}>{st.label}</span>
       </div>
     </div>

@@ -49,15 +49,15 @@ const PREVENT_DEFAULT_KEYS = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLef
 export function getMissionProgressCounters({
   vectorRingsPassed,
   energyCubesCollected,
-  oxygenCanistersCollected,
+  telemetryPodsCollected,
 }: {
   vectorRingsPassed: number;
   energyCubesCollected: number;
-  oxygenCanistersCollected: number;
+  telemetryPodsCollected: number;
 }) {
   return {
-    telemetryPodsCollected: oxygenCanistersCollected,
-    totalTelemetryPods: 3,
+    telemetryPodsCollected,
+    totalTelemetryPods: TOTAL_TELEMETRY_PODS,
     energyCoresCollected: energyCubesCollected,
     totalEnergyCores: STAGE2_REQUIRED_CUBES,
     waypointsPassed: vectorRingsPassed,

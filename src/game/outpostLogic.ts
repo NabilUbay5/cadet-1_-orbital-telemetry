@@ -131,6 +131,9 @@ export function nextRandom(s: { rngState: number }): number {
 }
 
 export const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+export function displayedResourceNet(stock: number, cap: number, net: number): number {
+  return net > 0 ? Math.min(net, Math.max(0, cap - stock)) : net;
+}
 export const aboard = (s: OutpostState) => s.crew.filter((c) => c.aboard);
 export const working = (s: OutpostState, k: FailableKey) => Math.max(0, s.modules[k] - s.broken[k]);
 export const brokenTotal = (s: OutpostState) => FAILABLE.reduce((t, k) => t + s.broken[k], 0);
