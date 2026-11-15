@@ -8,6 +8,7 @@ import { HORIZONS_SNAPSHOT } from '../data/nasa/horizonsSnapshot.ts';
 import { claimResearchReward } from '../game/researchBank.ts';
 import { OutpostScene } from './OutpostScene.tsx';
 import { FlightDirector } from './FlightDirector.tsx';
+import { SimulationPreview } from './SimulationPreview.tsx';
 import { playOutpostControl } from '../audio/outpostAudio.ts';
 import { audioEngine } from '../game/audioEngine.ts';
 import {
@@ -221,6 +222,7 @@ const SetupScreen: React.FC<{
           Keep 4 astronauts alive for 30 days. Balance power, oxygen, water, food and radiation shielding.
           Day and night at your site come from real NASA/JPL Horizons data.
         </p>
+        <SimulationPreview mode="outpost" />
         <div className="grid sm:grid-cols-2 gap-3">
           {(['moon', 'mars'] as const).map((d) => (
             <button key={d} className={card(setup.dest === d)} onClick={() => setSetup({ ...setup, dest: d })} aria-pressed={setup.dest === d}>

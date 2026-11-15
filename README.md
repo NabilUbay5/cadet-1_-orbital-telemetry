@@ -193,6 +193,7 @@ The same categories and documented tools are available in the lobby's
 - The Outpost Ops mode was drafted with an AI coding assistant (Claude Code) and reviewed by the team: the game rules ([outpostLogic.ts](src/game/outpostLogic.ts)), its screen ([OutpostMode.tsx](src/components/OutpostMode.tsx)), its tests, the Horizons fetch script, and the related README text. The Horizons snapshot itself is NASA/JPL data, not AI-generated.
 - GitHub Copilot assisted with the expanded certification question pool, NASA source links, question selection, and quiz interaction tests. Each displayed question links to its cited source.
 - OpenAI Codex assisted with the pooled Flight Academy starfall effect (PR #48), camera projection, lifecycle integration, tests and documentation.
+- OpenAI Codex assisted with refreshed Simulation Preview copy, reusable preview dialogs, actual browser captures and capture metadata.
 - OpenAI Codex assisted with responsive mobile HUD minimization, touch layouts, source attribution, SI disclosure alignment and final demo verification.
 - OpenAI Codex assisted with the Outpost HUD redesign, collapsible telemetry, Flight Director notifications, synthesized interaction cues, and their tests/documentation.
 - OpenAI Codex assisted with the final release audit, removal of unused dependencies/configuration, build chunking, offline browser verification, and submission documentation.
@@ -225,31 +226,30 @@ Team-provided deadline: **Sunday, November 15, 2026 at 11:59 PM, Asia/Kuala_Lump
 The engine owns the simulation state and renders the Three.js scene. It sends telemetry and mission callbacks to React, which manages the HUD, quizzes, and modals. Keyboard events and HUD callbacks control the engine.
 
 ```text
-+---------------------------------------------------------------+
-| CADET-1 ARCHITECTURE                                          |
-|                                                               |
-| Keyboard / HUD controls                                       |
-|            |                                                  |
-|            v                                                  |
-| +-------------------------+       +-------------------------+ |
-| | FlightEngine            |------>| Three.js renderer       | |
-| | Physics + mission state |       | Scene + camera + canvas | |
-| +-------------------------+       +-------------------------+ |
-|            |                                                  |
-|            | telemetry callbacks                              |
-|            v                                                  |
-| +-------------------------+       +-------------------------+ |
-| | React state (App)       |------>| HUD + quizzes + modals  | |
-| | Updates >= 45 ms apart  |       | React + Tailwind CSS    | |
-| +-------------------------+       +-------------------------+ |
-+---------------------------------------------------------------+
+                    LOBBY / MODE SELECTION
+                  Determination · React UI
+                         /          \
+                        /            \
+     OUTPOST OPS (main)                FLIGHT ACADEMY (bonus)
+     Moon / Mars · 30 turns             Fixed-step FlightEngine
+               |                                |
+     Horizons site sunlight             3 flight tasks + quiz gates
+               |                                |
+     Resource / crew forecasts          Three.js · camera-relative starfall
+               |                                |
+     Habitat canvas + tactical HUD      Full / minimized HUD + directive pill
+     Collapsible drawers + comms        Telemetry pods → RP
+                                        Horizons Moon/Earth reference → JSON log
 ```
+
+This is a functional architecture diagram, not a reproduction of the screen.
+NASA vectors feed the flight **reference replay**; the craft uses arcade physics.
 
 ### Key Architectural Decisions
 
 | Decision                         | Implementation                                                                                                                                                                         |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Zero-allocation hot path**     | Physics, collision, camera, and radar math reuse `private readonly` Vector3/Quaternion/Euler scratch fields; per-step input clearing uses `Set.clear()`. Only the telemetry snapshot sent to React is allocated, once per frame. |
+| **Zero-allocation hot path**     | Physics, collision, camera, and radar math reuse `private readonly` Vector3/Quaternion/Euler scratch fields; per-step input clearing uses `Set.clear()`. Telemetry snapshots and one-second flight-log records allocate outside the physics substeps. |
 | **Fixed-timestep accumulator**   | Frame delta is clamped to 0.05 s and consumed in `FIXED_DT = 1/60 s` steps ([fixedTimestep.ts](src/game/fixedTimestep.ts)), so damping, thrust, and stage timers match at any refresh rate. |
 | **Pure mission rules**           | Stage thresholds live in allocation-free scalar functions ([missionLogic.ts](src/game/missionLogic.ts)) shared by the engine and the unit tests.                                      |
 | **Strict TypeScript**            | `"strict": true` in `tsconfig.json`; no `any` or `@ts-ignore`.                                                                                                                         |
@@ -262,44 +262,89 @@ The engine owns the simulation state and renders the Three.js scene. It sends te
 
 ## 🎮 Simulation Preview
 
-These previews are captured from the running application in Chromium with software WebGL.
-The GIF is a **9-second, silent, accelerated visual preview** of thrust/boost, scanner,
-and camera modes; it is not a complete three-stage mission walkthrough.
+The lobby's **SIMULATION PREVIEW** links, Outpost setup and flight pause dialog
+use shared [mode descriptions](src/data/simulationPreviews.ts). These captures show
+the current UI with the bundled **Determination** font, not concept artwork.
 
-![Flight effects preview](public/assets/demo-preview.gif)
+**Outpost Ops — main mode, Moon & Mars**
 
-| View | Preview |
+- Compact crew/life-support bars, collapsible Sunlight / Power Budget / Mission
+  Log drawers, and chamfered buttons, notched tabs and hexagonal `clip-path` steppers.
+- Active Flight Director comms: typewriter text, radar-style alert/ping, tap-to-reveal,
+  synthesized incoming/typing/control cues, and global mute.
+- Bundled NASA/JPL Horizons day/night, including about 14 Earth days of lunar night;
+  crew allocation and resource forecasts; shielding, flares, storms and breakdowns.
+  Radiation rates/hazard effects are scenario assumptions, not NASA safety limits.
+
+**Flight Academy — three flight stages and certification**
+
+- Gyro stabilization → energy-cube retrieval through debris → satellite docking /
+  telemetry alignment. A three-question certification gate follows each stage.
+- Portrait/landscape HUD minimization retains the compact stage and active-directive
+  pill; the full HUD remains available on demand, alongside touch controls.
+- Pooled camera-relative shooting stars every **10 active flight seconds**, telemetry
+  pods worth **100 RP each**, and bundled Moon/Earth orbital reference replay.
+  Pauses freeze starfall/MET; reduced motion suppresses the streak.
+
+![Actual Moon, Mars and Flight Academy montage](public/assets/demo-preview.gif)
+
+The GIF is a **9-second, silent, accelerated montage** of 72 actual application
+frames (Moon, Mars, then Flight Academy), not a complete mission or a measurement
+of simulation frame rate. Sound cues occur in the app; the GIF contains no audio.
+
+| Current view | Actual capture |
 | --- | --- |
-| **Telemetry HUD / boost exhaust** | ![Telemetry HUD](public/assets/telemetry-hud.png) |
-| **Orbital camera / planetary limb** | ![Orbital view](public/assets/orbital-view.png) |
+| **Lobby / mode selection** — Outpost main mode, Academy bonus and preview links | ![Lobby with Determination typography and current mode descriptions](public/assets/lobby-preview.png) |
+| **Moon tactical HUD** — habitat, compact vitals, comms and collapsed drawers | ![Moon Outpost Ops tactical HUD and Flight Director transmission](public/assets/outpost-moon.png) |
+| **Mars tactical HUD** — site sunlight, resource forecasts and crew orders | ![Mars Outpost Ops HUD with current forecast and command controls](public/assets/outpost-mars.png) |
+| **Full Flight Academy HUD** — NASA reference, lives, pods/RP and natural starfall | ![Current full flight HUD and shooting star](public/assets/telemetry-hud.png) |
+| **Orbit camera** — spacecraft, planetary limb and current HUD | ![Current orbit camera and telemetry panels](public/assets/orbital-view.png) |
+| **Portrait touch HUD** — persistent stage/directive pill | ![Portrait minimized Flight Academy HUD and touch controls](public/assets/academy-mobile-portrait.png) |
+| **Landscape touch HUD** — clear flight viewport and compact directive | ![Landscape minimized Flight Academy HUD and touch controls](public/assets/academy-mobile-landscape.png) |
+| **Certification gate** — current scrollable quiz dialog | ![Actual Stage 1 certification quiz using Determination](public/assets/certification-quiz.png) |
 
-Additional cockpit, radar, and certification close-ups remain planned captures.
-These repository assets support a project demonstration; they do not establish award
-eligibility or replace checking the official submission format and public access.
+Desktop PNGs are **1920 × 1080**; mobile PNGs are **390 × 844** and **844 × 390**.
+The GIF scales to **800 × 450** with nearest-neighbor sampling. Capture time,
+source base revision/working-tree status, renderer, per-image dimensions and test
+count are recorded in [preview-metadata.json](public/assets/preview-metadata.json).
+The certification still uses controlled task entry to reach the actual quiz UI;
+other captures use real navigation and naturally elapsed starfall timing.
+The hero banner is an illustrative project diagram, not a UI screenshot.
 
-### Capturing Assets
+### Capturing assets and verifying counts
 
-The capture script exercises the actual UI and writes the three assets above. Run
-from the repository root, with the development server running in another terminal:
+Verified November 15, 2026: **196 tests pass across 21 files** (`bun test`), with
+strict TypeScript/build checks passing. This is a dated verification snapshot,
+not a promise that future commits retain the same count. Refresh it with captures.
+
+With the Vite development server running:
 
 ```bash
+bun test
 bun run dev
 
 # Install capture-only tooling outside the checkout; app dependencies stay unchanged.
 npm install --prefix /tmp/cadet-capture-tools --no-package-lock playwright-core@1.65.1
+# Set the count from the freshly completed test run.
 PLAYWRIGHT_MODULE=/tmp/cadet-capture-tools/node_modules/playwright-core/index.mjs \
-  CHROMIUM_PATH=/usr/bin/chromium node scripts/capture-previews.mjs
-
-# Browser audio and control checks (same tooling, running dev server)
-PLAYWRIGHT_MODULE=/tmp/cadet-capture-tools/node_modules/playwright-core/index.mjs \
-  CHROMIUM_PATH=/usr/bin/chromium node scripts/verify-audio.mjs
+  CHROMIUM_PATH=/usr/bin/chromium PREVIEW_TEST_COUNT=196 node scripts/capture-previews.mjs
 ```
 
-Capturing requires Node 24, Chromium with WebGL2 (SwiftShader is supported), and
-FFmpeg on PATH. `APP_URL` optionally selects another running development server.
-PNG screenshots are 1280 × 800; the GIF samples 72 real browser frames at 8 fps
-and scales them to 800 × 500. Sampling/rendering time varies by machine, so GIF
-playback is accelerated rather than a measurement of simulation frame rate.
+Node 24, Chromium/WebGL2 and FFmpeg are required. `APP_URL` selects another Vite
+server. The script waits for the self-hosted font, records Moon/Mars and flight
+frames, waits for an unmodified 10-second-MET starfall, and writes eight PNGs,
+the GIF and metadata. Captures use Chromium/SwiftShader; rendering speed varies.
+They support the demonstration but do not replace a public video/slides link or
+establish award eligibility. Check capture dimensions/GIF frame count, served
+images, keyboard focus return and lobby/setup/pause preview links with:
+
+```bash
+PLAYWRIGHT_MODULE=/path/to/playwright-core/index.mjs \
+  APP_URL=http://127.0.0.1:3000 node scripts/verify-previews.mjs
+```
+
+This check also runs against a production preview or Pages subpath. It requires
+FFprobe (bundled with FFmpeg) to validate the GIF frame count.
 
 ### Outpost command HUD
 
@@ -387,155 +432,32 @@ browser captures of the application, not generated illustrations.
 
 ---
 
-## ⚙ Core Simulation Engine Example
+## ⚙ Simulation orchestration
 
-The following is an **illustrative, condensed excerpt** of the flight and stage logic. It omits resource handling, audio, collision responses, and some state updates. See [flightEngine.ts](src/game/flightEngine.ts) for the complete implementation.
+The live implementation uses a fixed-step flight engine and separate turn-based
+outpost rules. This condensed frame orchestration shows the current integration;
+input, collision handling, scheduling and resource details are omitted:
 
 ```typescript
-// src/game/flightEngine.ts (excerpt: updateSimulation)
-// 6-DOF Newtonian flight physics with stage-gated mission progression.
-// Called once per FIXED_DT (1/60 s) step by the fixed-timestep accumulator.
+// FlightEngine frame orchestration (condensed; see flightEngine.ts).
+this.timer.update();
+const steps = this.timestep.advance(this.timer.getDelta());
+for (let i = 0; i < steps; i++) this.updateSimulation(FIXED_DT);
+this.flushTelemetry();
+this.captureTelemetryLog();
+this.render(); // Rebinds pooled starfall to the final camera, then renders Three.js.
 
-private updateSimulation(dt: number) {
-  // ── 1. ENVIRONMENTAL ROTATIONS ──────────────────────────────────────
-  if (this.stationAlpha) {
-    this.stationAlpha.rotatingRing.rotation.z += 0.08 * dt;
-  }
-  if (this.satelliteRelay) {
-    this.satelliteRelay.group.rotation.y += 0.15 * dt;
-  }
-
-  // Tumble asteroid debris field
-  for (const ast of this.asteroids) {
-    ast.mesh.rotation.x += ast.rotationSpeed.x * dt;
-    ast.mesh.rotation.y += ast.rotationSpeed.y * dt;
-    ast.mesh.rotation.z += ast.rotationSpeed.z * dt;
-  }
-
-  // ── 2. INPUT → ANGULAR VELOCITY ─────────────────────────────────────
-  const held = this.heldKeys;
-  let yawInput = 0, pitchInput = 0, rollInput = 0;
-
-  if (held['keya'] || held['arrowleft'])  yawInput += 1;
-  if (held['keyd'] || held['arrowright']) yawInput -= 1;
-  if (held['keyr']) pitchInput -= 1;
-  if (held['keyf']) pitchInput += 1;
-  if (held['keyq']) rollInput += 1;
-  if (held['keye']) rollInput -= 1;
-
-  const TURN_RATE = 1.4;
-  this.angularVelocity.y += yawInput   * TURN_RATE * dt;
-  this.angularVelocity.x += pitchInput * TURN_RATE * dt;
-  this.angularVelocity.z += rollInput  * (TURN_RATE * 1.5) * dt;
-
-  // Flight assist damping (damped harmonic oscillator approximation)
-  const rotDamp = this.flightAssist ? 0.88 : 0.97;
-  this.angularVelocity.multiplyScalar(Math.pow(rotDamp, dt * 60));
-
-  // Quaternion integration (YXZ order = aerospace convention)
-  this._deltaEuler.set(
-    this.angularVelocity.x * dt,
-    this.angularVelocity.y * dt,
-    this.angularVelocity.z * dt,
-    'YXZ'
-  );
-  this._deltaQuat.setFromEuler(this._deltaEuler);
-  this.orientation.multiply(this._deltaQuat);
-  this.craftGroup.quaternion.copy(this.orientation);
-
-  // ── 3. THRUST → LINEAR ACCELERATION (reused scratch vector, no allocation) ──
-  const speedMultiplier = this.isBoosting ? 65 : 38;  // m/s²
-  this._forwardVec.set(0, 0, -1).applyQuaternion(this.orientation);
-  this.velocity.addScaledVector(this._forwardVec, this.throttle * speedMultiplier * dt);
-
-  // Linear drag when flight assist engaged
-  if (this.flightAssist) {
-    const linearDamp = 0.975;
-    this.velocity.multiplyScalar(Math.pow(linearDamp, dt * 60));
-  }
-
-  // Position integration
-  this.position.addScaledVector(this.velocity, dt);
-  this.craftGroup.position.copy(this.position);
-
-  // ── 4. STAGE-SPECIFIC TASK LOGIC ────────────────────────────────────
-  // Extract Euler angles for stability assessment
-  this._attitudeEuler.setFromQuaternion(this.orientation, 'YXZ');
-  const pitchDeg = this._attitudeEuler.x * RAD_TO_DEG;
-  const yawDeg   = this._attitudeEuler.y * RAD_TO_DEG;
-
-  // STAGE 1: Ground School — Gyro Stabilization (±4.5° for 4s)
-  if (this.stage === 1 && !this.stage1Complete) {
-    // Gravitational turbulence perturbs attitude
-    const turbPitch = Math.sin(this.metSeconds * 1.8) * 0.16;
-    const turbYaw   = Math.cos(this.metSeconds * 1.4) * 0.16;
-    this.angularVelocity.x += turbPitch * dt;
-    this.angularVelocity.y += turbYaw   * dt;
-
-    const isLevel = Math.abs(pitchDeg) <= 4.5 && Math.abs(yawDeg) <= 4.5;
-    this.isCraftStabilized = isLevel;
-
-    if (isLevel) {
-      this.stabilizationTimer += dt;
-      if (this.stabilizationTimer >= this.targetStabilizationTime) {
-        this.stage1Complete = true;
-        this.onStageTaskCompleted?.(1);  // → Triggers certification quiz
-      }
-    } else {
-      this.stabilizationTimer = Math.max(0, this.stabilizationTimer - dt * 0.5);
-    }
-
-    // Waypoint rings give +1s calibration boost
-    for (const ring of this.waypointRings) {
-      if (!ring.passed && this.position.distanceTo(ring.group.position) < ring.radius) {
-        ring.passed = true; ring.group.visible = false;
-        this.vectorRingsPassedCount++;
-        this.stabilizationTimer = Math.min(this.targetStabilizationTime, this.stabilizationTimer + 1.0);
-      }
-    }
-  }
-
-  // STAGE 2: Orbital Entry — Harvest 3 Energy Cubes
-  if (this.stage === 2 && !this.stage2Complete) {
-    for (const cube of this.energyCubes) {
-      if (!cube.collected && this.position.distanceTo(cube.group.position) < 5.0) {
-        cube.collected = true; cube.group.visible = false;
-        this.energyCubesCollectedCount++;
-        if (this.energyCubesCollectedCount >= 3) {
-          this.stage2Complete = true;
-          this.onStageTaskCompleted?.(2);
-        }
-      }
-    }
-  }
-
-  // STAGE 3: Deep Space — Satellite Telemetry Alignment
-  const satPos = this.satelliteRelay.group.position;
-  const distToSat = this.position.distanceTo(satPos);
-
-  // Heading error between craft forward and vector-to-satellite
-  this._toTargetVec.subVectors(satPos, this.position).normalize();
-  this._forwardVec.set(0, 0, -1).applyQuaternion(this.orientation);
-  const alignDot = THREE.MathUtils.clamp(this._forwardVec.dot(this._toTargetVec), -1, 1);
-  const alignErrorDeg = Math.acos(alignDot) * RAD_TO_DEG;
-
-  if (this.stage === 3 && !this.stage3Complete) {
-    if (distToSat < 45 && alignErrorDeg < 8.0) {
-      this.satelliteLockTimer += dt;
-      if (this.satelliteLockTimer >= 3.0) {
-        this.stage3Complete = true;
-        this.onStageTaskCompleted?.(3);
-      }
-    } else {
-      this.satelliteLockTimer = Math.max(0, this.satelliteLockTimer - dt * 0.6);
-    }
-  }
-
-  // ── 5. TELEMETRY ────────────────────────────────────────────────────
-  // Readings are cached here and emitted once per rendered frame by flushTelemetry().
-  this.telemetryPending = true;
-}
+// Inside the active-flight simulation branch:
+this.metSeconds += dt;
+this.starfall.advance(dt); // Pauses with MET; mission reset clears its schedule.
 ```
+
+Allocation-free scalar stage rules live in [missionLogic.ts](src/game/missionLogic.ts).
+[Outpost rules](src/game/outpostLogic.ts) calculate sunlight-dependent power and
+crew/resource forecasts. The [screen](src/components/OutpostMode.tsx) and
+[Flight Director](src/components/FlightDirector.tsx) read those results. The
+[preview descriptions](src/data/simulationPreviews.ts) describe these implemented
+features, with NASA reference data distinguished from game scenario assumptions.
 
 ### Telemetry Data Contract (`src/types/game.ts`)
 
@@ -747,7 +669,7 @@ cadet-1_-orbital-telemetry/
 ├── public/
 │   ├── banner.png                      # README banner
 │   ├── banner.svg                      # Editable banner source
-│   └── assets/                         # Planned preview captures
+│   └── assets/                         # Current app captures and capture metadata
 ├── src/
 │   ├── App.tsx                         # Engine lifecycle and React state
 │   ├── main.tsx                        # React entry point
@@ -922,7 +844,7 @@ Project maintainer: [@NabilUbay5](https://github.com/NabilUbay5)
 
 ### Visual Assets
 
-1. Capture screenshots/GIFs per **Simulation Preview** table
+1. Regenerate actual screenshots/GIF and metadata with `scripts/capture-previews.mjs` after `bun test`
 2. Save them under the exact filenames in `public/assets/` listed above. These six filenames are allowed by `.gitignore`; other local captures remain ignored.
 3. Replace the corresponding WIP status with an embed such as `![Telemetry HUD](./public/assets/telemetry-hud.png)` only after that file exists.
 4. Include both the image and README update in the same PR so GitHub can render the preview.

@@ -6,6 +6,8 @@
 import React, { useRef } from 'react';
 import { PixelBadge } from './PixelBadge.tsx';
 import { ProjectCredits } from './ProjectCredits.tsx';
+import { SimulationPreview } from './SimulationPreview.tsx';
+import { SIMULATION_PREVIEWS } from '../data/simulationPreviews.ts';
 
 interface TitleScreenProps {
   researchBalance: number;
@@ -80,13 +82,15 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
           {/* Featured mission: the outpost manager built for the Space Apps challenge */}
           <div className="border-2 border-[#FFB000] bg-[#FFB000]/10 p-3 mb-3">
             <div className="text-[10px] text-[#FFB000] font-bold mb-1">★ MAIN MISSION · OUTPOST OPS</div>
-            <div className="text-[11px] text-white leading-relaxed">Run a Moon or Mars base for 30 days.</div>
-            <div className="text-[10px] text-[#A0AEC0] leading-relaxed mt-1">Balance power, air, water, food and radiation shielding. Day and night come from real NASA/JPL Horizons data.</div>
+            <div className="text-[11px] text-white leading-relaxed">{SIMULATION_PREVIEWS.outpost.summary}</div>
+            <div className="text-[10px] text-[#A0AEC0] leading-relaxed mt-1">{SIMULATION_PREVIEWS.outpost.highlights}</div>
+            <SimulationPreview mode="outpost" />
           </div>
 
           <div className="mb-2">
             <div className="text-[9px] text-[#A0AEC0]">BONUS · FLIGHT ACADEMY (3 STAGES + QUIZZES)</div>
-            <div className="text-[9px] text-[#A0AEC0] mt-1 leading-relaxed">Pilot training for the supply ship that serves your outpost.</div>
+            <div className="text-[9px] text-[#A0AEC0] mt-1 leading-relaxed">{SIMULATION_PREVIEWS.academy.highlights}</div>
+            <SimulationPreview mode="academy" />
           </div>
 
           {/* 3-Stage Progression Roadmap */}
@@ -118,7 +122,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
                 <PixelBadge stage={3} size="sm" />
                 <div>
                   <div className="text-[9px] text-[#00FF66] font-bold">STAGE 3: DEEP SPACE NAVIGATION</div>
-                  <div className="text-[9px] text-[#A0AEC0]">Task: Point the ship at the satellite.</div>
+                  <div className="text-[9px] text-[#A0AEC0]">Task: Dock / align with the satellite relay.</div>
                 </div>
               </div>
               <span className="hidden sm:inline text-[8px] text-[#FFB000] shrink-0">[QUIZ GATE 3]</span>

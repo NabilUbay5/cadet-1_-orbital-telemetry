@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 2,
+  "capturedAtUtc": "2026-11-15T10:57:30.422Z",
+  "sourceBaseCommit": "86bcb06a0f47c8b6ece244152d3509bb3c37cfd7",
+  "includesWorkingTreeChanges": true,
+  "font": "Determination (self-hosted, anonymous-1438277, CC BY 3.0)",
+  "renderer": "Chromium WebGL2 / SwiftShader",
+  "verifiedUnitTestCount": 196,
+  "screenshots": [
+    {
+      "file": "lobby-preview.png",
+      "width": 1920,
+      "height": 1080,
+      "description": "Lobby: main Outpost mode, Flight Academy bonus, shared preview links and Determination typography."
+    },
+    {
+      "file": "outpost-moon.png",
+      "width": 1920,
+      "height": 1080,
+      "description": "THE MOON: day/sol 1, tactical HUD, collapsed drawers and revealed Flight Director transmission."
+    },
+    {
+      "file": "outpost-mars.png",
+      "width": 1920,
+      "height": 1080,
+      "description": "MARS: day/sol 1, tactical HUD, collapsed drawers and revealed Flight Director transmission."
+    },
+    {
+      "file": "telemetry-hud.png",
+      "width": 1920,
+      "height": 1080,
+      "description": "Desktop Flight Academy: full NASA reference HUD, RP/pods, lives and naturally triggered starfall."
+    },
+    {
+      "file": "orbital-view.png",
+      "width": 1920,
+      "height": 1080,
+      "description": "Orbit camera: current spacecraft, planetary limb and full flight HUD."
+    },
+    {
+      "file": "academy-mobile-portrait.png",
+      "width": 390,
+      "height": 844,
+      "description": "390×844 touch viewport: minimized HUD with persistent stage/directive pill and touch controls."
+    },
+    {
+      "file": "academy-mobile-landscape.png",
+      "width": 844,
+      "height": 390,
+      "description": "844×390 touch viewport: minimized landscape HUD, stage/directive pill and touch controls."
+    },
+    {
+      "file": "certification-quiz.png",
+      "width": 1920,
+      "height": 1080,
+      "description": "Actual Stage 1 certification dialog; entered using a controlled task trigger, not a full mission playthrough."
+    }
+  ],
+  "animation": {
+    "file": "demo-preview.gif",
+    "frames": 72,
+    "fps": 8,
+    "durationSeconds": 9,
+    "width": 800,
+    "height": 450,
+    "audio": "silent",
+    "scope": "Sampled actual Moon, Mars and Flight Academy frames; accelerated montage, not measured frame rate or a full mission."
+  }
+}

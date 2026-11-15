@@ -30,5 +30,11 @@ public/assets/*
 !public/assets/cockpit-view.png
 !public/assets/radar-scope.png
 !public/assets/certification-quiz.png
+!public/assets/outpost-moon.png
+!public/assets/outpost-mars.png
+!public/assets/academy-mobile-portrait.png
+!public/assets/academy-mobile-landscape.png
+!public/assets/lobby-preview.png
+!public/assets/preview-metadata.json
 
 .wikirc.yaml
