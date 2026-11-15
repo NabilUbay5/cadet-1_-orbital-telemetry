@@ -82,19 +82,13 @@ export default function App() {
   useEffect(() => {
     if (!canvasMountRef.current) return;
 
-    let lastUpdate = 0;
     const engine = new FlightEngine(canvasMountRef.current, {
       onTelemetryUpdate: (data) => {
         if (!isValidTelemetryData(data)) {
           console.error('Flight engine emitted invalid telemetry; update skipped.', data);
           return;
         }
-
-        const now = performance.now();
-        if (now - lastUpdate >= 45) {
-          lastUpdate = now;
-          setTelemetry(data);
-        }
+        setTelemetry(data);
       },
       onStateChange: (state, result) => {
         setGameState(state);

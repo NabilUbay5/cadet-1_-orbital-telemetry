@@ -21,6 +21,7 @@ import { ExhaustParticles } from './exhaustParticles.ts';
 import { FLIGHT_EPHEMERIS } from '../data/nasa/flightEphemeris.ts';
 import { FlightTelemetryLog } from './flightTelemetryLog.ts';
 import { FIXED_DT, FixedTimestep } from './fixedTimestep.ts';
+import { isTelemetryUpdateDue } from './telemetrySchedule.ts';
 import {
   STAGE1_TARGET_TIME,
   STAGE1_TOTAL_RINGS,
@@ -90,6 +91,7 @@ export class FlightEngine {
   private lastDistToSat: number = 0;
   private lastAlignErrorDeg: number = 0;
   private telemetryPending: boolean = false;
+  private lastTelemetryUpdateTime: number = Number.NEGATIVE_INFINITY;
 
   // Craft & Scene entities
   private craftGroup: THREE.Group;
@@ -881,7 +883,7 @@ export class FlightEngine {
 
     this.updateCamera(dt);
 
-    // Telemetry is emitted once per rendered frame (see flushTelemetry), not once per physics step.
+    // Keep the latest readings ready for the throttled telemetry publisher.
     this.lastPitchDeg = pitchDeg;
     this.lastYawDeg = yawDeg;
     this.lastRollDeg = this._attitudeEuler.z * RAD_TO_DEG;
@@ -901,7 +903,11 @@ export class FlightEngine {
 
   private flushTelemetry() {
     if (!this.telemetryPending) return;
+    const now = performance.now();
+    if (!isTelemetryUpdateDue(now, this.lastTelemetryUpdateTime)) return;
+
     this.telemetryPending = false;
+    this.lastTelemetryUpdateTime = now;
     this.emitTelemetry(this.lastPitchDeg, this.lastYawDeg, this.lastDistToSat, this.lastAlignErrorDeg);
   }
 
