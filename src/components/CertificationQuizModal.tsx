@@ -217,7 +217,7 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
                   } else if (idx === selectedOption) {
                     btnStyle = 'border-2 border-[#FF3344] bg-[#FF3344] text-[#FFFFFF]';
                   } else {
-                    btnStyle = 'border-2 border-[#2A3B5C] bg-[#050508] text-[#64748B] opacity-50';
+                    btnStyle = 'border-2 border-[#2A3B5C] bg-[#050508] text-[#8494AD] opacity-50';
                   }
                 }
 

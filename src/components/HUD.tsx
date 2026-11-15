@@ -140,7 +140,7 @@ export const HUD: React.FC<HUDProps> = ({
                 className={`px-2 py-0.5 text-[8px] border ${
                   isEarned
                     ? 'border-[#00FF66] bg-[#00FF66]/20 text-[#00FF66] font-bold'
-                    : 'border-[#2A3B5C] bg-[#141926] text-[#64748B]'
+                    : 'border-[#2A3B5C] bg-[#141926] text-[#8494AD]'
                 }`}
               >
                 {isEarned ? `★ ${b.label}` : `[ ${b.label} ]`}
@@ -179,7 +179,7 @@ export const HUD: React.FC<HUDProps> = ({
             className="retro-btn-secondary h-8 px-2.5 text-[9px] flex items-center gap-1 cursor-pointer"
           >
             <span>PAUSE</span>
-            <span className="text-[8px] text-[#64748B]">[ESC]</span>
+            <span className="text-[8px] text-[#8494AD]">[ESC]</span>
           </button>
         </div>
       </header>
@@ -200,7 +200,7 @@ export const HUD: React.FC<HUDProps> = ({
               </div>
               <button
                 onClick={() => setShowAnnouncement(false)}
-                className="text-[9px] text-[#64748B] hover:text-[#FF3344] px-1 border border-transparent hover:border-[#FF3344] cursor-pointer"
+                className="text-[9px] text-[#8494AD] hover:text-[#FF3344] px-1 border border-transparent hover:border-[#FF3344] cursor-pointer"
                 title="Dismiss Announcement"
               >
                 [X]
@@ -226,7 +226,7 @@ export const HUD: React.FC<HUDProps> = ({
                 ★ TASK COMPLETED! EXAM INITIALIZED ★
               </div>
             ) : (
-              <div className="flex items-center justify-between text-[8px] text-[#64748B]">
+              <div className="flex items-center justify-between text-[8px] text-[#8494AD]">
                 <span>STATUS: IN PROGRESS</span>
                 <span className="text-[#00F0FF]">
                   {telemetry.stage === 1
@@ -315,18 +315,18 @@ export const HUD: React.FC<HUDProps> = ({
                 }}
               />
 
-              <div className="absolute bottom-1 left-2 text-[8px] text-[#64748B]">
+              <div className="absolute bottom-1 left-2 text-[8px] text-[#8494AD]">
                 P:<span className="text-[#A0AEC0]">{telemetry.pitch}°</span>
               </div>
-              <div className="absolute bottom-1 right-2 text-[8px] text-[#64748B]">
+              <div className="absolute bottom-1 right-2 text-[8px] text-[#8494AD]">
                 Y:<span className="text-[#A0AEC0]">{telemetry.yaw}°</span>
               </div>
             </div>
 
             <div className="flex items-center justify-between mt-2 text-[9px]">
-              <span className="text-[#64748B]">SPEED</span>
+              <span className="text-[#8494AD]">SPEED</span>
               <span className="text-[#FFFFFF]">{telemetry.velocity.toFixed(0)} M/S</span>
-              <span className="text-[#64748B]">G-FORCE</span>
+              <span className="text-[#8494AD]">G-FORCE</span>
               <span className="text-[#00FF66]">{telemetry.gForce}G</span>
             </div>
           </div>
@@ -367,7 +367,7 @@ export const HUD: React.FC<HUDProps> = ({
                     ? 'text-[#00FF66]'
                     : telemetry.stage === 1
                     ? 'text-[#00F0FF]'
-                    : 'text-[#64748B]'
+                    : 'text-[#8494AD]'
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -382,7 +382,7 @@ export const HUD: React.FC<HUDProps> = ({
                     ? 'text-[#00FF66]'
                     : telemetry.stage === 2
                     ? 'text-[#00F0FF]'
-                    : 'text-[#64748B]'
+                    : 'text-[#8494AD]'
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -393,7 +393,7 @@ export const HUD: React.FC<HUDProps> = ({
               </div>
               <div
                 className={`flex items-center justify-between ${
-                  telemetry.stage === 3 ? 'text-[#00F0FF]' : 'text-[#64748B]'
+                  telemetry.stage === 3 ? 'text-[#00F0FF]' : 'text-[#8494AD]'
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -509,8 +509,8 @@ export const HUD: React.FC<HUDProps> = ({
                 />
               ))}
 
-              <div className="absolute top-1 left-2 text-[8px] text-[#64748B]">140M</div>
-              <div className="absolute bottom-1 right-2 text-[8px] text-[#64748B]">ACTIVE</div>
+              <div className="absolute top-1 left-2 text-[8px] text-[#8494AD]">140M</div>
+              <div className="absolute bottom-1 right-2 text-[8px] text-[#8494AD]">ACTIVE</div>
             </div>
           </div>
         </aside>
@@ -542,7 +542,7 @@ export const HUD: React.FC<HUDProps> = ({
                 style={{ width: `${telemetry.boostCharge}%` }}
               />
             </div>
-            <span className="text-[8px] text-[#64748B]">[SHIFT]</span>
+            <span className="text-[8px] text-[#8494AD]">[SHIFT]</span>
           </div>
 
           {/* Action Actuators */}
@@ -561,7 +561,7 @@ export const HUD: React.FC<HUDProps> = ({
               className={`h-8 px-2 text-[8px] border cursor-pointer ${
                 telemetry.flightAssist
                   ? 'border-[#00FF66] bg-[#0d111a] text-[#00FF66]'
-                  : 'border-[#2A3B5C] bg-[#050508] text-[#64748B]'
+                  : 'border-[#2A3B5C] bg-[#050508] text-[#8494AD]'
               }`}
               title="Toggle Flight Assist [I]"
             >
