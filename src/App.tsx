@@ -92,8 +92,10 @@ const initialTelemetry: TelemetryData = {
 };
 
 export default function App() {
+  const appRootRef = useRef<HTMLDivElement>(null);
   const canvasMountRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<FlightEngine | null>(null);
+  const victoryShakeRef = useRef<Animation | null>(null);
   const gameStateRef = useRef<GameState>('TITLE');
   const creditedResearchEventsRef = useRef(new Set<string>());
 
@@ -151,7 +153,7 @@ export default function App() {
     setScore(nextScore);
   };
 
-  const finalizeHighScore = (finalScore: number): boolean => {
+  const finalizeHighScore = useCallback((finalScore: number): boolean => {
     try {
       const result = recordHighScore(window.localStorage, finalScore);
       setHighScore(result.highScore);
@@ -164,7 +166,7 @@ export default function App() {
       setNewHighScore(false);
       return false;
     }
-  };
+  }, []);
 
   useEffect(() => {
     try {
@@ -278,7 +280,9 @@ export default function App() {
     setGameState('PLAYING');
   };
 
-  const handleReturnToLobby = () => {
+  const handleReturnToLobby = useCallback(() => {
+    victoryShakeRef.current?.cancel();
+    victoryShakeRef.current = null;
     let scoreToKeep = missionResult?.score ?? null;
     if (gameStateRef.current === 'PAUSED') {
       const finalScore = engineRef.current?.finalizeCurrentRunScore();
@@ -295,8 +299,41 @@ export default function App() {
     engineRef.current?.setGameState('TITLE');
     gameStateRef.current = 'TITLE';
     setGameState('TITLE');
-    if (scoreToKeep !== null) updateScore(scoreToKeep);
-  };
+    if (scoreToKeep !== null) setScore(scoreToKeep);
+  }, [missionResult, finalizeHighScore]);
+
+  const handleVictoryShake = useCallback(() => {
+    const root = appRootRef.current;
+    if (!root || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    victoryShakeRef.current?.cancel();
+    const animation = root.animate(
+      [
+        { transform: 'translate3d(0, 0, 0)' },
+        { transform: 'translate3d(-4px, 2px, 0)' },
+        { transform: 'translate3d(3px, -2px, 0)' },
+        { transform: 'translate3d(-2px, -1px, 0)' },
+        { transform: 'translate3d(0, 0, 0)' },
+      ],
+      { duration: 180, easing: 'steps(5, end)' },
+    );
+    victoryShakeRef.current = animation;
+    animation.onfinish = () => {
+      if (victoryShakeRef.current === animation) victoryShakeRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (gameState !== 'VICTORY') return;
+
+    const exitOnKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return;
+      event.preventDefault();
+      handleReturnToLobby();
+    };
+
+    window.addEventListener('keydown', exitOnKeyDown);
+    return () => window.removeEventListener('keydown', exitOnKeyDown);
+  }, [gameState, handleReturnToLobby]);
 
   const handlePause = () => {
     engineRef.current?.setGameState('PAUSED');
@@ -422,7 +459,7 @@ export default function App() {
   };
 
   return (
-    <div className="relative w-screen h-dvh bg-[#050508] overflow-hidden select-none">
+    <div ref={appRootRef} className="relative w-screen h-dvh bg-[#050508] overflow-hidden select-none">
       {/* 3D WebGL Canvas Mount Container */}
       <div ref={canvasMountRef} data-testid="flight-canvas" className="absolute inset-0 z-0 flight-canvas" />
 
@@ -504,10 +541,12 @@ export default function App() {
           onExportFlightLog={handleExportFlightLog}
           result={missionResult}
           totalResearchPoints={researchBalance}
+          lives={telemetry.lives}
+          maxLives={telemetry.maxLives}
           highScore={highScore}
           newHighScore={newHighScore}
-          onRestart={handleRestart}
           onExit={handleReturnToLobby}
+          onMajorExplosion={handleVictoryShake}
         />
       )}
 
