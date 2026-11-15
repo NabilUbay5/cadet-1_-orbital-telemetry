@@ -123,7 +123,7 @@ For the submission form's "Space Agency Partner & Other Data" field. The softwar
 | TypeScript    | https://www.typescriptlang.org    | Strict type checking              |
 | Tailwind CSS  | https://tailwindcss.com           | Styling                           |
 | Bun           | https://bun.sh                    | Package manager and test runner   |
-| Press Start 2P (font, OFL-1.1) | https://fonts.google.com/specimen/Press+Start+2P | The 8-bit pixel typeface, bundled through the `@fontsource/press-start-2p` package so it works offline |
+| Determination (font, CC BY 3.0) | https://fontstruct.com/fontstructions/show/2368299 | Custom UI and canvas typeface by anonymous-1438277, self-hosted with its original license and readme |
 | Chang'e-4 lunar surface radiation (Zhang et al., 2020) | https://doi.org/10.1126/sciadv.aaz1334 | Reference for a literature-inspired Moon scenario input; the exact value is unverified here, as noted above. Not an API integration. |
 | Curiosity RAD surface radiation (Hassler et al., 2014) | https://doi.org/10.1126/science.1244797 | Reference for a literature-inspired Mars scenario input; the exact value is unverified here, as noted above. Not an API integration. |
 
@@ -663,6 +663,39 @@ cadet-1_-orbital-telemetry/
 
 ---
 
+### Custom typography
+
+The app uses **Determination Regular** by **anonymous-1438277**, supplied from
+[FontStruct](https://fontstruct.com/fontstructions/show/2368299). Its unmodified
+package is stored in [`public/fonts/determination/`](public/fonts/determination/):
+
+- `determination.ttf` — the supplied TrueType font.
+- `license.txt` — the supplied CC BY 3.0 attribution notice.
+- `readme.txt` — the supplied FontStruct redistribution notice.
+
+Keep all three files together when distributing the font. Vite copies this folder
+to `dist/fonts/determination/`; the CSS font URL is rewritten for the deployment
+base, including GitHub Pages. There are no remote font requests.
+
+[`src/index.css`](src/index.css) registers the regular face with `font-display: swap`
+and maps Tailwind v4's sans, mono, and pixel families to it. Body text, telemetry,
+HUDs, quizzes, modals, and arcade buttons use that family, with system monospace
+fallbacks for unsupported glyphs. Bold UI text uses browser-synthesized weight
+because only the regular face was supplied. The animated Outpost canvas uses the
+same family and redraws as the local font becomes available. There is no Three.js
+`TextGeometry` or `FontLoader` text pipeline to convert.
+
+With a production preview running, verify actual rendered glyphs, canvas labels,
+offline use, and byte-for-byte delivery of the font and both notices:
+
+```bash
+PLAYWRIGHT_MODULE=/path/to/playwright-core/index.mjs \
+  CHROMIUM_PATH=/usr/bin/chromium node scripts/verify-fonts.mjs
+```
+
+Set `APP_URL` to test another preview or a GitHub Pages subpath, and optionally set
+`FONT_SCREENSHOT_DIR` to save title, Outpost, and HUD captures.
+
 ## 🧪 Testing & Quality
 
 ```bash
@@ -808,7 +841,9 @@ branch; the team credits above are maintained separately.
 
 ## 📜 License
 
-**MIT License** — see [LICENSE](LICENSE) for full text.
+**MIT License** for project code — see [LICENSE](LICENSE) for full text.
+
+The bundled **Determination** font is separately licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) by anonymous-1438277. Its original [license](public/fonts/determination/license.txt) and [redistribution notice](public/fonts/determination/readme.txt) accompany the unmodified font; the font is not relicensed under MIT.
 
 ```
 Copyright (c) 2025 NabilUbay5

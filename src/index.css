@@ -1,11 +1,22 @@
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    --font-pixel: 'Press Start 2P', monospace;
-    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  }
+/* Determination by anonymous-1438277 (FontStruct), CC BY 3.0.
+   Original license and redistribution notice: public/fonts/determination/. */
+@font-face {
+  font-family: 'Determination';
+  src: url('/fonts/determination/determination.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
+@theme {
+  --font-sans: 'Determination', ui-monospace, monospace;
+  --font-mono: 'Determination', ui-monospace, monospace;
+  --font-pixel: 'Determination', ui-monospace, monospace;
+}
+
+@layer base {
   body {
     font-family: var(--font-pixel);
     background-color: #050508;

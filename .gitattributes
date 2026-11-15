@@ -2,3 +2,6 @@
 # SHA-256 in their provenance notes, so Git must never convert their line endings
 # (Windows checkouts with core.autocrlf=true would otherwise change the bytes).
 src/data/nasa/*.json -text
+# Preserve the supplied font package, including its original text notices.
+public/fonts/determination/* -text
+public/fonts/determination/*.txt whitespace=cr-at-eol

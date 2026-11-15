@@ -158,7 +158,7 @@ export const OutpostScene: React.FC<Props> = (props) => {
       for (let i = 0; i < M.o2gen; i++) {
         const x = W * (0.25 + i * 0.045), y = gy2 - H * 0.085, bad = i >= M.o2gen - B.o2gen;
         box(x, y, W * 0.034, H * 0.085, bad ? '#473A3A' : '#5AA9C8', '#BDE8FF');
-        ctx.fillStyle = '#E8F8FF'; ctx.font = `700 ${Math.max(8, H * 0.03)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('O2', x + W * 0.017, y + H * 0.055);
+        ctx.fillStyle = '#E8F8FF'; ctx.font = `${Math.max(8, H * 0.03)}px "Determination", monospace`; ctx.textAlign = 'center'; ctx.fillText('O2', x + W * 0.017, y + H * 0.055);
         warn(x + W * 0.017, y - 8, bad, t);
       }
       for (let i = 0; i < M.recycler; i++) { const x = W * (0.37 + i * 0.04), y = gy2 - H * 0.09, bad = i >= M.recycler - B.recycler; box(x, y, W * 0.03, H * 0.09, bad ? '#473A3A' : '#4A74D8', '#A9C3FF'); warn(x + W * 0.015, y - 8, bad, t); }
@@ -181,7 +181,7 @@ export const OutpostScene: React.FC<Props> = (props) => {
       }
       if (s.flareToday) { ctx.fillStyle = `rgba(255,140,60,${0.12 + (reduce ? 0 : 0.08 * Math.sin(t / 300))})`; ctx.fillRect(0, 0, W, H); }
       const tag = (text: string, color: string, x: number) => {
-        ctx.font = '700 11px ui-monospace, monospace'; ctx.textAlign = 'left';
+        ctx.font = '11px "Determination", monospace'; ctx.textAlign = 'left';
         const w = ctx.measureText(text).width + 16;
         ctx.fillStyle = 'rgba(8,12,24,.78)'; ctx.fillRect(x === -1 ? W - w - 8 : x, H - 30, w, 22);
         ctx.fillStyle = color; ctx.fillText(text, (x === -1 ? W - w - 8 : x) + 8, H - 15);
