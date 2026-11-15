@@ -4,6 +4,8 @@ import {
   STAGE1_DECAY_RATE,
   STAGE1_LEVEL_TOLERANCE_DEG,
   STAGE1_RING_BONUS,
+  STAGE1_START_PITCH_DEG,
+  STAGE1_START_YAW_DEG,
   STAGE1_TARGET_TIME,
   STAGE1_TOTAL_RINGS,
   STAGE2_PICKUP_RADIUS,
@@ -246,5 +248,19 @@ describe('progressPercent', () => {
       expect(p).toBeGreaterThanOrEqual(prev);
       prev = p;
     }
+  });
+});
+
+describe('Stage 1 start attitude', () => {
+  test('the craft starts outside the level window, so Stage 1 needs input', () => {
+    expect(isCraftLevel(STAGE1_START_PITCH_DEG, STAGE1_START_YAW_DEG)).toBe(false);
+    expect(Math.abs(STAGE1_START_PITCH_DEG)).toBeGreaterThan(STAGE1_LEVEL_TOLERANCE_DEG);
+    expect(Math.abs(STAGE1_START_YAW_DEG)).toBeGreaterThan(STAGE1_LEVEL_TOLERANCE_DEG);
+  });
+
+  test('waiting without input never completes Stage 1 while the craft stays tilted', () => {
+    const level = isCraftLevel(STAGE1_START_PITCH_DEG, STAGE1_START_YAW_DEG);
+    const t = simulate(10, 0, (x, dt) => stepStabilizationTimer(x, level, dt));
+    expect(isStabilizationComplete(t)).toBe(false);
   });
 });
