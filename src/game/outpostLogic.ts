@@ -116,6 +116,8 @@ export interface OutpostState {
   iceDay: number;
   flareToday: boolean;
   stats: Stats;
+  /** How often each plain-language shortage cause happened, for the debrief. */
+  causes: Record<string, number>;
   rngState: number;
 }
 
@@ -155,6 +157,7 @@ export function newOutpost(dest: Destination, difficulty: Difficulty, seed: numb
     buildPoints: 8, science: 0, dose: 0,
     flareDays: [], storm: null, resupplyDays: [10, 20], meteorDays: [], iceDay: 0, flareToday: false,
     stats: { brownouts: 0, noWater: 0, noOxygen: 0, noFood: 0, flaresHit: 0, flaresSheltered: 0, evacuations: 0, breakdowns: 0, repaired: 0, wastedKwh: 0, lowMoraleDays: 0 },
+    causes: {},
     rngState: seed | 0,
   };
   const rand = () => nextRandom(s);
@@ -416,13 +419,17 @@ export function endDay(s: OutpostState, plan: Plan): LogLine[] {
   const f = forecastDay(s, plan);
   const a = effectiveAllocation(s, plan);
   const shelter = s.flareToday && plan.shelter;
+  const why = (cause: string) => {
+    note('info', `Why: ${cause}.`);
+    s.causes[cause] = (s.causes[cause] ?? 0) + 1;
+  };
 
   s.res.battery = f.batteryAfter;
   s.stats.wastedKwh += f.wastedKwh;
   if (f.lifeSupportShort) {
     s.stats.brownouts++;
     note('bad', 'Power ran short. Life support got power first.');
-    note('info', `Why: ${explainPowerShortage(s, f)}.`);
+    why(explainPowerShortage(s, f));
   }
   else if (SERVICES.some((sv) => !sv.lifeSupport && f.demand[sv.key] > 0 && f.served[sv.key] < 0.999)) note('warn', 'Not enough power for every job. Outdoor work slowed down.');
 
@@ -430,9 +437,9 @@ export function endDay(s: OutpostState, plan: Plan): LogLine[] {
   s.res.o2 = clamp(s.res.o2 + f.o2Net, 0, CAP.o2);
   s.res.water = clamp(s.res.water + f.waterNet, 0, CAP.water);
   s.res.food = clamp(s.res.food + f.foodNet, 0, CAP.food);
-  if (lack.o2) { s.stats.noOxygen++; note('bad', 'Oxygen ran out.'); note('info', `Why: ${explainShortage(s, f, a, 'o2')}.`); }
-  if (lack.water) { s.stats.noWater++; note('bad', 'The water tank is empty.'); note('info', `Why: ${explainShortage(s, f, a, 'water')}.`); }
-  if (lack.food) { s.stats.noFood++; note('warn', 'Food ran out.'); note('info', `Why: ${explainShortage(s, f, a, 'food')}.`); }
+  if (lack.o2) { s.stats.noOxygen++; note('bad', 'Oxygen ran out.'); why(explainShortage(s, f, a, 'o2')); }
+  if (lack.water) { s.stats.noWater++; note('bad', 'The water tank is empty.'); why(explainShortage(s, f, a, 'water')); }
+  if (lack.food) { s.stats.noFood++; note('warn', 'Food ran out.'); why(explainShortage(s, f, a, 'food')); }
 
   if (f.science > 0) { s.science += f.science; note('good', `+${f.science.toFixed(1)} science samples.`); }
   s.buildPoints += f.buildPoints;
@@ -486,6 +493,13 @@ export function endDay(s: OutpostState, plan: Plan): LogLine[] {
   else if (s.day >= MISSION_DAYS) { s.phase = 'over'; s.result = 'complete'; }
   else s.day++;
   return lines;
+}
+
+/** The shortage cause that happened most often, with how many days it hit. */
+export function mainCause(s: OutpostState): { cause: string; days: number } | null {
+  let best: { cause: string; days: number } | null = null;
+  for (const [cause, days] of Object.entries(s.causes)) if (!best || days > best.days) best = { cause, days };
+  return best;
 }
 
 export interface Report {

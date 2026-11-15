@@ -55,7 +55,10 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) 
             <div className="text-[10px] text-[#A0AEC0] leading-relaxed mt-1">Balance power, air, water, food and radiation shielding. Day and night come from real NASA/JPL Horizons data.</div>
           </div>
 
-          <div className="text-[9px] text-[#A0AEC0] mb-2">BONUS · FLIGHT ACADEMY (3 STAGES + QUIZZES)</div>
+          <div className="mb-2">
+            <div className="text-[9px] text-[#A0AEC0]">BONUS · FLIGHT ACADEMY (3 STAGES + QUIZZES)</div>
+            <div className="text-[9px] text-[#A0AEC0] mt-1 leading-relaxed">Pilot training for the supply ship that flies crew and cargo to your outpost.</div>
+          </div>
 
           {/* 3-Stage Progression Roadmap */}
           <div className="space-y-2 mb-5">
