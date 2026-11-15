@@ -231,19 +231,15 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   100% { transform: translateX(0) scale(1); fill: #2A3B5C; }
 }
 
-/* Minimal flight HUD on small screens: keep the ship visible.
-   Life support (with hearts) and the mission task stay; the NASA reference,
-   gyro and radar panels come back with the HUD: FULL button. */
+/* Short screens: replace peripheral instrumentation with a persistent mission readout. */
 .hud-detail-toggle { display: none; }
+.hud-mini-status { display: none; }
 @media (max-width: 640px), (max-height: 500px) {
   .hud-detail-toggle { display: inline-flex; }
-  .cockpit-hud:not(.hud-details-open) .hud-wing > section[aria-label^="NASA"],
-  .cockpit-hud:not(.hud-details-open) [data-hud-panel="gyro"],
-  .cockpit-hud:not(.hud-details-open) [data-hud-panel="radar"] { display: none; }
+  .cockpit-hud:not(.hud-details-open) .hud-wing { display: none; }
+  .cockpit-hud:not(.hud-details-open) .hud-dispatch { display: none; }
+  .cockpit-hud:not(.hud-details-open) .hud-mini-status { display: flex; }
   .cockpit-hud:not(.hud-details-open) .hud-viewport { align-items: flex-start; }
-}
-@media (max-width: 640px) and (orientation: portrait) {
-  .cockpit-hud:not(.hud-details-open) .hud-wing { max-height: 45%; }
 }
 
 /* Touch controller (phones and tablets) */
