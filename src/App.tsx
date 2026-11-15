@@ -3,7 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { TouchControls } from './components/TouchControls.tsx';
+import {
+  TOUCH_MODE_STORAGE_KEY,
+  nextTouchMode,
+  parseTouchMode,
+  shouldShowTouchControls,
+  type TouchMode,
+} from './game/touchControls.ts';
 import { CertificationQuizModal } from './components/CertificationQuizModal.tsx';
 import { HUD } from './components/HUD.tsx';
 import { OutpostMode } from './components/OutpostMode.tsx';
@@ -95,6 +103,30 @@ export default function App() {
   const [activeQuizStage, setActiveQuizStage] = useState<MissionStage | null>(null);
   const [badgesUnlocked, setBadgesUnlocked] = useState<string[]>([]);
   const [outpostOpen, setOutpostOpen] = useState(false);
+  const [touchMode, setTouchMode] = useState<TouchMode>(() => {
+    try { return parseTouchMode(window.localStorage.getItem(TOUCH_MODE_STORAGE_KEY)); } catch { return 'auto'; }
+  });
+  const [touchFirst, setTouchFirst] = useState(false);
+
+  // Touch-first devices (phones, tablets) get the on-screen controller in auto mode.
+  useEffect(() => {
+    const query = window.matchMedia?.('(pointer: coarse)');
+    const update = () => setTouchFirst(!!query?.matches && navigator.maxTouchPoints > 0);
+    update();
+    query?.addEventListener?.('change', update);
+    return () => query?.removeEventListener?.('change', update);
+  }, []);
+  const showTouchControls = shouldShowTouchControls(touchMode, touchFirst, touchFirst ? 1 : 0);
+  const handleCycleTouchMode = () => {
+    setTouchMode((mode) => {
+      const next = nextTouchMode(mode);
+      try { window.localStorage.setItem(TOUCH_MODE_STORAGE_KEY, next); } catch { /* private mode: keep for this session */ }
+      return next;
+    });
+  };
+  const handleTouchSteer = useCallback((x: number, y: number) => engineRef.current?.setTouchSteer(x, y), []);
+  const handleTouchKey = useCallback((code: string, down: boolean) => engineRef.current?.setVirtualKey(code, down), []);
+  const handleTouchScan = useCallback(() => engineRef.current?.triggerScannerPulse(), []);
   const [researchBalance, setResearchBalance] = useState(0);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
@@ -407,6 +439,9 @@ export default function App() {
           onOutpost={handleOpenOutpost}
           onExportResearchBank={handleExportResearchBank}
           onImportResearchBank={handleImportResearchBank}
+          touchMode={touchMode}
+          touchActive={showTouchControls}
+          onCycleTouchMode={handleCycleTouchMode}
         />
       )}
 
@@ -437,6 +472,11 @@ export default function App() {
           onTriggerPulse={handleTriggerPulse}
           onPause={handlePause}
         />
+      )}
+
+      {/* On-screen joystick and buttons for phones and tablets */}
+      {gameState === 'PLAYING' && showTouchControls && activeQuizStage === null && (
+        <TouchControls onSteer={handleTouchSteer} onKey={handleTouchKey} onScan={handleTouchScan} />
       )}
 
       {/* Interactive 8-Bit Astronaut Certification Trivia Quiz Gate */}

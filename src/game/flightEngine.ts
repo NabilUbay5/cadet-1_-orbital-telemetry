@@ -156,6 +156,9 @@ export class FlightEngine {
   private hullIntegrity: number = 100;
   private lives: number = MAX_LIVES;
   private invulnerableTimer: number = 0;
+  // Analog steering from the on-screen joystick (unit circle, x right, y down).
+  private touchSteerX = 0;
+  private touchSteerY = 0;
   private oxygen: number = 100;
   private energy: number = 100;
   private flightAssist: boolean = true;
@@ -425,6 +428,7 @@ export class FlightEngine {
     this.hullIntegrity = 100;
     this.lives = MAX_LIVES;
     this.invulnerableTimer = 0;
+    this.touchSteerX = this.touchSteerY = 0;
     this.craftGroup.visible = true;
     this.oxygen = 100;
     this.energy = 100;
@@ -598,7 +602,23 @@ export class FlightEngine {
     if (!enabled) {
       for (const key in this.heldKeys) this.heldKeys[key] = false;
       this.justPressedKeys.clear();
+      this.touchSteerX = this.touchSteerY = 0;
     }
+  }
+
+  /** Analog steer from the touch joystick: x right, y down, each in [-1, 1]. */
+  public setTouchSteer(x: number, y: number) {
+    if (!this.inputEnabled) return;
+    this.touchSteerX = Number.isFinite(x) ? Math.max(-1, Math.min(1, x)) : 0;
+    this.touchSteerY = Number.isFinite(y) ? Math.max(-1, Math.min(1, y)) : 0;
+  }
+
+  /** Lets a touch button act exactly like holding a keyboard key (e.g. 'KeyW', 'ShiftLeft'). */
+  public setVirtualKey(code: string, down: boolean) {
+    if (!this.inputEnabled) return;
+    const key = code.toLowerCase();
+    if (down && !this.heldKeys[key]) this.justPressedKeys.add(key);
+    this.heldKeys[key] = down;
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
@@ -657,6 +677,7 @@ export class FlightEngine {
   private onWindowBlur = () => {
     this.heldKeys = {};
     this.justPressedKeys.clear();
+    this.touchSteerX = this.touchSteerY = 0;
   };
 
   private onWindowResize = () => {
@@ -832,6 +853,10 @@ export class FlightEngine {
     let rollInput = 0;
     if (held['keyq']) rollInput += 1;
     if (held['keye']) rollInput -= 1;
+
+    // Touch joystick: right yaws right, up pitches the nose up (same axes as A/D and R/F).
+    yawInput = Math.max(-1, Math.min(1, yawInput - this.touchSteerX));
+    pitchInput = Math.max(-1, Math.min(1, pitchInput - this.touchSteerY));
 
 
     if (yawInput !== 0 || pitchInput !== 0 || rollInput !== 0) {
