@@ -6,6 +6,8 @@
 import type { TelemetryData } from '../types/game.ts';
 
 const numericFields = [
+  'lives',
+  'maxLives',
   'metSeconds',
   'velocity',
   'maxVelocity',
@@ -51,6 +53,8 @@ const percentageFields = [
 ] as const;
 
 const countFields = [
+  'lives',
+  'maxLives',
   'vectorRingsPassed',
   'totalVectorRings',
   'energyCubesCollected',
@@ -74,6 +78,7 @@ const nonNegativeFields = [
 ] as const;
 
 const booleanFields = [
+  'isInvulnerable',
   'isInertialDrifting',
   'isBoosting',
   'flightAssist',

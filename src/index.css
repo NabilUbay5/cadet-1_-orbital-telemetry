@@ -236,6 +236,22 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   }
 }
 
+/* 8-bit heart bar (player lives) */
+.pixel-heart { image-rendering: pixelated; }
+.pixel-heart-full { fill: #FF3344; filter: drop-shadow(2px 2px 0 #000000); }
+.pixel-heart-empty { fill: #2A3B5C; }
+.pixel-heart-breaking { fill: #FF3344; animation: pixelHeartBreak 0.6s steps(6) forwards; }
+.pixel-hearts-hit { animation: arcadeBlink 0.25s infinite; }
+
+@keyframes pixelHeartBreak {
+  0% { transform: translateX(0) scale(1.35); fill: #FFFFFF; }
+  20% { transform: translateX(-3px) scale(1.2); fill: #FF3344; }
+  40% { transform: translateX(3px) scale(1.1); }
+  60% { transform: translateX(-2px) scale(1); }
+  80% { transform: translateX(2px) scale(0.9); fill: #FFB000; }
+  100% { transform: translateX(0) scale(1); fill: #2A3B5C; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pixel-confetti, .pixel-fireworks {
     display: none;
@@ -243,4 +259,6 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   .animate-arcade-blink, .animate-pulse {
     animation: none;
   }
+  .pixel-heart-breaking { animation: none; fill: #2A3B5C; }
+  .pixel-hearts-hit { animation: none; }
 }
