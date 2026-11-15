@@ -67,7 +67,44 @@ try {
   assert.equal(await mute.getAttribute('aria-pressed'), 'false');
   console.log('HUD mute, keyboard mute, and repeat-key handling passed.');
 
-  await page.getByText('[ASTRONAUT CERTIFICATION: STAGE 1]', { exact: true }).waitFor({ timeout: 60000 });
+  // Stage 1 starts tilted. Fly level through real keyboard input and HUD feedback;
+  // do not overwrite engine state or weaken the four-second stabilization gate.
+  const quiz = page.getByText('[ASTRONAUT CERTIFICATION: STAGE 1]', { exact: true });
+  const held = new Set();
+  const deadline = performance.now() + 60000;
+  let steeringInputs = 0;
+  let lastAttitude;
+  try {
+    while (!(await quiz.isVisible()) && performance.now() < deadline) {
+      lastAttitude = await page.evaluate(() => {
+        const hud = document.querySelector('.cockpit-hud')?.textContent ?? '';
+        const pitch = hud.match(/P:\s*(-?\d+)°/);
+        const yaw = hud.match(/Y:\s*(-?\d+)°/);
+        return pitch && yaw ? { pitch: Number(pitch[1]), yaw: Number(yaw[1]) } : null;
+      });
+      assert(lastAttitude, 'Flight HUD must report pitch and yaw while steering');
+      const wanted = new Set();
+      if (lastAttitude.pitch > 1) wanted.add('r');
+      else if (lastAttitude.pitch < -1) wanted.add('f');
+      if (lastAttitude.yaw > 1) wanted.add('d');
+      else if (lastAttitude.yaw < -1) wanted.add('a');
+      for (const key of held) if (!wanted.has(key)) {
+        await page.keyboard.up(key);
+        held.delete(key);
+      }
+      for (const key of wanted) if (!held.has(key)) {
+        await page.keyboard.down(key);
+        held.add(key);
+        steeringInputs++;
+      }
+      await page.waitForTimeout(150);
+    }
+  } finally {
+    for (const key of held) await page.keyboard.up(key);
+  }
+  assert(await quiz.isVisible(), `Steering did not unlock certification; last HUD attitude: ${JSON.stringify(lastAttitude)}`);
+  assert(steeringInputs > 0, 'The tilted start must require real steering before the quiz');
+  console.log(`Stage 1 stabilization reached through HUD-guided steering (${steeringInputs} control inputs).`);
   // Certification is a modal input lock, not an ordinary resumable pause.
   assert.equal(await page.locator('.cockpit-hud').evaluate(hud => hud.inert), true);
   // Verify browser focus behavior directly; role locators can still match inert DOM.

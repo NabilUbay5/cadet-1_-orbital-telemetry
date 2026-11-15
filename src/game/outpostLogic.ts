@@ -254,6 +254,8 @@ export interface DayForecast {
   o2Net: number;
   waterNet: number;
   foodNet: number;
+  /** Effective indoor/outdoor exposure before any dedicated flare-shelter reduction. */
+  exposureFactor: number;
   dose: number;
   baseDose: number;
   flareDose: number;
@@ -308,8 +310,11 @@ export function forecastDay(s: OutpostState, plan: Plan): DayForecast {
   const waterUsed = crewWater + o2WaterUsed + greenhouseWaterUsed;
   const outdoorShare = ((a.build + a.ice + a.sci) / allowed) * 0.6;
   const indoor = 1 - 0.16 * s.modules.shield;
-  const baseDose = D.dose * ((1 - outdoorShare) * indoor + outdoorShare);
-  const flareDose = s.flareToday ? D.flare * indoor * (plan.shelter ? 0.15 : 1) : 0;
+  const exposureFactor = (1 - outdoorShare) * indoor + outdoorShare;
+  const baseDose = D.dose * exposureFactor;
+  // Habitat regolith cannot shield outdoor work. Sheltering cancels outdoor
+  // jobs in effectiveAllocation, then reduces the remaining indoor flare dose.
+  const flareDose = s.flareToday ? D.flare * exposureFactor * (plan.shelter ? 0.15 : 1) : 0;
   return {
     crew, allowed, env, solarKwh, reactorKwh, generated, demand, served, totalDemand,
     batteryAfter: clamp(available, 0, cap), batteryCap: cap, wastedKwh: Math.max(0, available - cap),
@@ -318,16 +323,16 @@ export function forecastDay(s: OutpostState, plan: Plan): DayForecast {
     o2Net: o2Made - crew,
     waterNet: minedWater - waterUsed,
     foodNet: greenhouseWaterUsed * 2.5 * tended - crew,
-    dose: baseDose + flareDose, baseDose, flareDose,
+    exposureFactor, dose: baseDose + flareDose, baseDose, flareDose,
     science: a.sci * 3 * served.sci,
     buildPoints: a.build * served.bld,
   };
 }
 
 export function projectedDose(s: OutpostState, f: DayForecast): number {
-  const indoor = 1 - 0.16 * s.modules.shield;
   const futureFlares = s.flareDays.filter((d) => d > s.day).length;
-  return s.dose + f.dose + (MISSION_DAYS - s.day) * f.baseDose + futureFlares * DESTINATIONS[s.dest].flare * indoor;
+  // Hold today's effective work split constant; assume future flares are not sheltered.
+  return s.dose + f.dose + (MISSION_DAYS - s.day) * f.baseDose + futureFlares * DESTINATIONS[s.dest].flare * f.exposureFactor;
 }
 
 export interface OutpostEvent {
@@ -549,7 +554,7 @@ export function lessons(s: OutpostState): Array<{ title: string; body: string }>
   if (st.noWater || st.noFood || st.noOxygen) out.push({ title: 'Supplies ran out', body: 'Every kilogram launched is expensive, so outposts recycle water, mine ice and grow food instead of waiting for deliveries.' });
   if (s.dose > DOSE_LIMIT) out.push({ title: 'The crew went over the radiation limit', body: 'This game uses about 1.37 mSv a day on the Moon and 0.64 mSv a day on Mars, inspired by lander and rover measurements. With no thick air or magnetic field overhead, a few metres of soil piled on a habitat is one of the best shields.' });
   else if (s.modules.shield >= 2) out.push({ title: 'Shielding paid off', body: 'Soil is heavy to launch but free to dig up, so covering habitats with regolith is a leading idea for long stays.' });
-  if (st.flaresSheltered > 0) out.push({ title: 'Sheltering through a flare', body: 'You traded a day of outdoor work for an 85% smaller flare dose. Real crews make the same call using space weather forecasts.' });
+  if (st.flaresSheltered > 0) out.push({ title: 'Sheltering through a flare', body: 'You stopped outdoor work and cut the remaining indoor flare dose by 85%. Real crews make shelter decisions using space weather forecasts.' });
   if (st.breakdowns >= 4) out.push({ title: `${st.breakdowns} machines broke down`, body: 'Spare parts and maintenance time are part of every mission plan. There is no shop next door.' });
   if (st.lowMoraleDays > 2) out.push({ title: 'Morale ran low', body: 'Rest and exercise are part of the job. Tired crews make mistakes, so long missions schedule downtime.' });
   if (out.length === 0) out.push({ title: 'A balanced outpost', body: 'You kept power, air, water, food and radiation in check together. That balancing act is what mission planners do every day.' });

@@ -23,6 +23,7 @@ import {
   newOutpost,
   nextLightChange,
   openCrate,
+  projectedDose,
   displayedResourceNet,
   startDay,
   type Destination,
@@ -258,6 +259,71 @@ describe('crew schedule', () => {
     const inside = forecastDay(s, indoorPlan).dose;
     expect(inside).toBeCloseTo(DESTINATIONS.moon.dose * 0.52, 6);
     expect(forecastDay(s, outdoorPlan).dose).toBeGreaterThan(inside);
+  });
+});
+
+describe('flare exposure indoors and outdoors', () => {
+  const indoorPlan = (): Plan => ({ alloc: { maint: 0, build: 0, farm: 0, ice: 0, sci: 0 }, shelter: false });
+  const outdoorPlan = (): Plan => ({ alloc: { maint: 0, build: 4, farm: 0, ice: 2, sci: 2 }, shelter: false });
+
+  test('regolith protects only the indoor share of an unsheltered flare', () => {
+    for (const dest of ['moon', 'mars'] as const) {
+      const s = newOutpost(dest, 'commander', 1);
+      s.flareToday = true;
+      s.modules.shield = 5;
+      const indoors = forecastDay(s, indoorPlan());
+      const outdoors = forecastDay(s, outdoorPlan());
+      // Eight outdoor blocks give 60% surface exposure and 40% habitat exposure.
+      expect(indoors.exposureFactor).toBeCloseTo(0.2, 8);
+      expect(outdoors.exposureFactor).toBeCloseTo(0.68, 8);
+      expect(indoors.flareDose).toBeCloseTo(DESTINATIONS[dest].flare * 0.2, 8);
+      expect(outdoors.flareDose).toBeCloseTo(DESTINATIONS[dest].flare * 0.68, 8);
+      expect(outdoors.flareDose).toBeGreaterThan(indoors.flareDose);
+      s.modules.shield = 0;
+      expect(forecastDay(s, indoorPlan()).flareDose).toBe(DESTINATIONS[dest].flare);
+      expect(forecastDay(s, outdoorPlan()).flareDose).toBe(DESTINATIONS[dest].flare);
+    }
+  });
+
+  test('a mixed schedule weights the exposed fraction rather than shielding everyone', () => {
+    const s = newOutpost('moon', 'commander', 1);
+    s.flareToday = true;
+    s.modules.shield = 3;
+    const plan = indoorPlan();
+    plan.alloc.build = 4; // 30% outdoors, 70% under a 48% dose-reducing shield.
+    const f = forecastDay(s, plan);
+    expect(f.exposureFactor).toBeCloseTo(0.664, 8);
+    expect(f.flareDose).toBeCloseTo(9.296, 8);
+  });
+
+  test('sheltering brings outdoor workers inside before applying shelter protection', () => {
+    const s = newOutpost('moon', 'commander', 1);
+    s.flareToday = true;
+    s.modules.shield = 5;
+    const plan = { ...outdoorPlan(), shelter: true };
+    const f = forecastDay(s, plan);
+    expect(f.exposureFactor).toBeCloseTo(0.2, 8);
+    expect(f.flareDose).toBeCloseTo(0.42, 8);
+    expect(f.baseDose).toBeCloseTo(0.274, 8);
+    expect(f.science).toBe(0);
+    expect(f.buildPoints).toBe(0);
+    endDay(s, plan);
+    expect(s.dose).toBeCloseTo(f.dose, 8);
+    expect(s.stats.flaresSheltered).toBe(1);
+  });
+
+  test('future flare projections use the same work split and exclude past/current flares', () => {
+    const s = newOutpost('moon', 'commander', 1);
+    s.day = 4;
+    s.dose = 2;
+    s.flareDays = [2, 4, 9, 18];
+    s.flareToday = true;
+    s.modules.shield = 5;
+    const outdoors = forecastDay(s, outdoorPlan());
+    expect(projectedDose(s, outdoors)).toBeCloseTo(2 + outdoors.dose + 26 * 0.9316 + 2 * 9.52, 8);
+    const sheltered = forecastDay(s, { ...outdoorPlan(), shelter: true });
+    // Future flares remain conservatively unsheltered, with today's indoor work split.
+    expect(projectedDose(s, sheltered)).toBeCloseTo(2 + sheltered.dose + 26 * 0.274 + 2 * 2.8, 8);
   });
 });
 
