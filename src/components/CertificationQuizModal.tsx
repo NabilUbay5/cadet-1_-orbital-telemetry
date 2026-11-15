@@ -8,6 +8,7 @@ import { audioEngine } from '../game/audioEngine.ts';
 import { STAGE_BADGES, TRIVIA_QUESTIONS, TriviaQuestion } from '../data/triviaBank.ts';
 import { MissionStage } from '../types/game.ts';
 import { PixelBadge } from './PixelBadge.tsx';
+import { PixelConfetti } from './PixelConfetti.tsx';
 
 interface CertificationQuizModalProps {
   stage: MissionStage;
@@ -170,7 +171,8 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
       data-selected-question-ids={selectedQuestionIds}
       className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-40 pointer-events-auto font-pixel"
     >
-      <div className="w-full max-w-xl retro-window p-6 bg-[#0d111a] border-2 border-[#00F0FF] shadow-[6px_6px_0_#000]">
+      {isPassed && <PixelConfetti />}
+      <div className="relative z-10 w-full max-w-xl retro-window p-6 bg-[#0d111a] border-2 border-[#00F0FF] shadow-[6px_6px_0_#000]">
         {/* Terminal Header */}
         <div className="flex items-center justify-between border-b-2 border-[#2A3B5C] pb-3 mb-5">
           <div className="flex items-center gap-2">

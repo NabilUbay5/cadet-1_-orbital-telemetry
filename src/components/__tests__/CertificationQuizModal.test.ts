@@ -200,6 +200,29 @@ describe('CertificationQuizModal component interaction', () => {
     document.body.removeChild(container);
   });
 
+  test('shows confetti when each stage certification is passed', () => {
+    for (const stage of [1, 2, 3] as const) {
+      const { container, root } = renderQuiz(stage);
+      const selectedQuestionIds = getSelectedQuestionIds(container);
+
+      for (let questionIndex = 0; questionIndex < selectedQuestionIds.length; questionIndex += 1) {
+        const question = getCurrentQuestion(container, stage);
+        clickButton(getQuestionButton(container, question));
+        if (questionIndex < selectedQuestionIds.length - 1) {
+          clickButton(getButtonContaining(container, 'NEXT QUESTION'));
+        }
+      }
+
+      clickButton(getButtonContaining(container, 'SUBMIT CERTIFICATION EXAM'));
+      expect(container.querySelectorAll('.pixel-confetti-piece').length).toBe(48);
+
+      act(() => {
+        root.unmount();
+      });
+      document.body.removeChild(container);
+    }
+  });
+
   test('a single incorrect answer prevents the quiz from passing', () => {
     const passedStages: number[] = [];
     const { container, root } = renderQuiz(1, (stage) => {
@@ -224,6 +247,7 @@ describe('CertificationQuizModal component interaction', () => {
     expect(passedStages).toEqual([]);
     expect(container.textContent).toContain('INSUFFICIENT');
     expect(container.textContent).toContain('2 / 3');
+    expect(container.querySelectorAll('.pixel-confetti-piece').length).toBe(0);
     expect(getButtonContaining(container, 'PROCEED TO NEXT MISSION STAGE')).toBeNull();
     act(() => {
       root.unmount();
