@@ -8,6 +8,7 @@ import { MissionResult } from '../types/game.ts';
 import { PixelBadge } from './PixelBadge.tsx';
 import { PixelConfetti } from './PixelConfetti.tsx';
 import { PixelFireworks } from './PixelFireworks.tsx';
+import { PlayerLives } from './PlayerLives.tsx';
 import { ExportFlightLogButton } from './ExportFlightLogButton.tsx';
 
 interface PauseModalProps {
@@ -97,36 +98,47 @@ export const PauseModal: React.FC<PauseModalProps> = ({ onResume, onRestart, onE
 interface VictoryModalProps {
   result: MissionResult;
   totalResearchPoints: number;
+  lives: number;
+  maxLives: number;
   highScore: number;
   newHighScore: boolean;
-  onRestart: () => void;
   onExit: () => void;
   onExportFlightLog: () => void;
+  onMajorExplosion: () => void;
 }
 
 export const VictoryModal: React.FC<VictoryModalProps> = ({
   result,
   totalResearchPoints,
+  lives,
+  maxLives,
   highScore,
   newHighScore,
-  onRestart,
   onExit,
   onExportFlightLog,
+  onMajorExplosion,
 }) => {
   return (
     <div className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-30 pointer-events-auto font-pixel">
       <PixelConfetti />
-      <PixelFireworks />
-      <div role="dialog" aria-modal="true" aria-label="Mission complete" className="flight-modal relative z-10 w-full max-w-lg retro-window-green p-6 bg-[#0d111a] border-2 border-[#00FF66] shadow-[6px_6px_0_#000]">
+      <PixelFireworks onMajorExplosion={onMajorExplosion} />
+      <div role="dialog" aria-modal="true" aria-label="Mission complete" className="flight-modal relative z-10 w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto retro-window-green p-6 bg-[#0d111a] border-2 border-[#00FF66] shadow-[6px_6px_0_#000]">
         {/* Header */}
         <div className="flex items-center justify-between border-b-2 border-[#2A3B5C] pb-3 mb-4">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 bg-[#00FF66] inline-block animate-pulse" />
             <span className="text-xs text-[#00FF66] uppercase tracking-wider">
-              ★ GRADUATION DIPLOMA: JUNIOR ASTRONAUT ★
+              ★ MISSION ACCOMPLISHED ★
             </span>
           </div>
           <span className="text-[9px] text-[#FFB000]">TRAINING VERIFIED</span>
+        </div>
+
+        <div className="victory-lives-glow flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border border-[#FF4FD8]/60 bg-[#FF4FD8]/10 px-3 py-2 mb-4">
+          <div className="flex-1">
+            <PlayerLives lives={lives} maxLives={maxLives} invulnerable={false} />
+          </div>
+          <span className="text-[8px] text-[#A0AEC0] text-right">ANY KEY OR TAP EXIT LOBBY</span>
         </div>
 
         <ExportFlightLogButton onExport={onExportFlightLog} />
@@ -203,16 +215,10 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({
 
         <div className="flex flex-col sm:flex-row gap-3">
           <button
-            onClick={onRestart}
+            onClick={onExit}
             className="retro-btn flex-1 h-12 text-[10px] md:text-xs tracking-wider flex items-center justify-center cursor-pointer"
           >
-            NEXT CYCLE [R]
-          </button>
-          <button
-            onClick={onExit}
-            className="retro-btn-secondary h-12 px-4 text-[9px] text-[#A0AEC0] hover:text-[#00FF66] cursor-pointer"
-          >
-            EXIT TO LOBBY
+            EXIT LOBBY
           </button>
         </div>
       </div>
