@@ -103,8 +103,24 @@ velocities; the HUD displays unavailable readings beyond the source interval.
 
 With the dev server running, the optional browser smoke checks cover widths
 320, 390, 568, and 1280 px at device pixel ratio 2, reference epoch advancement,
-all three modal downloads, and log reset. Terminal screens are tested using
-controlled engine transitions, not a complete mission playthrough:
+all three modal downloads, and log reset. The deterministic mission check
+positions the craft at task targets, then exercises the real mission task rules,
+all three certification exams, stage transitions, and victory screen:
+
+```bash
+PLAYWRIGHT_MODULE=/path/to/playwright-core/index.mjs \
+  CHROMIUM_PATH=/usr/bin/chromium node scripts/verify-mission.mjs
+```
+
+In PowerShell, set the optional browser paths before running the same script:
+
+```powershell
+$env:PLAYWRIGHT_MODULE = 'C:\path\to\playwright-core\index.mjs'
+$env:CHROMIUM_PATH = 'C:\path\to\chrome.exe'
+node scripts\verify-mission.mjs
+```
+
+The HUD checks remain:
 
 ```bash
 PLAYWRIGHT_MODULE=/path/to/playwright-core/index.mjs \
