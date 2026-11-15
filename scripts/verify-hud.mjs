@@ -76,11 +76,25 @@ try {
         wings: [...document.querySelectorAll('.hud-wing')].map(wing => getComputedStyle(wing).display),
         dispatch: getComputedStyle(document.querySelector('.hud-dispatch')).display,
         status: document.querySelector('[data-testid="hud-mini-status"]').getBoundingClientRect().toJSON(),
+        viewport: document.querySelector('.hud-viewport').getBoundingClientRect().toJSON(),
+        reticle: document.querySelector('.hud-reticle').getBoundingClientRect().toJSON(),
       }));
       assert(minimizedLayout.wings.every(display => display === 'none'));
       assert.equal(minimizedLayout.dispatch, 'none');
       assert(minimizedLayout.status.left >= 0 && minimizedLayout.status.right <= viewport.width);
       assert(minimizedLayout.status.top >= 0 && minimizedLayout.status.bottom <= viewport.height);
+      const reticleCenter = {
+        x: (minimizedLayout.reticle.left + minimizedLayout.reticle.right) / 2,
+        y: (minimizedLayout.reticle.top + minimizedLayout.reticle.bottom) / 2,
+      };
+      const viewportCenter = {
+        x: (minimizedLayout.viewport.left + minimizedLayout.viewport.right) / 2,
+        y: (minimizedLayout.viewport.top + minimizedLayout.viewport.bottom) / 2,
+      };
+      assert(Math.abs(reticleCenter.x - viewportCenter.x) <= 1,
+        `Reticle is not horizontally centered: ${JSON.stringify({ reticleCenter, viewportCenter })}`);
+      assert(Math.abs(reticleCenter.y - viewportCenter.y) <= 1,
+        `Reticle is not vertically centered: ${JSON.stringify({ reticleCenter, viewportCenter })}`);
 
       await miniStatus.click();
       await page.getByRole('region', { name: 'NASA orbital reference', exact: true }).waitFor();

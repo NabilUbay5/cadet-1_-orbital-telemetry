@@ -239,7 +239,13 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   .cockpit-hud:not(.hud-details-open) .hud-wing { display: none; }
   .cockpit-hud:not(.hud-details-open) .hud-dispatch { display: none; }
   .cockpit-hud:not(.hud-details-open) .hud-mini-status { display: flex; }
-  .cockpit-hud:not(.hud-details-open) .hud-viewport { align-items: flex-start; }
+  .cockpit-hud:not(.hud-details-open) .hud-viewport { justify-content: center; align-items: center; }
+  .cockpit-hud:not(.hud-details-open) .hud-reticle {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
 }
 
 /* Touch controller (phones and tablets) */
