@@ -5,6 +5,7 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { HORIZONS_SNAPSHOT } from '../data/nasa/horizonsSnapshot.ts';
+import { OutpostScene } from './OutpostScene.tsx';
 import {
   CAP,
   CRATES,
@@ -150,7 +151,7 @@ const SetupScreen: React.FC<{
         <div className="grid sm:grid-cols-2 gap-3">
           {(['moon', 'mars'] as const).map((d) => (
             <button key={d} className={card(setup.dest === d)} onClick={() => setSetup({ ...setup, dest: d })} aria-pressed={setup.dest === d}>
-              <div className="font-pixel text-[11px] mb-2" style={{ color: d === 'moon' ? C.cyan : C.amber }}>{d === 'moon' ? 'THE MOON' : 'MARS'}</div>
+              <div className="font-pixel text-[12px] mb-2" style={{ color: d === 'moon' ? C.cyan : C.amber }}>{d === 'moon' ? 'THE MOON' : 'MARS'}</div>
               <div className="font-telemetry text-xs text-[#A0AEC0]">
                 {d === 'moon'
                   ? `${HORIZONS_SNAPSHOT.moon.site}. Full sun, then a ${HORIZONS_SNAPSHOT.moon.sunlight.filter((v) => v === 0).length}-day lunar night. Radiation scenario: 1.37 mSv per game day (unverified input).`
@@ -162,7 +163,7 @@ const SetupScreen: React.FC<{
         <div className="grid sm:grid-cols-2 gap-3">
           {(['cadet', 'commander'] as const).map((d) => (
             <button key={d} className={card(setup.diff === d)} onClick={() => setSetup({ ...setup, diff: d })} aria-pressed={setup.diff === d}>
-              <div className="font-pixel text-[10px] mb-2">{d === 'cadet' ? 'CADET' : 'COMMANDER'}</div>
+              <div className="font-pixel text-[11px] mb-2">{d === 'cadet' ? 'CADET' : 'COMMANDER'}</div>
               <div className="font-telemetry text-xs text-[#A0AEC0]">{d === 'cadet' ? 'More supplies, fewer flares and breakdowns.' : 'Lean supplies, more flares and breakdowns.'}</div>
             </button>
           ))}
@@ -197,15 +198,16 @@ function daysLeft(stock: number, net: number, remaining: number): { label: strin
   return { label: `${Math.floor(d)} DAYS LEFT`, color: d < 5 ? C.red : C.amber };
 }
 
-const Gauge: React.FC<{ label: string; color: string; value: number; cap: number; unit: string; net: number; remaining: number }> = ({ label, color, value, cap, unit, net, remaining }) => {
+const Gauge: React.FC<{ label: string; hint: string; color: string; value: number; cap: number; unit: string; net: number; remaining: number }> = ({ label, hint, color, value, cap, unit, net, remaining }) => {
   const st = daysLeft(value, net, remaining);
   return (
     <div className="space-y-1">
       <div className="flex justify-between gap-2"><span style={{ color }} className="font-bold">{label}</span><span className="tabular-nums">{Math.round(value)}<span className="text-[#A0AEC0]"> / {cap} {unit}</span></span></div>
+      <div className="text-[12px] text-[#A0AEC0]">{hint}</div>
       <Bar pct={(value / cap) * 100} color={color} />
-      <div className="flex justify-between gap-2 text-[11px]">
+      <div className="flex justify-between gap-2 text-[12px]">
         <span style={{ color: net >= 0 ? C.green : C.amber }}>{net >= 0 ? '+' : '−'}{Math.abs(net).toFixed(1)} / day</span>
-        <span className="font-pixel text-[8px] px-1.5 py-0.5 border" style={{ color: st.color, borderColor: st.color }}>{st.label}</span>
+        <span className="font-pixel text-[9px] px-1.5 py-0.5 border" style={{ color: st.color, borderColor: st.color }}>{st.label}</span>
       </div>
     </div>
   );
@@ -265,7 +267,7 @@ const Game: React.FC<{
   return (
     <div className="max-w-[1400px] mx-auto p-3 md:p-4 space-y-3">
       <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b-2 border-[#00F0FF] pb-2">
-        <div className="font-pixel text-[10px] text-[#00F0FF]">OUTPOST OPS</div>
+        <div className="font-pixel text-[11px] text-[#00F0FF]">OUTPOST OPS</div>
         <div className="text-[#A0AEC0] text-xs">{D.site}</div>
         <div className="flex flex-wrap gap-2 ml-auto items-center text-xs">
           <span className="border border-[#FFB000] px-2 py-0.5 tabular-nums">{D.dayWord.toUpperCase()} {s.day} / {MISSION_DAYS}</span>
@@ -281,16 +283,17 @@ const Game: React.FC<{
         <div className="space-y-3 min-w-0 order-2 lg:order-1">
           <Panel title="LIFE SUPPORT">
             <div className="space-y-3">
-              <Gauge label="Battery" color={C.amber} value={s.res.battery} cap={f.batteryCap} unit="kWh" net={surplus} remaining={remaining} />
-              <Gauge label="Oxygen" color={C.cyan} value={s.res.o2} cap={CAP.o2} unit="units" net={f.o2Net} remaining={remaining} />
-              <Gauge label="Water" color={C.water} value={s.res.water} cap={CAP.water} unit="units" net={f.waterNet} remaining={remaining} />
-              <Gauge label="Food" color={C.green} value={s.res.food} cap={CAP.food} unit="units" net={f.foodNet} remaining={remaining} />
+              <Gauge label="Battery" hint="Stored electricity for nights and storms" color={C.amber} value={s.res.battery} cap={f.batteryCap} unit="kWh" net={surplus} remaining={remaining} />
+              <Gauge label="Oxygen" hint="Air for the crew to breathe" color={C.cyan} value={s.res.o2} cap={CAP.o2} unit="units" net={f.o2Net} remaining={remaining} />
+              <Gauge label="Water" hint="Drinking and washing water" color={C.water} value={s.res.water} cap={CAP.water} unit="units" net={f.waterNet} remaining={remaining} />
+              <Gauge label="Food" hint="Meals: each astronaut eats 1 a day" color={C.green} value={s.res.food} cap={CAP.food} unit="units" net={f.foodNet} remaining={remaining} />
               <div className="space-y-1">
                 <div className="flex justify-between gap-2"><span style={{ color: C.rad }} className="font-bold">Radiation dose</span><span className="tabular-nums">{s.dose.toFixed(1)}<span className="text-[#A0AEC0]"> / {DOSE_LIMIT} mSv</span></span></div>
+                <div className="text-[12px] text-[#A0AEC0]">Space radiation each astronaut has absorbed. Keep it under {DOSE_LIMIT}.</div>
                 <Bar pct={(s.dose / DOSE_LIMIT) * 100} color={C.rad} />
-                <div className="flex justify-between gap-2 text-[11px]">
+                <div className="flex justify-between gap-2 text-[12px]">
                   <span>Shield layers {s.modules.shield} / 5</span>
-                  <span className="font-pixel text-[8px] px-1.5 py-0.5 border" style={{ color: proj > DOSE_LIMIT ? C.red : proj > DOSE_LIMIT * 0.85 ? C.amber : C.green, borderColor: 'currentColor' }}>END ~{proj.toFixed(0)}</span>
+                  <span className="font-pixel text-[9px] px-1.5 py-0.5 border" style={{ color: proj > DOSE_LIMIT ? C.red : proj > DOSE_LIMIT * 0.85 ? C.amber : C.green, borderColor: 'currentColor' }}>END ~{proj.toFixed(0)}</span>
                 </div>
               </div>
             </div>
@@ -300,8 +303,8 @@ const Game: React.FC<{
               {s.crew.map((c) => (
                 <div key={c.name} className={c.aboard ? '' : 'opacity-40'}>
                   <div className="flex justify-between text-xs"><b>{c.name}</b><span className="text-[#A0AEC0]">{c.aboard ? c.role : 'Evacuated'}</span></div>
-                  <div className="grid grid-cols-[52px_1fr] items-center gap-2 text-[10px] text-[#A0AEC0] mt-1">Health<Bar h={6} pct={c.hp} color={c.hp < 35 ? C.red : c.hp < 65 ? C.amber : C.green} /></div>
-                  <div className="grid grid-cols-[52px_1fr] items-center gap-2 text-[10px] text-[#A0AEC0] mt-0.5">Morale<Bar h={6} pct={c.morale} color={c.morale < 35 ? C.red : c.morale < 60 ? C.amber : C.cyan} /></div>
+                  <div className="grid grid-cols-[52px_1fr] items-center gap-2 text-[11px] text-[#A0AEC0] mt-1">Health<Bar h={6} pct={c.hp} color={c.hp < 35 ? C.red : c.hp < 65 ? C.amber : C.green} /></div>
+                  <div className="grid grid-cols-[52px_1fr] items-center gap-2 text-[11px] text-[#A0AEC0] mt-0.5">Morale<Bar h={6} pct={c.morale} color={c.morale < 35 ? C.red : c.morale < 60 ? C.amber : C.cyan} /></div>
                 </div>
               ))}
             </div>
@@ -310,9 +313,10 @@ const Game: React.FC<{
 
         {/* Center */}
         <div className="space-y-3 min-w-0 order-1 lg:order-2">
-          <Panel title="SUNLIGHT AT YOUR SITE" right={<span className="text-[10px] text-[#A0AEC0]">NASA/JPL Horizons</span>}>
+          <OutpostScene s={s} f={f} shelter={!!(s.flareToday && plan.shelter)} outdoorBlocks={a.build + a.ice + a.sci} />
+          <Panel title="SUNLIGHT AT YOUR SITE" right={<span className="text-[11px] text-[#A0AEC0]">NASA/JPL Horizons</span>}>
             <SunStrip s={s} />
-            <p className="text-[11px] text-[#A0AEC0] mt-2">
+            <p className="text-[12px] text-[#A0AEC0] mt-2">
               Each bar is one {D.dayWord.toLowerCase()}: the share of it with the Sun above the horizon at {site.lat}° N, {site.lonE}° E, from {site.startUtc.slice(0, 10)}
               {s.dest === 'mars' ? `, times ${Math.round((site.solarConstantWm2.mean / HORIZONS_SNAPSHOT.moon.solarConstantWm2.mean) * 100)}% because Mars is farther from the Sun` : ''}.
             </p>
@@ -324,18 +328,18 @@ const Game: React.FC<{
               ))}
             </div>
           )}
-          <Panel title="POWER BUDGET" right={<span className="text-[10px] text-[#A0AEC0] tabular-nums">{f.generated.toFixed(0)} made · {f.totalDemand.toFixed(0)} wanted kWh</span>}>
-            <div className="grid grid-cols-[60px_1fr] gap-2 items-center text-[11px] text-[#A0AEC0] mb-2">
+          <Panel title="POWER BUDGET" right={<span className="text-[11px] text-[#A0AEC0] tabular-nums">{f.generated.toFixed(0)} made · {f.totalDemand.toFixed(0)} wanted kWh</span>}>
+            <div className="grid grid-cols-[60px_1fr] gap-2 items-center text-[12px] text-[#A0AEC0] mb-2">
               Supply<StackBar parts={supply} scale={scale} />
               Demand<StackBar parts={SERVICES.map((sv) => [sv.label, f.demand[sv.key], SERVICE_COLOR[sv.key]] as [string, number, string])} scale={scale} />
             </div>
-            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[#A0AEC0] mb-2">
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[#A0AEC0] mb-2">
               {SERVICES.filter((sv) => f.demand[sv.key] > 0.01).map((sv) => (
                 <span key={sv.key} className="inline-flex items-center gap-1"><i className="inline-block w-2 h-2" style={{ background: SERVICE_COLOR[sv.key] }} />{sv.label} {f.demand[sv.key].toFixed(0)}</span>
               ))}
             </div>
             <div className="text-xs font-bold" style={{ color: verdict[0] }}>{verdict[1]}</div>
-            <div className="text-[10px] text-[#A0AEC0] mt-1">Power goes to the habitat first, then oxygen, water and greenhouses, then jobs.</div>
+            <div className="text-[11px] text-[#A0AEC0] mt-1">Power goes to the habitat first, then oxygen, water and greenhouses, then jobs.</div>
           </Panel>
           <Panel title="MISSION LOG">
             <div className="max-h-56 overflow-y-auto space-y-1 pr-1 text-xs">
@@ -348,6 +352,7 @@ const Game: React.FC<{
 
         {/* Command */}
         <div className="space-y-3 min-w-0 order-3">
+          <FirstSteps s={s} plan={plan} />
           <Panel title="TODAY'S ORDERS">
             <div className="grid grid-cols-2 gap-2 mb-3">
               {(['schedule', 'build'] as const).map((t) => (
@@ -356,7 +361,7 @@ const Game: React.FC<{
             </div>
             {tab === 'schedule' ? (
               <div className="space-y-2">
-                <div className="text-[11px] text-[#A0AEC0]">{allowed} work blocks today (about 4 hours each).{2 * f.crew > allowed ? ` Low morale cost ${2 * f.crew - allowed}.` : ''}</div>
+                <div className="text-[12px] text-[#A0AEC0]">{allowed} work blocks today (about 4 hours each).{2 * f.crew > allowed ? ` Low morale cost ${2 * f.crew - allowed}.` : ''}</div>
                 <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${allowed}, 1fr)` }}>
                   {[...JOBS.flatMap((j) => Array(a[j.key]).fill(JOB_COLOR[j.key]) as string[]), ...(Array(a.rest).fill(REST_COLOR) as string[])].slice(0, allowed).map((col, i) => (
                     <i key={i} className="h-3 border border-black" style={{ background: col }} />
@@ -366,21 +371,21 @@ const Game: React.FC<{
                   const lockedOut = s.flareToday && plan.shelter && j.outdoor;
                   return (
                     <div key={j.key} className="grid grid-cols-[1fr_auto] gap-2 items-center border border-[#2A3B5C] bg-[#050508] p-2">
-                      <div className="min-w-0"><div className="text-xs font-bold" style={{ color: JOB_COLOR[j.key] }}>{j.name}</div><div className="text-[10px] text-[#A0AEC0]">{j.hint}</div></div>
+                      <div className="min-w-0"><div className="text-xs font-bold" style={{ color: JOB_COLOR[j.key] }}>{j.name}</div><div className="text-[11px] text-[#A0AEC0]">{j.hint}</div></div>
                       <div className="flex items-center gap-1">
                         <button aria-label={`Fewer ${j.name} blocks`} className="w-8 h-8 border-2 border-[#2A3B5C] hover:border-[#00F0FF] disabled:opacity-30" disabled={plan.alloc[j.key] <= 0} onClick={() => onJob(j.key, -1)}>−</button>
-                        <span className="w-6 text-center font-pixel text-[11px] tabular-nums">{a[j.key]}</span>
+                        <span className="w-6 text-center font-pixel text-[12px] tabular-nums">{a[j.key]}</span>
                         <button aria-label={`More ${j.name} blocks`} className="w-8 h-8 border-2 border-[#2A3B5C] hover:border-[#00F0FF] disabled:opacity-30" disabled={used >= allowed || lockedOut} onClick={() => onJob(j.key, 1)}>+</button>
                       </div>
                     </div>
                   );
                 })}
                 <div className="grid grid-cols-[1fr_auto] gap-2 items-center border border-dashed border-[#2A3B5C] p-2">
-                  <div><div className="text-xs font-bold" style={{ color: REST_COLOR }}>Rest and exercise</div><div className="text-[10px] text-[#A0AEC0]">Leftover blocks. Keeps morale and health up.</div></div>
-                  <span className="w-6 text-center font-pixel text-[11px]">{a.rest}</span>
+                  <div><div className="text-xs font-bold" style={{ color: REST_COLOR }}>Rest and exercise</div><div className="text-[11px] text-[#A0AEC0]">Leftover blocks. Keeps morale and health up.</div></div>
+                  <span className="w-6 text-center font-pixel text-[12px]">{a.rest}</span>
                 </div>
                 {s.flareToday && (
-                  <label className="flex gap-2 items-start border-2 border-[#FF3344] bg-[#FF3344]/10 p-2 text-[11px] cursor-pointer">
+                  <label className="flex gap-2 items-start border-2 border-[#FF3344] bg-[#FF3344]/10 p-2 text-[12px] cursor-pointer">
                     <input type="checkbox" className="mt-0.5 w-4 h-4 accent-[#00F0FF]" checked={plan.shelter} onChange={(e) => setPlan({ ...plan, shelter: e.target.checked })} />
                     <span><b>Shelter from the flare.</b> Construction, ice mining and science stop today. Flare dose drops by 85%.</span>
                   </label>
@@ -397,15 +402,15 @@ const Game: React.FC<{
                         <b className="text-xs">{m.name}</b>
                         <button className="retro-btn px-2 py-1 text-[8px] disabled:opacity-30 disabled:cursor-not-allowed" disabled={!canBuild(s, k)} onClick={() => onBuild(k)}>{s.modules[k] >= m.max ? 'MAX' : `BUILD ${m.cost}`}</button>
                       </div>
-                      <div className="text-[10px] text-[#A0AEC0]">{m.desc}</div>
-                      <div className="text-[10px] text-[#A0AEC0] tabular-nums">Built {s.modules[k]} of {m.max}{brk ? <span style={{ color: C.red }}> · {brk} offline</span> : null}</div>
+                      <div className="text-[11px] text-[#A0AEC0]">{m.desc}</div>
+                      <div className="text-[11px] text-[#A0AEC0] tabular-nums">Built {s.modules[k]} of {m.max}{brk ? <span style={{ color: C.red }}> · {brk} offline</span> : null}</div>
                     </div>
                   );
                 })}
               </div>
             )}
             <button className="retro-btn w-full h-12 mt-3 text-xs disabled:opacity-40" disabled={s.phase !== 'play'} onClick={onRun}>RUN {D.dayWord.toUpperCase()} {s.day}</button>
-            <div className="text-[11px] text-[#A0AEC0] mt-2">
+            <div className="text-[12px] text-[#A0AEC0] mt-2">
               Tonight: +{f.dose.toFixed(2)} mSv each{s.flareToday ? (plan.shelter ? ' (sheltered)' : ' (flare, no shelter)') : ''}. Expect {f.science > 0 ? `+${f.science.toFixed(0)} samples` : 'no samples'} and {f.buildPoints > 0 ? `+${f.buildPoints.toFixed(0)} build points` : 'no build points'}.
             </div>
           </Panel>
@@ -446,8 +451,33 @@ const SunStrip: React.FC<{ s: OutpostState }> = ({ s }) => {
           );
         })}
       </div>
-      <div className="flex justify-between text-[10px] text-[#64748B] mt-1 tabular-nums"><span>{D.dayWord} 1</span><span>{D.dayWord} {MISSION_DAYS}</span></div>
+      <div className="flex justify-between text-[11px] text-[#64748B] mt-1 tabular-nums"><span>{D.dayWord} 1</span><span>{D.dayWord} {MISSION_DAYS}</span></div>
     </div>
+  );
+};
+
+/** Guided start for the first days: what to do, in order, ticked off as it happens. */
+const FirstSteps: React.FC<{ s: OutpostState; plan: Plan }> = ({ s, plan }) => {
+  const gh = s.modules.greenhouse > 0;
+  const steps: Array<[boolean, string]> = [
+    [gh, 'Open BUILD and build a greenhouse (5 points). Without one, food runs out.'],
+    [gh && plan.alloc.farm >= s.modules.greenhouse, 'In CREW SCHEDULE, give each greenhouse 1 Farming block.'],
+    [s.day > 1, 'Check the gauges on the left. Green LASTS means you are fine. Then press RUN DAY.'],
+  ];
+  if (s.dest === 'moon') steps.push([s.modules.reactor > 0, 'Before night falls (see the sunlight chart), save up for a fission reactor.']);
+  if (s.day > 4 || steps.every(([done]) => done)) return null;
+  return (
+    <section className="border-2 border-[#FFB000] bg-[#FFB000]/10 p-3" aria-label="First steps">
+      <h2 className="font-pixel text-[11px] text-[#FFB000] mb-2">FIRST STEPS</h2>
+      <ol className="space-y-1.5 text-[13px]">
+        {steps.map(([done, text], i) => (
+          <li key={i} className="flex gap-2" style={{ color: done ? C.green : '#fff' }}>
+            <span className="font-pixel text-[11px] mt-0.5" aria-hidden="true">{done ? '■' : '□'}</span>
+            <span className={done ? 'line-through opacity-70' : ''}>{text}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 };
 
@@ -487,12 +517,12 @@ const EventModal: React.FC<{ ev: OutpostEvent; onDone: (crate?: CrateKey) => voi
         {(Object.keys(CRATES) as CrateKey[]).map((k) => (
           <button key={k} className="text-left border-2 border-[#2A3B5C] hover:border-[#00F0FF] p-2" onClick={() => onDone(k)}>
             <div className="text-xs font-bold">{CRATES[k].name}</div>
-            <div className="text-[11px] text-[#A0AEC0]">{CRATES[k].text}</div>
+            <div className="text-[12px] text-[#A0AEC0]">{CRATES[k].text}</div>
           </button>
         ))}
       </div>
     ) : (
-      <div className="flex justify-end"><button autoFocus className="retro-btn px-4 py-2 text-[10px]" onClick={() => onDone()}>GOT IT</button></div>
+      <div className="flex justify-end"><button autoFocus className="retro-btn px-4 py-2 text-[11px]" onClick={() => onDone()}>GOT IT</button></div>
     )}
   </Modal>
 );
@@ -518,10 +548,10 @@ const Debrief: React.FC<{ s: OutpostState; onAgain: () => void; onExit: () => vo
           <div key={l.title} className="border border-[#2A3B5C] bg-[#050508] p-2 text-xs"><b className="block mb-0.5">{l.title}</b><span className="text-[#A0AEC0]">{l.body}</span></div>
         ))}
       </div>
-      <p className="text-[10px] text-[#64748B]">The {DOSE_LIMIT} mSv limit is game-sized. Real agencies set career limits in the hundreds of mSv. Sunlight data: NASA/JPL Horizons.</p>
+      <p className="text-[11px] text-[#64748B]">The {DOSE_LIMIT} mSv limit is game-sized. Real agencies set career limits in the hundreds of mSv. Sunlight data: NASA/JPL Horizons.</p>
       <div className="flex flex-wrap gap-2 justify-end">
-        <button className="retro-btn-secondary px-4 py-2 text-[10px]" onClick={onExit}>TITLE SCREEN</button>
-        <button autoFocus className="retro-btn px-4 py-2 text-[10px]" onClick={onAgain}>NEW MISSION</button>
+        <button className="retro-btn-secondary px-4 py-2 text-[11px]" onClick={onExit}>TITLE SCREEN</button>
+        <button autoFocus className="retro-btn px-4 py-2 text-[11px]" onClick={onAgain}>NEW MISSION</button>
       </div>
     </Modal>
   );

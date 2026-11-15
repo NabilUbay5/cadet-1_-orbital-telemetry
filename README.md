@@ -488,7 +488,15 @@ export interface TelemetryData {
 | **Audio**                | Pooled procedural thrusters, boost, proximity pings, quiz chimes, and master mute.                    | [Audio engine](src/game/audioEngine.ts)                                            |
 | **Procedural assets**    | Canvas textures with nearest filtering; low-poly craft, planet, stars, satellite, and debris.         | [Models](src/game/proceduralModels.ts)                                                |
 | **React integration**    | Engine stored in a ref; telemetry and UI in state; effect cleanup calls engine disposal.              | [App](src/App.tsx)                                                                    |
-| **Outpost Ops**          | Turn-based Moon/Mars base for a crew of four over 30 days: crew work blocks, seven buildable modules, power priority for life support, radiation dose and shielding, flares, dust storms, breakdowns, supply drones, and an end-of-mission debrief. Sunlight per day comes from NASA/JPL Horizons. | [Rules](src/game/outpostLogic.ts), [Screen](src/components/OutpostMode.tsx), [Data](src/data/nasa/horizonsSnapshot.ts) |
+| **Outpost Ops**          | Turn-based Moon/Mars base for a crew of four over 30 days: crew work blocks, seven buildable modules, power priority for life support, radiation dose and shielding, flares, dust storms, breakdowns, supply drones, and an end-of-mission debrief. An animated outpost scene shows buildings, night, dust storms and broken machines. A first-steps guide walks new players through day 1, and every shortage is logged with a plain-language "Why" that traces it to its cause. Sunlight per day comes from NASA/JPL Horizons. It is the main mission on the title screen (Enter); Flight Academy is the bonus mode (Space). | [Rules](src/game/outpostLogic.ts), [Screen](src/components/OutpostMode.tsx), [Data](src/data/nasa/horizonsSnapshot.ts) |
+
+---
+
+## 🌐 Play Online
+
+Once GitHub Pages is switched on, every push to `main` publishes a playable build to **https://nabilubay5.github.io/cadet-1_-orbital-telemetry/** through [pages.yml](.github/workflows/pages.yml).
+
+One-time setup by the repository owner: **Settings → Pages → Build and deployment → Source: GitHub Actions**, then re-run the "Deploy to GitHub Pages" workflow.
 
 ---
 
@@ -673,7 +681,7 @@ This launches a fresh browser context, blocks all external requests, loads the l
 | **Stage thresholds**   | Stage 1 ±4.5° window, 4 s hold, half-rate decay, and +1 s ring bonus; Stage 2 5 m pickup radius and 3-cube goal; Stage 3 <45 m / <8° lock held for 3 s with 0.6× decay. Also pins every exported constant, strict vs. inclusive boundaries, timer clamping under 5,000 random steps, and `progressPercent` rounding, capping, and monotonicity. |
 | **Fixed timestep**     | Same physics step count at 30, 60, 144, and 240 Hz; 0.05 s frame clamp prevents a spiral of death. Also covers remainder carry-over, zero and exact-clamp deltas, irregular frame jitter, per-instance state, and deterministic replay. |
 | **Trivia bank**        | Three questions per stage, unique ids, four distinct options, in-range `correctIndex`, and one badge per stage.                       |
-| **Outpost Ops**        | Horizons snapshot shape and the lunar night; solar output following the data; life support powered before jobs; shelter and shielding dose rules; build caps; stock limits; seeded replay; and a balance check that a sensible scripted player completes most missions while a neglected Moon base usually fails. |
+| **Outpost Ops**        | Horizons snapshot shape and the lunar night; solar output following the data; life support powered before jobs; shelter and shielding dose rules; build caps; stock limits; seeded replay; a balance check that a sensible scripted player completes most missions while a neglected Moon base usually fails; and the "Why" explanations for power, oxygen, water and food shortages. |
 
 Tests live in [`src/game/__tests__/`](src/game/__tests__) and exercise the pure modules ([missionLogic.ts](src/game/missionLogic.ts), [fixedTimestep.ts](src/game/fixedTimestep.ts), [triviaBank.ts](src/data/triviaBank.ts)), so they run without WebGL or a browser. Audio graph lifecycle and exhaust buffer reuse are also covered by Bun tests. The optional browser checks render audio using OfflineAudioContext and exercise mute, quiz retry/pass, stage transitions, and pause/resume. There is no automated visual-regression suite.
 

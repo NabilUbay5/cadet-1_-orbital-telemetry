@@ -528,7 +528,8 @@ export class FlightEngine {
         this.onStateChange?.('PLAYING');
       }
     }
-    if ((e.code === 'Space' || e.code === 'Enter') && this.gameState === 'TITLE') {
+    // Space starts Flight Academy. Enter on the title screen opens Outpost Ops (handled in App).
+    if (e.code === 'Space' && this.gameState === 'TITLE') {
       this.resetSimulation();
     }
     if (e.code === 'KeyR' && (this.gameState === 'VICTORY' || this.gameState === 'DEFEAT')) {
