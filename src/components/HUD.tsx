@@ -11,6 +11,7 @@ import { NasaTelemetryPanel } from './NasaTelemetryPanel.tsx';
 
 interface HUDProps {
   telemetry: TelemetryData;
+  inert?: boolean;
   onCycleCamera: () => void;
   onToggleFlightAssist: () => void;
   onToggleMute: () => void;
@@ -20,6 +21,7 @@ interface HUDProps {
 
 export const HUD: React.FC<HUDProps> = ({
   telemetry,
+  inert = false,
   onCycleCamera,
   onToggleFlightAssist,
   onToggleMute,
@@ -100,7 +102,7 @@ export const HUD: React.FC<HUDProps> = ({
   const currentDirective = stageDirectives[telemetry.stage] || stageDirectives[1];
 
   return (
-    <div className="cockpit-hud absolute inset-0 pointer-events-none z-10 flex flex-col justify-between overflow-hidden font-pixel">
+    <div inert={inert} className="cockpit-hud absolute inset-0 pointer-events-none z-10 flex flex-col justify-between overflow-hidden font-pixel">
       {/* 1. TOP COMMAND DECK (Height 48px, 100% width) */}
       <header className="hud-header w-full min-h-12 shrink-0 bg-[#0d111a]/95 border-b-2 border-[#00F0FF] px-3 md:px-4 flex flex-wrap gap-2 py-2 items-center justify-between pointer-events-auto shadow-[0_3px_0_#000]">
         {/* Left: MET & Stage Name */}

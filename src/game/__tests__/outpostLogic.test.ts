@@ -335,6 +335,107 @@ describe('balance', () => {
   });
 });
 
+describe('water-limited life support', () => {
+  const productionPlan = (): Plan => ({ alloc: { maint: 0, build: 0, farm: 1, ice: 0, sci: 0 }, shelter: false });
+  const productionState = () => {
+    const s = newOutpost('mars', 'cadet', 1);
+    s.modules.reactor = 3;
+    s.modules.greenhouse = 1;
+    return s;
+  };
+
+  test('a dry tank cannot produce oxygen or food without incoming water', () => {
+    const s = productionState();
+    s.res.water = s.res.o2 = s.res.food = 0;
+    const plan = productionPlan();
+    const f = forecastDay(s, plan);
+    expect(f.served.o2).toBe(1);
+    expect(f.served.gh).toBe(1);
+    expect(f.o2Net).toBe(-4);
+    expect(f.foodNet).toBe(-4);
+    expect(f.o2WaterFraction).toBe(0);
+    expect(f.greenhouseWaterFraction).toBe(0);
+    const lines = endDay(s, plan);
+    expect(s.res.water).toBe(0);
+    expect(s.res.o2).toBe(0);
+    expect(s.res.food).toBe(0);
+    expect(s.stats.noWater).toBe(1);
+    expect(lines.some(l => l.text.includes('Water rationing'))).toBe(true);
+    expect(lines.some(l => l.text.includes('not enough water remained for the oxygen generator'))).toBe(true);
+    expect(lines.some(l => l.text.includes('not enough water remained for the greenhouses'))).toBe(true);
+  });
+
+  test('crew water is reserved before partially running the oxygen generator', () => {
+    const s = productionState();
+    // Crew uses 12, recycler recovers 5; only one unit remains for the generator.
+    s.res.water = 8;
+    const f = forecastDay(s, productionPlan());
+    expect(f.o2WaterFraction).toBe(0.5);
+    expect(f.o2Net).toBe(-1.5); // 2.5 made, four breathed.
+    expect(f.foodNet).toBe(-4);
+    expect(f.waterNet).toBe(-8);
+    const oldOxygen = s.res.o2;
+    endDay(s, productionPlan());
+    expect(s.res.o2).toBeCloseTo(oldOxygen + f.o2Net, 8);
+    expect(s.res.water).toBe(0);
+    expect(s.stats.noWater).toBe(0); // Crew received its full allocation.
+  });
+
+  test('greenhouse output scales with water remaining after oxygen production', () => {
+    const s = productionState();
+    s.res.water = 9.5; // Seven for crew, two for oxygen, half for the greenhouse.
+    const f = forecastDay(s, productionPlan());
+    expect(f.o2WaterFraction).toBe(1);
+    expect(f.greenhouseWaterFraction).toBe(0.5);
+    expect(f.o2Net).toBe(1.5);
+    expect(f.foodNet).toBe(-2.75);
+    expect(f.waterNet).toBe(-9.5);
+  });
+
+  test('sufficient water preserves the documented full production rates', () => {
+    const s = productionState();
+    s.res.water = 10;
+    const before = structuredClone(s);
+    const f = forecastDay(s, productionPlan());
+    expect(f.o2Net).toBe(2); // Five from generator plus one from greenhouse minus four.
+    expect(f.foodNet).toBe(-1.5);
+    expect(f.waterNet).toBe(-10);
+    expect(f.o2WaterFraction).toBe(1);
+    expect(f.greenhouseWaterFraction).toBe(1);
+    expect(s).toEqual(before); // Forecasting must not consume the water itself.
+  });
+
+  test('same-day ice mining can supply a dry tank and its production', () => {
+    const s = productionState();
+    s.res.water = 0;
+    const plan = productionPlan();
+    plan.alloc.ice = 2; // Twelve supplied; seven crew plus three production consumed.
+    const f = forecastDay(s, plan);
+    expect(f.o2Net).toBe(2);
+    expect(f.foodNet).toBe(-1.5);
+    expect(f.waterNet).toBe(2);
+    endDay(s, plan);
+    expect(s.res.water).toBe(2);
+    expect(s.stats.noWater).toBe(0);
+  });
+
+  test('limited power and water both constrain output without double counting water', () => {
+    const s = productionState();
+    s.modules.solar = s.modules.reactor = 0;
+    const plan = productionPlan();
+    const demand = forecastDay(s, plan).demand;
+    s.res.battery = demand.hab + demand.o2 / 2;
+    // Recycler is unpowered, so crew reserves 12, leaving half a water unit.
+    s.res.water = 12.5;
+    const f = forecastDay(s, plan);
+    expect(f.served.o2).toBe(0.5);
+    expect(f.o2WaterFraction).toBe(0.5);
+    expect(f.o2Net).toBe(-2.75);
+    expect(f.foodNet).toBe(-4);
+    expect(f.waterNet).toBe(-12.5);
+  });
+});
+
 describe('shortage explanations', () => {
   const nightDay = HORIZONS_SNAPSHOT.moon.sunlight.indexOf(0) + 1;
 

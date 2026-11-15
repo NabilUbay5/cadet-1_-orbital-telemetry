@@ -350,6 +350,7 @@ export class FlightEngine {
   }
 
   public resetSimulation() {
+    this.setInputEnabled(true);
     this.flightLog.clear();
     this.position.set(0, 0, 150);
     this.velocity.set(0, 0, 0);
@@ -501,7 +502,13 @@ export class FlightEngine {
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
-    if (!this.inputEnabled) return;
+    if (!this.inputEnabled || e.defaultPrevented) return;
+    // Let focused controls keep their native editing and activation keys.
+    // Letter shortcuts on HUD buttons (e.g. M after clicking mute) still work.
+    if (e.target instanceof HTMLElement) {
+      if (e.target.closest('input, select, textarea, [contenteditable]:not([contenteditable="false"])')) return;
+      if ((e.code === 'Space' || e.code === 'Enter') && e.target.closest('button, a, [role="button"]')) return;
+    }
     if (PREVENT_DEFAULT_KEYS.has(e.code)) {
       e.preventDefault();
     }

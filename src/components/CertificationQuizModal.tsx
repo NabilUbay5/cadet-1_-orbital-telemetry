@@ -100,6 +100,7 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
   const [score, setScore] = useState<number>(0);
   const [quizFinished, setQuizFinished] = useState<boolean>(false);
   const scoreRef = useRef<number>(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setCurrentIdx(0);
@@ -108,6 +109,8 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
     setScore(0);
     scoreRef.current = 0;
     setQuizFinished(false);
+    // Leave the HUD's focused control behind when this modal opens.
+    dialogRef.current?.focus();
   }, [stage]);
 
   const currentQ = questions[currentIdx];
@@ -159,6 +162,11 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
 
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Astronaut certification: stage ${stage}`}
+      tabIndex={-1}
       data-selected-question-ids={selectedQuestionIds}
       className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-40 pointer-events-auto font-pixel"
     >

@@ -242,6 +242,9 @@ export interface DayForecast {
   batteryCap: number;
   wastedKwh: number;
   lifeSupportShort: boolean;
+  /** Share of powered production supported by water, after reserving crew needs. */
+  o2WaterFraction: number;
+  greenhouseWaterFraction: number;
   o2Net: number;
   waterNet: number;
   foodNet: number;
@@ -282,9 +285,21 @@ export function forecastDay(s: OutpostState, plan: Plan): DayForecast {
   const cap = batteryCap(s);
   const gh = working(s, 'greenhouse');
   const tended = gh > 0 ? 0.4 + 0.6 * Math.min(1, a.farm / gh) : 0;
-  const o2Made = working(s, 'o2gen') * 5 * served.o2 + gh * served.gh * tended;
   const recovered = Math.min(3 * crew, working(s, 'recycler') * 5 * served.rec);
-  const waterUsed = 3 * crew - recovered + working(s, 'o2gen') * 2 * served.o2 + gh * served.gh;
+  const crewWater = 3 * crew - recovered;
+  const minedWater = a.ice * 6 * served.ice;
+  // Same-day mining can supply production. Reserve net crew consumption first,
+  // then split the remainder between oxygen and food in life-support order.
+  let productionWater = Math.max(0, s.res.water + minedWater - crewWater);
+  const o2WaterDemand = working(s, 'o2gen') * 2 * served.o2;
+  const o2WaterUsed = Math.min(productionWater, o2WaterDemand);
+  productionWater -= o2WaterUsed;
+  const greenhouseWaterDemand = gh * served.gh;
+  const greenhouseWaterUsed = Math.min(productionWater, greenhouseWaterDemand);
+  const o2WaterFraction = o2WaterDemand > 0 ? o2WaterUsed / o2WaterDemand : 1;
+  const greenhouseWaterFraction = greenhouseWaterDemand > 0 ? greenhouseWaterUsed / greenhouseWaterDemand : 1;
+  const o2Made = o2WaterUsed * 2.5 + greenhouseWaterUsed * tended;
+  const waterUsed = crewWater + o2WaterUsed + greenhouseWaterUsed;
   const outdoorShare = ((a.build + a.ice + a.sci) / allowed) * 0.6;
   const indoor = 1 - 0.16 * s.modules.shield;
   const baseDose = D.dose * ((1 - outdoorShare) * indoor + outdoorShare);
@@ -293,9 +308,10 @@ export function forecastDay(s: OutpostState, plan: Plan): DayForecast {
     crew, allowed, env, solarKwh, reactorKwh, generated, demand, served, totalDemand,
     batteryAfter: clamp(available, 0, cap), batteryCap: cap, wastedKwh: Math.max(0, available - cap),
     lifeSupportShort: SERVICES.some((sv) => sv.lifeSupport && demand[sv.key] > 0 && served[sv.key] < 0.999),
+    o2WaterFraction, greenhouseWaterFraction,
     o2Net: o2Made - crew,
-    waterNet: a.ice * 6 * served.ice - waterUsed,
-    foodNet: gh * 2.5 * served.gh * tended - crew,
+    waterNet: minedWater - waterUsed,
+    foodNet: greenhouseWaterUsed * 2.5 * tended - crew,
     dose: baseDose + flareDose, baseDose, flareDose,
     science: a.sci * 3 * served.sci,
     buildPoints: a.build * served.bld,
@@ -394,6 +410,7 @@ export function explainShortage(s: OutpostState, f: DayForecast, a: EffectiveAll
   if (kind === 'o2') {
     if (working(s, 'o2gen') === 0) return s.modules.o2gen > 0 ? 'the oxygen generator is broken (a maintenance block fixes it)' : 'there is no oxygen generator';
     if (f.served.o2 < 0.999) return `the oxygen generator got only ${pct(f.served.o2)} of its power, because ${explainPowerShortage(s, f)}`;
+    if (f.o2WaterFraction < 0.999) return 'not enough water remained for the oxygen generator after reserving crew needs. Mine ice or improve recycling';
     return 'the crew breathes more than the outpost makes. Add an oxygen generator or a greenhouse';
   }
   if (kind === 'water') {
@@ -405,6 +422,7 @@ export function explainShortage(s: OutpostState, f: DayForecast, a: EffectiveAll
   const gh = working(s, 'greenhouse');
   if (gh === 0) return s.modules.greenhouse > 0 ? 'the greenhouse is broken (a maintenance block fixes it)' : 'there is no greenhouse, so the crew is eating the stored food';
   if (f.served.gh < 0.999) return `the greenhouses got only ${pct(f.served.gh)} of their power, because ${explainPowerShortage(s, f)}`;
+  if (f.greenhouseWaterFraction < 0.999) return 'not enough water remained for the greenhouses after supplying the crew and oxygen generator. Mine ice or improve recycling';
   if (a.farm < gh) return 'the greenhouses were not fully tended. Each one needs 1 farming block a day';
   return 'four astronauts eat more than the greenhouses grow. Build another greenhouse';
 }
@@ -425,6 +443,9 @@ export function endDay(s: OutpostState, plan: Plan): LogLine[] {
     note('info', `Why: ${explainPowerShortage(s, f)}.`);
   }
   else if (SERVICES.some((sv) => !sv.lifeSupport && f.demand[sv.key] > 0 && f.served[sv.key] < 0.999)) note('warn', 'Not enough power for every job. Outdoor work slowed down.');
+  if (f.o2WaterFraction < 0.999 || f.greenhouseWaterFraction < 0.999) {
+    note('warn', 'Water rationing reduced machine production. Crew water comes first, then oxygen generators, then greenhouses.');
+  }
 
   const lack = { o2: s.res.o2 + f.o2Net < 0, water: s.res.water + f.waterNet < 0, food: s.res.food + f.foodNet < 0 };
   s.res.o2 = clamp(s.res.o2 + f.o2Net, 0, CAP.o2);

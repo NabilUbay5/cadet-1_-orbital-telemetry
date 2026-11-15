@@ -98,6 +98,7 @@ export default function App() {
       },
       onStageTaskCompleted: (stage) => {
         // Pause physics and thruster so the cadet can focus safely on the exam
+        engineRef.current?.setInputEnabled(false);
         engineRef.current?.setGameState('PAUSED');
         setActiveQuizStage(stage);
       },
@@ -196,6 +197,7 @@ export default function App() {
 
   // Trivia Certification Passed Handler
   const handlePassQuiz = (passedStage: MissionStage) => {
+    engineRef.current?.setInputEnabled(true);
     const badgeId =
       passedStage === 1
         ? 'badge-gravity'
@@ -241,6 +243,7 @@ export default function App() {
       {gameState === 'PLAYING' && (
         <HUD
           telemetry={telemetry}
+          inert={activeQuizStage !== null}
           onCycleCamera={handleCycleCamera}
           onToggleFlightAssist={handleToggleFlightAssist}
           onToggleMute={handleToggleMute}

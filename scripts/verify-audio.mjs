@@ -39,7 +39,22 @@ try {
   assert(Object.values(rendered).every(signal => signal.peak < 1));
   console.log('OfflineAudioContext:', rendered);
 
-  await page.getByRole('button', { name: /PRESS START/ }).click();
+  // Focused title controls own Enter/Space; global shortcuts must not start a flight.
+  for (const key of ['Enter', 'Space']) {
+    await page.getByRole('button', { name: /OUTPOST OPS/ }).focus();
+    await page.keyboard.press(key);
+    await page.getByText('RUN A MOON OR MARS OUTPOST', { exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Mute audio', exact: true }).count(), 0);
+    await page.getByRole('button', { name: 'BACK TO TITLE', exact: true }).click();
+  }
+  // Unfocused Enter still opens the upstream main mission shortcut.
+  await page.evaluate(() => document.activeElement?.blur());
+  await page.keyboard.press('Enter');
+  await page.getByText('RUN A MOON OR MARS OUTPOST', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'BACK TO TITLE', exact: true }).click();
+  await page.getByRole('button', { name: /PRESS START/ }).focus();
+  await page.keyboard.press('Enter');
+  console.log('Focused title Enter/Space activation and default Enter navigation passed.');
   const mute = page.getByRole('button', { name: 'Mute audio', exact: true });
   await mute.click();
   await page.waitForFunction(() => document.querySelector('[aria-label="Mute audio"]')?.getAttribute('aria-pressed') === 'true');
@@ -53,6 +68,25 @@ try {
   console.log('HUD mute, keyboard mute, and repeat-key handling passed.');
 
   await page.getByText('[ASTRONAUT CERTIFICATION: STAGE 1]', { exact: true }).waitFor({ timeout: 60000 });
+  // Certification is a modal input lock, not an ordinary resumable pause.
+  assert.equal(await page.locator('.cockpit-hud').evaluate(hud => hud.inert), true);
+  // Verify browser focus behavior directly; role locators can still match inert DOM.
+  await page.locator('[aria-label="Mute audio"]').evaluate(button => button.focus());
+  assert.equal(await page.getByRole('dialog', { name: 'Astronaut certification: stage 1', exact: true }).evaluate(
+    dialog => dialog === document.activeElement), true);
+  const quizEpoch = await page.getByTestId('nasa-epoch').innerText();
+  for (const key of ['p', 'Escape', 'Space']) {
+    await page.keyboard.press(key);
+    // Check each shortcut independently; P and Escape must not cancel each other out.
+    await page.waitForTimeout(400);
+    assert.equal(await page.getByTestId('nasa-epoch').innerText(), quizEpoch, `${key} must not resume flight`);
+  }
+  await page.keyboard.down('w');
+  await page.waitForTimeout(800);
+  await page.keyboard.up('w');
+  assert.equal(await page.getByTestId('nasa-epoch').innerText(), quizEpoch);
+  assert.equal(await page.getByRole('dialog', { name: 'Flight paused', exact: true }).count(), 0);
+  console.log('Quiz blocks flight resume, thrust, and scanner shortcuts.');
   // Verify wrong-answer feedback, retry, and a complete successful certification.
   const questions = await page.evaluate(async () => (await import('/src/data/triviaBank.ts')).TRIVIA_QUESTIONS[1]);
   const answerCurrentQuestion = async wrong => {
@@ -60,7 +94,12 @@ try {
     const question = questions.find(candidate => candidate.id === id);
     assert(question, `Displayed question ${id} must belong to the Stage 1 bank`);
     const index = wrong ? (question.correctIndex + 1) % 4 : question.correctIndex;
-    await page.getByRole('button', { name: `${'ABCD'[index]} ${question.options[index]}`, exact: true }).click();
+    // Match the answer text, not its old letter: the UI independently shuffles options.
+    const options = page.locator('button').filter({ has: page.getByText(question.options[index], { exact: true }) });
+    assert.equal(await options.count(), 1, 'Answer text must identify exactly one option');
+    // Check native Space activation too: the engine must leave quiz controls alone.
+    await options.focus();
+    await page.keyboard.press('Space');
   };
   // The current quiz draws three questions from a larger randomized bank.
   for (let i = 0; i < 3; i++) {
@@ -75,6 +114,7 @@ try {
   }
   await page.getByText('★ CERTIFICATION PASSED! ★', { exact: true }).waitFor();
   await page.getByRole('button', { name: /PROCEED TO NEXT MISSION STAGE/ }).click();
+  assert.equal(await page.locator('.cockpit-hud').evaluate(hud => hud.inert), false);
   await page.keyboard.press('p');
   await page.getByText('★ GAME PAUSED ★', { exact: true }).waitFor();
   await page.getByRole('button', { name: /CONTINUE/ }).click();
