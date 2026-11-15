@@ -24,7 +24,11 @@ import { FlightTelemetryLog } from './flightTelemetryLog.ts';
 import { FIXED_DT, FixedTimestep } from './fixedTimestep.ts';
 import { isTelemetryUpdateDue } from './telemetrySchedule.ts';
 import { createTelemetrySnapshot } from './telemetrySnapshot.ts';
-import { TelemetryPodTracker, TOTAL_TELEMETRY_PODS } from './telemetryPods.ts';
+import {
+  getTelemetryPodResearchPoints,
+  TelemetryPodTracker,
+  TOTAL_TELEMETRY_PODS,
+} from './telemetryPods.ts';
 import {
   STAGE1_START_PITCH_DEG,
   STAGE1_START_YAW_DEG,
@@ -298,7 +302,7 @@ export class FlightEngine {
 
     // Telemetry research pods are optional pickups distributed along the flight route.
     const telemetryPodPositions = [
-      new THREE.Vector3(-18, 20, 45),
+      new THREE.Vector3(3.06, 4.16, 130.68),
       new THREE.Vector3(20, 32, -100),
       new THREE.Vector3(-8, 28, -280),
     ];
@@ -477,6 +481,8 @@ export class FlightEngine {
       readinessScore: 100,
       hullDamageTaken: this.damageTakenCount,
       energyCubesCollected: this.energyCubesCollectedCount,
+      telemetryPodsCollected: this.telemetryPodTracker.count,
+      telemetryPodResearchPoints: getTelemetryPodResearchPoints(this.telemetryPodTracker.count),
       badgesEarned: 3,
       triviaScore: 9,
       totalTrivia: 9,
@@ -1022,6 +1028,18 @@ export class FlightEngine {
     const radarBlips: TelemetryData['radarBlips'] = [];
     const craftInvQuat = this._invOrientation.copy(this.orientation).invert();
 
+    for (const pod of this.telemetryPods) {
+      if (!pod.collected) {
+        this._tmpVec.subVectors(pod.group.position, this.position).applyQuaternion(craftInvQuat);
+        radarBlips.push({
+          x: this._tmpVec.x / 160,
+          y: -this._tmpVec.z / 160,
+          type: 'pod',
+          distance: Math.round(this.position.distanceTo(pod.group.position)),
+        });
+      }
+    }
+
     for (const ast of this.asteroids) {
       const dist = this.position.distanceTo(ast.mesh.position);
       nearestHazard = Math.min(nearestHazard, dist);
@@ -1036,18 +1054,6 @@ export class FlightEngine {
           y: -this._tmpVec.z / 120,
           type: 'hazard',
           distance: Math.round(dist),
-        });
-      }
-    }
-
-    for (const pod of this.telemetryPods) {
-      if (!pod.collected) {
-        this._tmpVec.subVectors(pod.group.position, this.position).applyQuaternion(craftInvQuat);
-        radarBlips.push({
-          x: this._tmpVec.x / 160,
-          y: -this._tmpVec.z / 160,
-          type: 'pod',
-          distance: Math.round(this.position.distanceTo(pod.group.position)),
         });
       }
     }
@@ -1152,6 +1158,8 @@ export class FlightEngine {
       readinessScore: 30,
       hullDamageTaken: this.damageTakenCount,
       energyCubesCollected: this.energyCubesCollectedCount,
+      telemetryPodsCollected: this.telemetryPodTracker.count,
+      telemetryPodResearchPoints: getTelemetryPodResearchPoints(this.telemetryPodTracker.count),
       badgesEarned: this.badgesUnlocked.length,
       triviaScore: 0,
       totalTrivia: 9,

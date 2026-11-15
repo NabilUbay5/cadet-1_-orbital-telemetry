@@ -28,3 +28,11 @@ jobs:
         run: bun test
       - name: Build
         run: bun run build
+      - name: Install Chromium for browser smoke test
+        run: |
+          npm install --prefix /tmp/cadet-browser-tools --no-package-lock playwright@1.65.1
+          /tmp/cadet-browser-tools/node_modules/.bin/playwright install --with-deps chromium
+      - name: Telemetry pod browser smoke test
+        env:
+          PLAYWRIGHT_MODULE: /tmp/cadet-browser-tools/node_modules/playwright/index.mjs
+        run: node scripts/verify-telemetry-pods.mjs

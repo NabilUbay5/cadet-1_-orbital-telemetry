@@ -5,6 +5,11 @@
 
 export const TOTAL_TELEMETRY_PODS = 3;
 export const TELEMETRY_POD_PICKUP_RADIUS = 4.5;
+export const TELEMETRY_POD_RESEARCH_POINTS = 100;
+
+export function getTelemetryPodResearchPoints(collectedCount: number): number {
+  return collectedCount * TELEMETRY_POD_RESEARCH_POINTS;
+}
 
 interface CollectiblePod {
   collected: boolean;
