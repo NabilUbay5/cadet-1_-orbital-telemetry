@@ -124,7 +124,10 @@ PLAYWRIGHT_MODULE=/path/to/playwright-core/index.mjs \
 Each pod earns 100 research points, credited to a research bank when the mission
 ends. The balance is stored in the browser's local storage and shown in the
 lobby, flight HUD, and victory or defeat debrief. It is local to the current
-browser profile and is not synced between devices.
+browser profile and is not synced between devices. Use **EXPORT RESEARCH** in
+the lobby to download a versioned JSON backup, or **IMPORT RESEARCH** to restore
+one. Import replaces the current balance; invalid or unsupported files are
+rejected without changing saved progress.
 
 ### Other data, libraries and tools
 
