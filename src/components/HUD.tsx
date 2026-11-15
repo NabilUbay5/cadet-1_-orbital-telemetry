@@ -83,7 +83,7 @@ export const HUD: React.FC<HUDProps> = ({
       title: 'STAGE 1: GROUND SCHOOL & GRAVITY BASICS',
       subtitle: 'FLIGHT CALIBRATION PROTOCOL',
       directive:
-        'Counter gravitational turbulence: pitch with R/F and yaw with A/D (or ←/→). Hold the crosshair level within ±4.5° for 4 seconds to calibrate flight gyros.',
+        'Counter gravitational turbulence: pitch with R/F and yaw with A/D (or the left/right arrows). Hold the crosshair level within ±4.5° for 4 seconds to calibrate flight gyros.',
     },
     2: {
       title: 'STAGE 2: ATMOSPHERE & ORBITAL ENTRY',
