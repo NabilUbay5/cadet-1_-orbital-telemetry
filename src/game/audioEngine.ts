@@ -8,6 +8,8 @@ const QUIZ_NOTES = [659.25, 987.77, 1318.51] as const;
 const DISPATCH_NOTES = [783.99, 1046.5, 1318.51] as const;
 const SCANNER_NOTES = [880, 1174.66, 1760] as const;
 const VICTORY_NOTES = [392, 523.25, 659.25, 783.99, 1046.5] as const;
+const FIREWORK_LAUNCH_NOTES = [261.63, 392, 523.25] as const;
+const FIREWORK_BURST_NOTES = [1046.5, 1318.51, 1567.98, 2093] as const;
 const VOICE_COUNT = 16;
 
 type Voice = { oscillator: OscillatorNode; gain: GainNode; until: number };
@@ -134,8 +136,8 @@ export class AudioEngine {
     }
   }
 
-  private sequence(notes: readonly number[], spacing = 0.06, duration = 0.18): void {
-    for (let i = 0; i < notes.length; i++) this.tone(notes[i], i * spacing, duration);
+  private sequence(notes: readonly number[], spacing = 0.06, duration = 0.18, startDelay = 0): void {
+    for (let i = 0; i < notes.length; i++) this.tone(notes[i], startDelay + i * spacing, duration);
   }
 
   public playBoostIgnition(): void {
@@ -178,6 +180,10 @@ export class AudioEngine {
   public playItemCollect(): void { this.tone(987.77); this.tone(1318.51, 0.07, 0.22); }
   public playWarning(): void { this.tone(980, 0, 0.12); this.tone(740, 0.08, 0.12); }
   public playDockSuccess(): void { this.sequence(VICTORY_NOTES, 0.12, 0.3); }
+  public playVictoryFireworks(): void {
+    this.sequence(FIREWORK_LAUNCH_NOTES, 0.08, 0.12, 0.8);
+    this.sequence(FIREWORK_BURST_NOTES, 0.035, 0.16, 1.1);
+  }
   public playRadioDispatch(): void { this.sequence(DISPATCH_NOTES, 0.05); }
   public playCollision(impactRatio = 0.5): void {
     const impact = Number.isFinite(impactRatio) ? Math.max(0, Math.min(1, impactRatio)) : 0.5;
