@@ -92,4 +92,16 @@ export interface MissionResult {
   badgesEarned: number;
   triviaScore: number;
   totalTrivia: number;
+  score: number;
+  scoreBreakdown: FlightScoreBreakdown;
+}
+
+export interface FlightScoreBreakdown {
+  gyroStabilization: number;
+  vectorRings: number;
+  energyCubes: number;
+  hullIntegrity: number;
+  satelliteSpeed: number;
+  satelliteLock: number;
+  quizAnswers: number;
 }

@@ -13,6 +13,7 @@ import { PixelConfetti } from './PixelConfetti.tsx';
 interface CertificationQuizModalProps {
   stage: MissionStage;
   onPass: (stage: MissionStage) => void;
+  onCorrectAnswer?: (questionId: string) => void;
   onClose: () => void;
 }
 
@@ -87,6 +88,7 @@ export function evaluateQuizResult(score: number, totalQuestions: number): boole
 export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
   stage,
   onPass,
+  onCorrectAnswer,
 }) => {
   const questions = useMemo(() => selectStageQuestions(stage), [stage]);
   const selectedQuestionIds = useMemo(
@@ -129,6 +131,7 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
 
     if (isCorrect) {
       audioEngine.playQuizAnswer(true);
+      onCorrectAnswer?.(currentQ.id);
     } else {
       audioEngine.playQuizAnswer(false);
     }

@@ -24,6 +24,7 @@ import {
   readResearchBalance,
   writeResearchBalance,
 } from './game/researchBank.ts';
+import { recordHighScore, readHighScore } from './game/scoreLogic.ts';
 import { isValidTelemetryData } from './game/telemetryValidation.ts';
 import { GameState, MissionResult, MissionStage, TelemetryData } from './types/game.ts';
 
@@ -95,7 +96,11 @@ export default function App() {
   const [badgesUnlocked, setBadgesUnlocked] = useState<string[]>([]);
   const [outpostOpen, setOutpostOpen] = useState(false);
   const [researchBalance, setResearchBalance] = useState(0);
+  const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
+  const [newHighScore, setNewHighScore] = useState(false);
   const [researchSaveError, setResearchSaveError] = useState(false);
+  const [scoreSaveError, setScoreSaveError] = useState(false);
   const [researchBackupMessage, setResearchBackupMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
 
   const creditResearchOnce = (eventId: string, points: number) => {
@@ -110,12 +115,38 @@ export default function App() {
     }
   };
 
+  const updateScore = (nextScore: number) => {
+    setScore(nextScore);
+  };
+
+  const finalizeHighScore = (finalScore: number): boolean => {
+    try {
+      const result = recordHighScore(window.localStorage, finalScore);
+      setHighScore(result.highScore);
+      setNewHighScore(result.isNewHighScore);
+      setScoreSaveError(false);
+      return result.isNewHighScore;
+    } catch (error) {
+      console.error('Unable to save the high score.', error);
+      setScoreSaveError(true);
+      setNewHighScore(false);
+      return false;
+    }
+  };
+
   useEffect(() => {
     try {
       setResearchBalance(readResearchBalance(window.localStorage));
     } catch (error) {
       console.error('Unable to load the saved research balance.', error);
       setResearchSaveError(true);
+    }
+    try {
+      const savedHighScore = readHighScore(window.localStorage);
+      setHighScore(savedHighScore);
+    } catch (error) {
+      console.error('Unable to load the saved high score.', error);
+      setScoreSaveError(true);
     }
   }, []);
 
@@ -131,6 +162,7 @@ export default function App() {
         }
         setTelemetry(data);
       },
+      onScoreUpdate: updateScore,
       onStateChange: (state, result) => {
         if (
           state === 'PLAYING'
@@ -142,6 +174,7 @@ export default function App() {
         setGameState(state);
         if (result) {
           setMissionResult(result);
+          finalizeHighScore(result.score);
           creditResearchOnce('flight-telemetry-pods', result.telemetryPodResearchPoints);
         }
       },
@@ -165,6 +198,8 @@ export default function App() {
     creditedResearchEventsRef.current.clear();
     setActiveQuizStage(null);
     setBadgesUnlocked([]);
+    setNewHighScore(false);
+    updateScore(0);
     engineRef.current?.resetSimulation();
     setGameState('PLAYING');
   };
@@ -205,11 +240,21 @@ export default function App() {
     creditedResearchEventsRef.current.clear();
     setActiveQuizStage(null);
     setBadgesUnlocked([]);
+    setNewHighScore(false);
+    updateScore(0);
     engineRef.current?.resetSimulation();
     setGameState('PLAYING');
   };
 
   const handleReturnToLobby = () => {
+    let scoreToKeep = missionResult?.score ?? null;
+    if (gameStateRef.current === 'PAUSED') {
+      const finalScore = engineRef.current?.finalizeCurrentRunScore();
+      if (finalScore) {
+        scoreToKeep = finalScore.total;
+        finalizeHighScore(finalScore.total);
+      }
+    }
     setActiveQuizStage(null);
     setMissionResult(null);
     setBadgesUnlocked([]);
@@ -218,6 +263,7 @@ export default function App() {
     engineRef.current?.setGameState('TITLE');
     gameStateRef.current = 'TITLE';
     setGameState('TITLE');
+    if (scoreToKeep !== null) updateScore(scoreToKeep);
   };
 
   const handlePause = () => {
@@ -269,10 +315,16 @@ export default function App() {
 
   const handleOutpostMissionStart = () => {
     creditedResearchEventsRef.current.delete('outpost-mission');
+    setNewHighScore(false);
+    updateScore(0);
   };
 
   const handleOutpostMissionComplete = (reward: OutpostResearchReward) => {
     creditResearchOnce('outpost-mission', reward.points);
+  };
+
+  const handleOutpostScoreUpdate = (nextScore: number) => {
+    updateScore(nextScore);
   };
 
   const handleImportResearchBank = async (file: File) => {
@@ -349,6 +401,8 @@ export default function App() {
       {gameState === 'TITLE' && !outpostOpen && (
         <TitleScreen
           researchBalance={researchBalance}
+          score={score}
+          highScore={highScore}
           onStart={handleStart}
           onOutpost={handleOpenOutpost}
           onExportResearchBank={handleExportResearchBank}
@@ -360,8 +414,11 @@ export default function App() {
       {gameState === 'TITLE' && outpostOpen && (
         <OutpostMode
           researchBalance={researchBalance}
+          highScore={highScore}
           onMissionStart={handleOutpostMissionStart}
           onMissionComplete={handleOutpostMissionComplete}
+          onScoreUpdate={handleOutpostScoreUpdate}
+          onFinalizeScore={finalizeHighScore}
           onExit={handleCloseOutpost}
         />
       )}
@@ -370,6 +427,8 @@ export default function App() {
       {gameState === 'PLAYING' && (
         <HUD
           telemetry={telemetry}
+          score={score}
+          highScore={highScore}
           researchBalance={researchBalance}
           inert={activeQuizStage !== null}
           onCycleCamera={handleCycleCamera}
@@ -385,6 +444,7 @@ export default function App() {
         <CertificationQuizModal
           stage={activeQuizStage}
           onPass={handlePassQuiz}
+          onCorrectAnswer={(questionId) => engineRef.current?.awardQuizAnswer(questionId)}
           onClose={() => setActiveQuizStage(null)}
         />
       )}
@@ -404,6 +464,8 @@ export default function App() {
           onExportFlightLog={handleExportFlightLog}
           result={missionResult}
           totalResearchPoints={researchBalance}
+          highScore={highScore}
+          newHighScore={newHighScore}
           onRestart={handleRestart}
           onExit={handleReturnToLobby}
         />
@@ -414,13 +476,20 @@ export default function App() {
           onExportFlightLog={handleExportFlightLog}
           result={missionResult}
           totalResearchPoints={researchBalance}
+          highScore={highScore}
+          newHighScore={newHighScore}
           onRestart={handleRestart}
           onExit={handleReturnToLobby}
         />
       )}
       {researchSaveError && (
-        <div role="alert" className="fixed bottom-2 left-2 z-50 border border-[#FF3344] bg-[#0d111a] px-3 py-2 text-[9px] text-[#FF3344] font-pixel">
+        <div role="alert" className="fixed bottom-12 left-2 z-50 border border-[#FF3344] bg-[#0d111a] px-3 py-2 text-[9px] text-[#FF3344] font-pixel">
           RESEARCH BANK STORAGE UNAVAILABLE · BALANCE MAY NOT SURVIVE RELOAD
+        </div>
+      )}
+      {scoreSaveError && (
+        <div role="alert" className="fixed bottom-2 left-2 z-50 border border-[#FF3344] bg-[#0d111a] px-3 py-2 text-[9px] text-[#FF3344] font-pixel">
+          HI-SCORE STORAGE UNAVAILABLE · SCORE MAY NOT SURVIVE RELOAD
         </div>
       )}
       {researchBackupMessage && (

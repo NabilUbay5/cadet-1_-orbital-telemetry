@@ -12,6 +12,8 @@ import { PlayerLives } from './PlayerLives.tsx';
 
 interface HUDProps {
   telemetry: TelemetryData;
+  score: number;
+  highScore: number;
   researchBalance: number;
   inert?: boolean;
   onCycleCamera: () => void;
@@ -23,6 +25,8 @@ interface HUDProps {
 
 export const HUD: React.FC<HUDProps> = ({
   telemetry,
+  score,
+  highScore,
   researchBalance,
   inert = false,
   onCycleCamera,
@@ -154,6 +158,12 @@ export const HUD: React.FC<HUDProps> = ({
 
         {/* Right: Dispatch Toggle, Readiness & Pause */}
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 text-[8px] md:text-[9px] tabular-nums">
+            <span className="text-[#A0AEC0]">SCORE</span>
+            <span data-testid="flight-score" className="text-white">{score}</span>
+            <span className="hidden sm:inline text-[#A0AEC0] ml-1">HI</span>
+            <span data-testid="high-score" className="text-[#FFB000]">{highScore}</span>
+          </div>
           <div className="flex items-center gap-1">
             <span className="hidden md:inline text-[9px] text-[#A0AEC0]">RESEARCH</span>
             <span data-testid="research-balance" className="text-[9px] md:text-sm text-[#00FF66]">

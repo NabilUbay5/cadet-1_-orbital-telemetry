@@ -8,6 +8,8 @@ import { PixelBadge } from './PixelBadge.tsx';
 
 interface TitleScreenProps {
   researchBalance: number;
+  score: number;
+  highScore: number;
   onStart: () => void;
   onOutpost: () => void;
   onExportResearchBank: () => void;
@@ -16,6 +18,8 @@ interface TitleScreenProps {
 
 export const TitleScreen: React.FC<TitleScreenProps> = ({
   researchBalance,
+  score,
+  highScore,
   onStart,
   onOutpost,
   onExportResearchBank,
@@ -37,7 +41,8 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
           <span>
             RESEARCH <span data-testid="research-balance" className="text-[#00FF66]">{researchBalance} RP</span>
           </span>
-          <span>HI-SCORE <span className="text-[#FFB000]">99990</span></span>
+          <span>SCORE <span data-testid="score" className="text-white tabular-nums">{score}</span></span>
+          <span>HI-SCORE <span data-testid="high-score" className="text-[#FFB000] tabular-nums">{highScore}</span></span>
           <span className="text-[#2A3B5C]">|</span>
           <span className="text-[#00FF66]">CREDIT 01</span>
         </div>
