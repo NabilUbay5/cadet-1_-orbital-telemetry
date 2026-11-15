@@ -123,6 +123,7 @@ For the submission form's "Space Agency Partner & Other Data" field. The softwar
 | TypeScript    | https://www.typescriptlang.org    | Strict type checking              |
 | Tailwind CSS  | https://tailwindcss.com           | Styling                           |
 | Bun           | https://bun.sh                    | Package manager and test runner   |
+| Press Start 2P (font, OFL-1.1) | https://fonts.google.com/specimen/Press+Start+2P | The 8-bit pixel typeface, bundled through the `@fontsource/press-start-2p` package so it works offline |
 | Chang'e-4 lunar surface radiation (Zhang et al., 2020) | https://doi.org/10.1126/sciadv.aaz1334 | Reference for a literature-inspired Moon scenario input; the exact value is unverified here, as noted above. Not an API integration. |
 | Curiosity RAD surface radiation (Hassler et al., 2014) | https://doi.org/10.1126/science.1244797 | Reference for a literature-inspired Mars scenario input; the exact value is unverified here, as noted above. Not an API integration. |
 

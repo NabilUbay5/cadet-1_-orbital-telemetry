@@ -13,7 +13,7 @@ interface TitleScreenProps {
 
 export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) => {
   return (
-    <div data-testid="title-screen" className="absolute inset-0 flex flex-col justify-between gap-4 overflow-y-auto overflow-x-hidden overscroll-contain p-4 md:p-8 z-20 font-pixel">
+    <div data-testid="title-screen" className="absolute inset-0 flex flex-col justify-between gap-3 overflow-y-auto overflow-x-hidden overscroll-contain p-4 md:p-6 z-20 font-pixel">
       {/* Top Arcade Marquee Stamp */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b-2 border-[#00F0FF] pb-2.5 pointer-events-auto bg-[#050508]/90 px-4 py-2 shadow-[0_3px_0_#000]">
         <div className="flex items-center gap-3">
@@ -32,21 +32,21 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) 
       {/* Center 8-Bit Title Lockup & Mission Dossier */}
       <div className="max-w-2xl shrink-0 my-auto pointer-events-auto">
         {/* Pixel Title Banner */}
-        <div className="retro-window p-5 md:p-6 mb-4 border-2 border-[#00F0FF] bg-[#0d111a]/95">
+        <div className="retro-window p-5 md:p-6 border-2 border-[#00F0FF] bg-[#0d111a]/95">
           <div className="flex items-center gap-2 mb-2 text-[9px] text-[#FFB000]">
             <span>▶ CADET-1</span>
             <span className="text-[#2A3B5C]">·</span>
             <span>MOON & MARS OUTPOST TRAINING</span>
           </div>
 
-          <h1 className="text-xl md:text-3xl text-[#FFFFFF] tracking-wider leading-relaxed mb-2">
+          <h1 className="text-xl md:text-2xl text-[#FFFFFF] tracking-wider leading-relaxed mb-1">
             JUNIOR ASTRONAUT
           </h1>
-          <div className="text-xs md:text-sm text-[#00F0FF] tracking-widest uppercase mb-4">
+          <div className="text-xs md:text-sm text-[#00F0FF] tracking-widest uppercase mb-3">
             [ MISSION TRAINER & CERTIFICATION ]
           </div>
 
-          <div className="h-0.5 w-full bg-[#00F0FF] mb-4" />
+          <div className="h-0.5 w-full bg-[#00F0FF] mb-3" />
 
           {/* Featured mission: the outpost manager built for the Space Apps challenge */}
           <div className="border-2 border-[#FFB000] bg-[#FFB000]/10 p-3 mb-3">
@@ -57,51 +57,51 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) 
 
           <div className="mb-2">
             <div className="text-[9px] text-[#A0AEC0]">BONUS · FLIGHT ACADEMY (3 STAGES + QUIZZES)</div>
-            <div className="text-[9px] text-[#A0AEC0] mt-1 leading-relaxed">Pilot training for the supply ship that flies crew and cargo to your outpost.</div>
+            <div className="text-[9px] text-[#A0AEC0] mt-1 leading-relaxed">Pilot training for the supply ship that serves your outpost.</div>
           </div>
 
           {/* 3-Stage Progression Roadmap */}
-          <div className="space-y-2 mb-5">
-            <div className="border border-[#2A3B5C] bg-[#050508] p-2.5 flex items-center justify-between gap-3">
+          <div className="space-y-1.5 mb-3">
+            <div className="border border-[#2A3B5C] bg-[#050508] p-2 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <PixelBadge stage={1} size="sm" />
                 <div>
                   <div className="text-[9px] text-[#00F0FF] font-bold">STAGE 1: GROUND SCHOOL & GRAVITY BASICS</div>
-                  <div className="text-[9px] text-[#A0AEC0]">Task: Counter gravitational turbulence & stabilize flight gyros.</div>
+                  <div className="text-[9px] text-[#A0AEC0]">Task: Fly level to calibrate the gyros.</div>
                 </div>
               </div>
-              <span className="text-[8px] text-[#FFB000] shrink-0">[QUIZ GATE 1]</span>
+              <span className="hidden sm:inline text-[8px] text-[#FFB000] shrink-0">[QUIZ GATE 1]</span>
             </div>
 
-            <div className="border border-[#2A3B5C] bg-[#050508] p-2.5 flex items-center justify-between gap-3">
+            <div className="border border-[#2A3B5C] bg-[#050508] p-2 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <PixelBadge stage={2} size="sm" />
                 <div>
                   <div className="text-[9px] text-[#FFB000] font-bold">STAGE 2: ATMOSPHERE & ORBITAL ENTRY</div>
-                  <div className="text-[9px] text-[#A0AEC0]">Task: Collect 3 glowing Energy Cubes while dodging debris hazards.</div>
+                  <div className="text-[9px] text-[#A0AEC0]">Task: Grab 3 Energy Cubes, dodge debris.</div>
                 </div>
               </div>
-              <span className="text-[8px] text-[#FFB000] shrink-0">[QUIZ GATE 2]</span>
+              <span className="hidden sm:inline text-[8px] text-[#FFB000] shrink-0">[QUIZ GATE 2]</span>
             </div>
 
-            <div className="border border-[#2A3B5C] bg-[#050508] p-2.5 flex items-center justify-between gap-3">
+            <div className="border border-[#2A3B5C] bg-[#050508] p-2 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <PixelBadge stage={3} size="sm" />
                 <div>
                   <div className="text-[9px] text-[#00FF66] font-bold">STAGE 3: DEEP SPACE NAVIGATION</div>
-                  <div className="text-[9px] text-[#A0AEC0]">Task: Align telemetry coordinates with the Deep Space Satellite.</div>
+                  <div className="text-[9px] text-[#A0AEC0]">Task: Point the ship at the satellite.</div>
                 </div>
               </div>
-              <span className="text-[8px] text-[#FFB000] shrink-0">[QUIZ GATE 3]</span>
+              <span className="hidden sm:inline text-[8px] text-[#FFB000] shrink-0">[QUIZ GATE 3]</span>
             </div>
 
           </div>
 
           {/* Primary Arcade Start CTA */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
             <button
               onClick={onOutpost}
-              className="retro-btn h-14 px-6 text-xs md:text-sm tracking-wider flex items-center justify-center gap-3 cursor-pointer"
+              className="retro-btn h-12 px-5 text-xs tracking-wider whitespace-nowrap flex items-center justify-center gap-3 cursor-pointer"
             >
               <span>OUTPOST OPS</span>
               <span className="text-[10px] opacity-80">[ENTER]</span>
@@ -109,14 +109,15 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) 
 
             <button
               onClick={onStart}
-              className="retro-btn-secondary h-12 px-5 text-[10px] md:text-xs tracking-wider flex items-center justify-center gap-2 cursor-pointer"
+              aria-label="FLIGHT ACADEMY, PRESS START [SPACE]"
+              className="retro-btn-secondary h-12 px-4 text-[10px] tracking-wider whitespace-nowrap flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>FLIGHT ACADEMY · PRESS START</span>
+              <span>FLIGHT ACADEMY</span>
               <span className="text-[9px] text-[#FFB000]">[SPACE]</span>
             </button>
 
-            <div className="text-[10px] text-[#FFB000] animate-arcade-blink text-center sm:text-left">
-              ★ 1 PLAYER READY · INSERT COIN ★
+            <div className="text-[9px] text-[#FFB000] animate-arcade-blink whitespace-nowrap text-center sm:text-left">
+              INSERT COIN
             </div>
           </div>
         </div>
