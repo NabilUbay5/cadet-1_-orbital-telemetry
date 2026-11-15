@@ -36,7 +36,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   const backupInputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div data-testid="title-screen" className="absolute inset-0 flex flex-col justify-between gap-3 overflow-y-auto overflow-x-hidden overscroll-contain p-4 md:p-6 z-20 font-pixel">
+    <div data-testid="title-screen" className="absolute inset-0 flex flex-col justify-between gap-2 md:gap-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 md:px-6 md:py-4 z-20 font-pixel">
       {/* Top Arcade Marquee Stamp */}
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b-2 border-[#00F0FF] pb-2.5 pointer-events-auto bg-[#050508]/90 px-4 py-2 shadow-[0_3px_0_#000]">
         <div className="flex items-center gap-3">
@@ -60,7 +60,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
       {/* Center 8-Bit Title Lockup & Mission Dossier */}
       <div className="max-w-2xl shrink-0 my-auto pointer-events-auto">
         {/* Pixel Title Banner */}
-        <div className="retro-window p-5 md:p-6 border-2 border-[#00F0FF] bg-[#0d111a]/95">
+        <div className="retro-window p-5 md:px-6 md:py-5 border-2 border-[#00F0FF] bg-[#0d111a]/95">
           <div className="flex items-center gap-2 mb-2 text-[9px] text-[#FFB000]">
             <span>▶ CADET-1</span>
             <span className="text-[#2A3B5C]">·</span>
@@ -149,7 +149,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#2A3B5C] pt-3">
+          <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-[#2A3B5C] pt-2">
             <button
               type="button"
               onClick={onExportResearchBank}
