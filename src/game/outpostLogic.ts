@@ -458,7 +458,8 @@ export function finalReport(s: OutpostState): Report {
   const complete = s.result === 'complete';
   const crewSafe = complete && s.stats.evacuations === 0;
   const scienceMet = complete && s.science >= SCIENCE_GOAL;
-  const doseOk = s.dose <= DOSE_LIMIT;
+  // Like the other two objectives, the dose star only counts on a completed mission.
+  const doseOk = complete && s.dose <= DOSE_LIMIT;
   const stars = Number(crewSafe) + Number(scienceMet) + Number(doseOk);
   const score = Math.round(s.science * 10 + aboard(s).length * 150 + Math.max(0, DOSE_LIMIT - s.dose) * 8 + stars * 100 + (complete ? 200 : 0));
   const rank = complete ? ['Cadet in training', 'Mission specialist', 'Flight engineer', 'Commander'][stars] : 'Mission aborted';

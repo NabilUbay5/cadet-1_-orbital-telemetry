@@ -1,0 +1,4 @@
+# Saved NASA/JPL Horizons responses are checked byte-for-byte against the
+# SHA-256 in their provenance notes, so Git must never convert their line endings
+# (Windows checkouts with core.autocrlf=true would otherwise change the bytes).
+src/data/nasa/*.json -text
