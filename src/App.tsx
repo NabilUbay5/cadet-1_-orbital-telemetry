@@ -12,7 +12,13 @@ import { TitleScreen } from './components/TitleScreen.tsx';
 import { audioEngine } from './game/audioEngine.ts';
 import { FlightEngine } from './game/flightEngine.ts';
 import {
+  getAcademyCertificationBonus,
+  getFlightAcademyStageResearchReward,
+} from './game/missionLogic.ts';
+import type { OutpostResearchReward } from './game/outpostLogic.ts';
+import {
   addResearchPoints,
+  claimResearchReward,
   createResearchBankBackup,
   parseResearchBankBackup,
   readResearchBalance,
@@ -77,7 +83,7 @@ export default function App() {
   const canvasMountRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<FlightEngine | null>(null);
   const gameStateRef = useRef<GameState>('TITLE');
-  const missionRewardCreditedRef = useRef(false);
+  const creditedResearchEventsRef = useRef(new Set<string>());
 
   const [gameState, setGameState] = useState<GameState>('TITLE');
   const [telemetry, setTelemetry] = useState<TelemetryData>(initialTelemetry);
@@ -88,6 +94,18 @@ export default function App() {
   const [researchBalance, setResearchBalance] = useState(0);
   const [researchSaveError, setResearchSaveError] = useState(false);
   const [researchBackupMessage, setResearchBackupMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+
+  const creditResearchOnce = (eventId: string, points: number) => {
+    if (!claimResearchReward(creditedResearchEventsRef.current, eventId)) return;
+    try {
+      setResearchBalance(addResearchPoints(window.localStorage, points));
+      setResearchSaveError(false);
+    } catch (error) {
+      console.error('Unable to save research points.', error);
+      setResearchBalance((balance) => balance + points);
+      setResearchSaveError(true);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -115,23 +133,13 @@ export default function App() {
           state === 'PLAYING'
           && (gameStateRef.current === 'TITLE' || gameStateRef.current === 'VICTORY' || gameStateRef.current === 'DEFEAT')
         ) {
-          missionRewardCreditedRef.current = false;
+          creditedResearchEventsRef.current.clear();
         }
         gameStateRef.current = state;
         setGameState(state);
         if (result) {
           setMissionResult(result);
-          if (!missionRewardCreditedRef.current) {
-            missionRewardCreditedRef.current = true;
-            try {
-              setResearchBalance(addResearchPoints(window.localStorage, result.telemetryPodResearchPoints));
-              setResearchSaveError(false);
-            } catch (error) {
-              console.error('Unable to save telemetry research points.', error);
-              setResearchBalance((balance) => balance + result.telemetryPodResearchPoints);
-              setResearchSaveError(true);
-            }
-          }
+          creditResearchOnce('flight-telemetry-pods', result.telemetryPodResearchPoints);
         }
       },
       onStageTaskCompleted: (stage) => {
@@ -151,7 +159,7 @@ export default function App() {
   }, []);
 
   const handleStart = () => {
-    missionRewardCreditedRef.current = false;
+    creditedResearchEventsRef.current.clear();
     setActiveQuizStage(null);
     setBadgesUnlocked([]);
     engineRef.current?.resetSimulation();
@@ -191,7 +199,7 @@ export default function App() {
   };
 
   const handleRestart = () => {
-    missionRewardCreditedRef.current = false;
+    creditedResearchEventsRef.current.clear();
     setActiveQuizStage(null);
     setBadgesUnlocked([]);
     engineRef.current?.resetSimulation();
@@ -256,6 +264,14 @@ export default function App() {
     }
   };
 
+  const handleOutpostMissionStart = () => {
+    creditedResearchEventsRef.current.delete('outpost-mission');
+  };
+
+  const handleOutpostMissionComplete = (reward: OutpostResearchReward) => {
+    creditResearchOnce('outpost-mission', reward.points);
+  };
+
   const handleImportResearchBank = async (file: File) => {
     try {
       if (file.size > 16_384) {
@@ -281,6 +297,17 @@ export default function App() {
 
   // Trivia Certification Passed Handler
   const handlePassQuiz = (passedStage: MissionStage) => {
+    creditResearchOnce(
+      `flight-academy-stage-${passedStage}`,
+      getFlightAcademyStageResearchReward(passedStage),
+    );
+    if (passedStage === 3) {
+      creditResearchOnce(
+        'flight-academy-certification',
+        getAcademyCertificationBonus(3),
+      );
+    }
+
     engineRef.current?.setInputEnabled(true);
     const badgeId =
       passedStage === 1
@@ -327,7 +354,14 @@ export default function App() {
       )}
 
       {/* Outpost Ops: Moon/Mars base management mode */}
-      {gameState === 'TITLE' && outpostOpen && <OutpostMode onExit={handleCloseOutpost} />}
+      {gameState === 'TITLE' && outpostOpen && (
+        <OutpostMode
+          researchBalance={researchBalance}
+          onMissionStart={handleOutpostMissionStart}
+          onMissionComplete={handleOutpostMissionComplete}
+          onExit={handleCloseOutpost}
+        />
+      )}
 
       {/* Active Flight Telemetry HUD */}
       {gameState === 'PLAYING' && (

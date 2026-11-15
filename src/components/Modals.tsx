@@ -178,12 +178,14 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ result, totalResearc
 
         <div className="border border-[#FFB000]/50 bg-[#FFB000]/10 p-3 mb-5 flex items-center justify-between gap-3">
           <div className="text-[9px]">
-            <div className="text-[#FFB000] font-bold">TELEMETRY RESEARCH BONUS</div>
-            <div className="text-[#A0AEC0] mt-1">{result.telemetryPodsCollected} / 3 PODS SECURED</div>
+            <div className="text-[#FFB000] font-bold">FLIGHT ACADEMY REWARDS</div>
+            <div className="text-[#A0AEC0] mt-1">Academy stage rewards: +{result.academyStageRewardPoints} RP</div>
+            <div className="text-[#A0AEC0]">Full certification bonus: +{result.certificationBonusPoints} RP</div>
+            <div className="text-[#A0AEC0]">Telemetry pods ({result.telemetryPodsCollected}): +{result.telemetryPodResearchPoints} RP</div>
+            <div className="text-[#00FF66] font-bold mt-1">
+              TOTAL EARNED: +{result.missionRewardPoints + result.telemetryPodResearchPoints} RP
+            </div>
             <div className="text-[#00FF66] mt-1">BANK TOTAL: {totalResearchPoints} RP</div>
-          </div>
-          <div className="text-sm text-[#FFB000] font-bold whitespace-nowrap">
-            +{result.telemetryPodResearchPoints} RP
           </div>
         </div>
 
@@ -258,12 +260,14 @@ export const DefeatModal: React.FC<DefeatModalProps> = ({ result, totalResearchP
 
         <div className="border border-[#FFB000]/50 bg-[#FFB000]/10 p-3 mb-5 flex items-center justify-between gap-3">
           <div className="text-[9px]">
-            <div className="text-[#FFB000] font-bold">TELEMETRY RESEARCH BONUS</div>
-            <div className="text-[#A0AEC0] mt-1">{result.telemetryPodsCollected} / 3 PODS SECURED</div>
+            <div className="text-[#FFB000] font-bold">FLIGHT ACADEMY REWARDS</div>
+            <div className="text-[#A0AEC0] mt-1">Completed stage rewards: +{result.academyStageRewardPoints} RP</div>
+            <div className="text-[#A0AEC0]">Full certification bonus: +{result.certificationBonusPoints} RP</div>
+            <div className="text-[#A0AEC0]">Telemetry pods ({result.telemetryPodsCollected}): +{result.telemetryPodResearchPoints} RP</div>
+            <div className="text-[#00FF66] font-bold mt-1">
+              TOTAL EARNED: +{result.missionRewardPoints + result.telemetryPodResearchPoints} RP
+            </div>
             <div className="text-[#00FF66] mt-1">BANK TOTAL: {totalResearchPoints} RP</div>
-          </div>
-          <div className="text-sm text-[#FFB000] font-bold whitespace-nowrap">
-            +{result.telemetryPodResearchPoints} RP
           </div>
         </div>
 

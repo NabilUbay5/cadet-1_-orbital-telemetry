@@ -80,6 +80,9 @@ export interface MissionResult {
   metSeconds: number;
   readinessScore: number;
   hullDamageTaken: number;
+  missionRewardPoints: number;
+  academyStageRewardPoints: number;
+  certificationBonusPoints: number;
   energyCubesCollected: number;
   telemetryPodsCollected: number;
   telemetryPodResearchPoints: number;

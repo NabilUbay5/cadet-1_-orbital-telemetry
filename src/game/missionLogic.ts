@@ -26,15 +26,51 @@ export const STAGE1_TOTAL_RINGS = 3;
 export const STAGE1_START_PITCH_DEG = 12;
 export const STAGE1_START_YAW_DEG = -9;
 
+export const STAGE1_RESEARCH_REWARD = 150;
+
 // Stage 2: Orbital Entry — energy cube harvest
 export const STAGE2_REQUIRED_CUBES = 3;
 export const STAGE2_PICKUP_RADIUS = 5.0;
+export const STAGE2_RESEARCH_REWARD = 250;
 
 // Stage 3: Deep Space — satellite alignment
 export const STAGE3_LOCK_DISTANCE = 45;
 export const STAGE3_LOCK_ERROR_DEG = 8.0;
 export const STAGE3_LOCK_TIME = 3.0;
 export const STAGE3_DECAY_RATE = 0.6;
+export const STAGE3_RESEARCH_REWARD = 400;
+export const ACADEMY_CERTIFICATION_BONUS = 200;
+
+export type FlightAcademyStage = 1 | 2 | 3;
+
+export function getFlightAcademyStageResearchReward(stage: FlightAcademyStage): number {
+  if (stage === 1) return STAGE1_RESEARCH_REWARD;
+  if (stage === 2) return STAGE2_RESEARCH_REWARD;
+  return STAGE3_RESEARCH_REWARD;
+}
+
+export function getAcademyCertificationBonus(completedStages: number): number {
+  if (!Number.isInteger(completedStages) || completedStages < 0 || completedStages > 3) {
+    throw new RangeError('Completed Flight Academy stages must be an integer from 0 to 3.');
+  }
+  return completedStages === 3 ? ACADEMY_CERTIFICATION_BONUS : 0;
+}
+
+export function getFlightAcademyStageRewardTotal(completedStages: number): number {
+  if (!Number.isInteger(completedStages) || completedStages < 0 || completedStages > 3) {
+    throw new RangeError('Completed Flight Academy stages must be an integer from 0 to 3.');
+  }
+
+  let reward = 0;
+  if (completedStages >= 1) reward += STAGE1_RESEARCH_REWARD;
+  if (completedStages >= 2) reward += STAGE2_RESEARCH_REWARD;
+  if (completedStages >= 3) reward += STAGE3_RESEARCH_REWARD;
+  return reward;
+}
+
+export function getFlightAcademyEarnedResearchReward(completedStages: number): number {
+  return getFlightAcademyStageRewardTotal(completedStages) + getAcademyCertificationBonus(completedStages);
+}
 
 /** True when pitch and yaw are both within the ±4.5° stabilization window. */
 export function isCraftLevel(pitchDeg: number, yawDeg: number): boolean {
