@@ -113,14 +113,18 @@ PLAYWRIGHT_MODULE=/path/to/playwright-core/index.mjs \
 
 The telemetry-pod browser smoke test starts a mission, collects a pod using
 thrust, verifies the HUD counter and radar marker update, then restarts and
-checks that all pods return. It can run with Playwright and Chromium installed:
+checks that all pods return and a saved research balance survives a page reload.
+It can run with Playwright and Chromium installed:
 
 ```bash
 PLAYWRIGHT_MODULE=/path/to/playwright-core/index.mjs \
   CHROMIUM_PATH=/usr/bin/chromium node scripts/verify-telemetry-pods.mjs
 ```
 
-Each pod also earns 100 research points, shown in the victory or defeat debrief.
+Each pod earns 100 research points, credited to a research bank when the mission
+ends. The balance is stored in the browser's local storage and shown in the
+lobby, flight HUD, and victory or defeat debrief. It is local to the current
+browser profile and is not synced between devices.
 
 ### Other data, libraries and tools
 

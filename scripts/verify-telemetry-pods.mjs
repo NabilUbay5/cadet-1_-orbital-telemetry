@@ -44,7 +44,14 @@ try {
     page.on('pageerror', (error) => errors.push(error.message));
 
     await page.goto(appUrl, { waitUntil: 'networkidle' });
+    const researchBalance = page.getByTestId('research-balance');
+    await researchBalance.waitFor();
+    assert.equal((await researchBalance.textContent())?.trim(), '0 RP');
+    await page.evaluate(() => localStorage.setItem('cadet-1-research-points', '400'));
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.equal((await page.getByTestId('research-balance').textContent())?.trim(), '400 RP');
     await page.getByRole('button', { name: /FLIGHT ACADEMY/ }).click();
+    assert.equal((await page.getByTestId('research-balance').textContent())?.trim(), '400 RP');
 
     const podCounter = page.getByTestId('telemetry-pod-counter');
     await page.waitForFunction(() => {
@@ -71,8 +78,9 @@ try {
       return document.querySelector('[data-testid="telemetry-pod-counter"]')?.textContent?.trim() === '0 / 3'
         && document.querySelectorAll('[title^="POD ["]').length === 3;
     });
+    assert.equal((await page.getByTestId('research-balance').textContent())?.trim(), '400 RP');
     assert.deepEqual(errors, []);
-    console.log('PASS: restart restores all telemetry pods and clears the collected count');
+    console.log('PASS: restart restores pods and preserves the saved research balance');
   } finally {
     await browser.close();
   }

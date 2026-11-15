@@ -11,6 +11,7 @@ import { DefeatModal, PauseModal, VictoryModal } from './components/Modals.tsx';
 import { TitleScreen } from './components/TitleScreen.tsx';
 import { audioEngine } from './game/audioEngine.ts';
 import { FlightEngine } from './game/flightEngine.ts';
+import { addResearchPoints, readResearchBalance } from './game/researchBank.ts';
 import { isValidTelemetryData } from './game/telemetryValidation.ts';
 import { GameState, MissionResult, MissionStage, TelemetryData } from './types/game.ts';
 
@@ -69,6 +70,8 @@ const initialTelemetry: TelemetryData = {
 export default function App() {
   const canvasMountRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<FlightEngine | null>(null);
+  const gameStateRef = useRef<GameState>('TITLE');
+  const missionRewardCreditedRef = useRef(false);
 
   const [gameState, setGameState] = useState<GameState>('TITLE');
   const [telemetry, setTelemetry] = useState<TelemetryData>(initialTelemetry);
@@ -76,6 +79,17 @@ export default function App() {
   const [activeQuizStage, setActiveQuizStage] = useState<MissionStage | null>(null);
   const [badgesUnlocked, setBadgesUnlocked] = useState<string[]>([]);
   const [outpostOpen, setOutpostOpen] = useState(false);
+  const [researchBalance, setResearchBalance] = useState(0);
+  const [researchSaveError, setResearchSaveError] = useState(false);
+
+  useEffect(() => {
+    try {
+      setResearchBalance(readResearchBalance(window.localStorage));
+    } catch (error) {
+      console.error('Unable to load the saved research balance.', error);
+      setResearchSaveError(true);
+    }
+  }, []);
 
   // Mount Three.js Engine once
   useEffect(() => {
@@ -90,9 +104,27 @@ export default function App() {
         setTelemetry(data);
       },
       onStateChange: (state, result) => {
+        if (
+          state === 'PLAYING'
+          && (gameStateRef.current === 'TITLE' || gameStateRef.current === 'VICTORY' || gameStateRef.current === 'DEFEAT')
+        ) {
+          missionRewardCreditedRef.current = false;
+        }
+        gameStateRef.current = state;
         setGameState(state);
         if (result) {
           setMissionResult(result);
+          if (!missionRewardCreditedRef.current) {
+            missionRewardCreditedRef.current = true;
+            try {
+              setResearchBalance(addResearchPoints(window.localStorage, result.telemetryPodResearchPoints));
+              setResearchSaveError(false);
+            } catch (error) {
+              console.error('Unable to save telemetry research points.', error);
+              setResearchBalance((balance) => balance + result.telemetryPodResearchPoints);
+              setResearchSaveError(true);
+            }
+          }
         }
       },
       onStageTaskCompleted: (stage) => {
@@ -112,6 +144,7 @@ export default function App() {
   }, []);
 
   const handleStart = () => {
+    missionRewardCreditedRef.current = false;
     setActiveQuizStage(null);
     setBadgesUnlocked([]);
     engineRef.current?.resetSimulation();
@@ -146,10 +179,12 @@ export default function App() {
 
   const handleResume = () => {
     engineRef.current?.setGameState('PLAYING');
+    gameStateRef.current = 'PLAYING';
     setGameState('PLAYING');
   };
 
   const handleRestart = () => {
+    missionRewardCreditedRef.current = false;
     setActiveQuizStage(null);
     setBadgesUnlocked([]);
     engineRef.current?.resetSimulation();
@@ -163,11 +198,13 @@ export default function App() {
     setTelemetry(initialTelemetry);
     engineRef.current?.resetSimulation();
     engineRef.current?.setGameState('TITLE');
+    gameStateRef.current = 'TITLE';
     setGameState('TITLE');
   };
 
   const handlePause = () => {
     engineRef.current?.setGameState('PAUSED');
+    gameStateRef.current = 'PAUSED';
     setGameState('PAUSED');
   };
 
@@ -232,7 +269,7 @@ export default function App() {
 
       {/* Title Screen Overlay */}
       {gameState === 'TITLE' && !outpostOpen && (
-        <TitleScreen onStart={handleStart} onOutpost={handleOpenOutpost} />
+        <TitleScreen researchBalance={researchBalance} onStart={handleStart} onOutpost={handleOpenOutpost} />
       )}
 
       {/* Outpost Ops: Moon/Mars base management mode */}
@@ -242,6 +279,7 @@ export default function App() {
       {gameState === 'PLAYING' && (
         <HUD
           telemetry={telemetry}
+          researchBalance={researchBalance}
           inert={activeQuizStage !== null}
           onCycleCamera={handleCycleCamera}
           onToggleFlightAssist={handleToggleFlightAssist}
@@ -274,6 +312,7 @@ export default function App() {
         <VictoryModal
           onExportFlightLog={handleExportFlightLog}
           result={missionResult}
+          totalResearchPoints={researchBalance}
           onRestart={handleRestart}
           onExit={handleReturnToLobby}
         />
@@ -283,9 +322,15 @@ export default function App() {
         <DefeatModal
           onExportFlightLog={handleExportFlightLog}
           result={missionResult}
+          totalResearchPoints={researchBalance}
           onRestart={handleRestart}
           onExit={handleReturnToLobby}
         />
+      )}
+      {researchSaveError && (
+        <div role="alert" className="fixed bottom-2 left-2 z-50 border border-[#FF3344] bg-[#0d111a] px-3 py-2 text-[9px] text-[#FF3344] font-pixel">
+          RESEARCH BANK STORAGE UNAVAILABLE · BALANCE MAY NOT SURVIVE RELOAD
+        </div>
       )}
     </div>
   );
