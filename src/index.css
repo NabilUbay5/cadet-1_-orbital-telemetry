@@ -357,3 +357,11 @@ html.touch-flight .flight-canvas { touch-action: none; }
 @media (prefers-reduced-motion: reduce) {
   .outpost-ui *, .outpost-comms, .outpost-comms-icon, .outpost-cursor { animation: none !important; transition: none !important; }
 }
+
+.project-credits { width: min(680px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; padding: 20px; border: 2px solid #00f0ff; background: #0d111a; color: #edf7ff; font-size: 14px; line-height: 1.6; }
+.project-credits::backdrop { background: #050508e8; }
+.project-credits h3 { margin: 16px 0 6px; color: #ffb000; font-weight: bold; }
+.project-credits p { margin-bottom: 10px; }
+.project-credits ul { padding-left: 20px; list-style: square; margin-bottom: 12px; }
+.project-credits a { color: #8beaff; text-decoration: underline; }
+.project-credits :focus-visible { outline: 2px solid #fff; outline-offset: 2px; }

@@ -33,7 +33,7 @@ jobs:
       - name: Unit tests
         run: bun test
       - name: Build for the Pages sub-path
-        run: bun x vite build --base=/cadet-1_-orbital-telemetry/
+        run: bun run build -- --base=/cadet-1_-orbital-telemetry/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
