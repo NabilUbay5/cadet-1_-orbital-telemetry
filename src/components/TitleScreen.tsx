@@ -14,6 +14,9 @@ interface TitleScreenProps {
   onOutpost: () => void;
   onExportResearchBank: () => void;
   onImportResearchBank: (file: File) => void;
+  touchMode: 'auto' | 'on' | 'off';
+  touchActive: boolean;
+  onCycleTouchMode: () => void;
 }
 
 export const TitleScreen: React.FC<TitleScreenProps> = ({
@@ -24,6 +27,9 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
   onOutpost,
   onExportResearchBank,
   onImportResearchBank,
+  touchMode,
+  touchActive,
+  onCycleTouchMode,
 }) => {
   const backupInputRef = useRef<HTMLInputElement>(null);
 
@@ -167,6 +173,14 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({
                 event.currentTarget.value = '';
               }}
             />
+            <button
+              type="button"
+              onClick={onCycleTouchMode}
+              aria-label={`Touch controls: ${touchMode}. ${touchActive ? 'On-screen controller will show in flight.' : 'Keyboard only.'}`}
+              className="retro-btn-secondary min-h-9 px-3 text-[8px] tracking-wider cursor-pointer"
+            >
+              TOUCH: {touchMode.toUpperCase()}{touchMode === 'auto' ? (touchActive ? ' (ON)' : ' (OFF)') : ''}
+            </button>
           </div>
         </div>
       </div>

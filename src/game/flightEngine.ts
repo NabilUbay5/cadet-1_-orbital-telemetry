@@ -156,6 +156,9 @@ export class FlightEngine {
   private hullIntegrity: number = 100;
   private lives: number = MAX_LIVES;
   private invulnerableTimer: number = 0;
+  // Analog steering from the on-screen joystick (unit circle, x right, y down).
+  private touchSteerX = 0;
+  private touchSteerY = 0;
   private oxygen: number = 100;
   private energy: number = 100;
   private flightAssist: boolean = true;
@@ -193,6 +196,8 @@ export class FlightEngine {
   // Input System (Held & JustPressed)
   private inputEnabled = true;
   private heldKeys: Record<string, boolean> = {};
+  // On-screen buttons are tracked apart from the keyboard, so releasing one never cancels the other.
+  private touchKeys: Record<string, boolean> = {};
   // A Set is cleared in place each step instead of re-allocating an object literal.
   private readonly justPressedKeys = new Set<string>();
 
@@ -425,6 +430,8 @@ export class FlightEngine {
     this.hullIntegrity = 100;
     this.lives = MAX_LIVES;
     this.invulnerableTimer = 0;
+    this.touchSteerX = this.touchSteerY = 0;
+    for (const key in this.touchKeys) this.touchKeys[key] = false;
     this.craftGroup.visible = true;
     this.oxygen = 100;
     this.energy = 100;
@@ -599,7 +606,24 @@ export class FlightEngine {
     if (!enabled) {
       for (const key in this.heldKeys) this.heldKeys[key] = false;
       this.justPressedKeys.clear();
+      this.touchSteerX = this.touchSteerY = 0;
+    for (const key in this.touchKeys) this.touchKeys[key] = false;
     }
+  }
+
+  /** Analog steer from the touch joystick: x right, y down, each in [-1, 1]. */
+  public setTouchSteer(x: number, y: number) {
+    if (!this.inputEnabled) return;
+    this.touchSteerX = Number.isFinite(x) ? Math.max(-1, Math.min(1, x)) : 0;
+    this.touchSteerY = Number.isFinite(y) ? Math.max(-1, Math.min(1, y)) : 0;
+  }
+
+  /** Lets a touch button act exactly like holding a keyboard key (e.g. 'KeyW', 'ShiftLeft'). */
+  public setVirtualKey(code: string, down: boolean) {
+    if (!this.inputEnabled) return;
+    const key = code.toLowerCase();
+    if (down && !this.heldKeys[key] && !this.touchKeys[key]) this.justPressedKeys.add(key);
+    this.touchKeys[key] = down;
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
@@ -658,6 +682,8 @@ export class FlightEngine {
   private onWindowBlur = () => {
     this.heldKeys = {};
     this.justPressedKeys.clear();
+    this.touchSteerX = this.touchSteerY = 0;
+    for (const key in this.touchKeys) this.touchKeys[key] = false;
   };
 
   private onWindowResize = () => {
@@ -807,15 +833,17 @@ export class FlightEngine {
 
     // 2. Flight Controls
     const held = this.heldKeys;
+    const touch = this.touchKeys;
 
-    if (held['keyw'] || held['arrowup']) {
+    // Touch BOOST also thrusts: on a tablet it is the main button, and boost needs speed.
+    if (held['keyw'] || held['arrowup'] || touch['keyw'] || touch['shiftleft']) {
       this.throttle = Math.min(1.0, this.throttle + 0.9 * dt);
-    } else if (held['keys'] || held['arrowdown']) {
+    } else if (held['keys'] || held['arrowdown'] || touch['keys']) {
       this.throttle = Math.max(0.0, this.throttle - 1.2 * dt);
     }
 
     this.isBoosting = false;
-    if ((held['shiftleft'] || held['shiftright']) && this.boostCharge > 2 && this.throttle > 0.1) {
+    if ((held['shiftleft'] || held['shiftright'] || touch['shiftleft']) && this.boostCharge > 2 && this.throttle > 0.1) {
       this.isBoosting = true;
       this.boostCharge = Math.max(0, this.boostCharge - 26 * dt);
     } else {
@@ -833,6 +861,10 @@ export class FlightEngine {
     let rollInput = 0;
     if (held['keyq']) rollInput += 1;
     if (held['keye']) rollInput -= 1;
+
+    // Touch joystick: right yaws right, up pitches the nose up (same axes as A/D and R/F).
+    yawInput = Math.max(-1, Math.min(1, yawInput - this.touchSteerX));
+    pitchInput = Math.max(-1, Math.min(1, pitchInput - this.touchSteerY));
 
 
     if (yawInput !== 0 || pitchInput !== 0 || rollInput !== 0) {
