@@ -19,6 +19,7 @@ import {
   createWaypointRing,
 } from './proceduralModels.ts';
 import { ExhaustParticles } from './exhaustParticles.ts';
+import { Starfall } from './starfall.ts';
 import { FLIGHT_EPHEMERIS } from '../data/nasa/flightEphemeris.ts';
 import { FlightTelemetryLog } from './flightTelemetryLog.ts';
 import { FIXED_DT, FixedTimestep } from './fixedTimestep.ts';
@@ -127,6 +128,8 @@ export class FlightEngine {
   // Craft & Scene entities
   private craftGroup: THREE.Group;
   private readonly exhaust = new ExhaustParticles();
+  private readonly starfall = new Starfall();
+  private reducedMotionQuery: MediaQueryList | null = null;
   private visualTime = 0;
   private leftFlame: THREE.Mesh;
   private rightFlame: THREE.Mesh;
@@ -295,6 +298,7 @@ export class FlightEngine {
     const { stars, planet } = createCelestialEnvironment();
     this.scene.add(stars);
     this.scene.add(planet);
+    this.scene.add(this.starfall.mesh);
 
     const craft = createCadet1Craft();
     this.craftGroup = craft.group;
@@ -387,6 +391,9 @@ export class FlightEngine {
     this.scene.add(this.pulseSphere);
 
     // Event Listeners
+    this.reducedMotionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)') ?? null;
+    this.starfall.setReducedMotion(this.reducedMotionQuery?.matches ?? false);
+    this.reducedMotionQuery?.addEventListener('change', this.onReducedMotionChange);
     window.addEventListener('resize', this.onWindowResize);
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
@@ -412,6 +419,7 @@ export class FlightEngine {
   }
 
   public resetSimulation() {
+    this.starfall.reset();
     this.setInputEnabled(true);
     this.flightLog.clear();
     this.position.set(0, 0, 150);
@@ -688,6 +696,10 @@ export class FlightEngine {
     for (const key in this.touchKeys) this.touchKeys[key] = false;
   };
 
+  private onReducedMotionChange = (event: MediaQueryListEvent) => {
+    this.starfall.setReducedMotion(event.matches);
+  };
+
   private onWindowResize = () => {
     if (!this.container) return;
     const w = this.container.clientWidth;
@@ -823,6 +835,7 @@ export class FlightEngine {
     }
 
     this.metSeconds += dt;
+    this.starfall.advance(dt);
 
     // 1. Oxygen Depletion & Energy Recharge
     this.oxygen = Math.max(0, this.oxygen - 0.2 * dt);
@@ -1340,6 +1353,8 @@ export class FlightEngine {
   }
 
   private render() {
+    const canvas = this.renderer.domElement;
+    this.starfall.place(this.camera, canvas.width, canvas.height, this.gameState === 'PLAYING' || this.gameState === 'PAUSED');
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -1355,6 +1370,8 @@ export class FlightEngine {
 
     audioEngine.dispose();
     this.exhaust.dispose();
+    this.reducedMotionQuery?.removeEventListener('change', this.onReducedMotionChange);
+    this.starfall.dispose();
     this.renderer.dispose();
   }
 }
