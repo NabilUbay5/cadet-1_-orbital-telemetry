@@ -24,7 +24,13 @@ import {
   readResearchBalance,
   writeResearchBalance,
 } from './game/researchBank.ts';
-import { recordHighScore, readHighScore } from './game/scoreLogic.ts';
+import {
+  recordHighScore,
+  readHighScores,
+  writeHighScores,
+  type HighScoreRecords,
+  type ScoreMode,
+} from './game/scoreLogic.ts';
 import { isValidTelemetryData } from './game/telemetryValidation.ts';
 import { GameState, MissionResult, MissionStage, TelemetryData } from './types/game.ts';
 
@@ -99,7 +105,7 @@ export default function App() {
   const [outpostOpen, setOutpostOpen] = useState(false);
   const [researchBalance, setResearchBalance] = useState(0);
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(0);
+  const [highScores, setHighScores] = useState<HighScoreRecords>({ flight: 0, outpost: 0 });
   const [newHighScore, setNewHighScore] = useState(false);
   const [researchSaveError, setResearchSaveError] = useState(false);
   const [scoreSaveError, setScoreSaveError] = useState(false);
@@ -121,10 +127,10 @@ export default function App() {
     setScore(nextScore);
   };
 
-  const finalizeHighScore = useCallback((finalScore: number): boolean => {
+  const finalizeHighScore = useCallback((mode: ScoreMode, finalScore: number): boolean => {
     try {
-      const result = recordHighScore(window.localStorage, finalScore);
-      setHighScore(result.highScore);
+      const result = recordHighScore(window.localStorage, mode, finalScore);
+      setHighScores((previous) => ({ ...previous, [mode]: result.highScore }));
       setNewHighScore(result.isNewHighScore);
       setScoreSaveError(false);
       return result.isNewHighScore;
@@ -144,8 +150,7 @@ export default function App() {
       setResearchSaveError(true);
     }
     try {
-      const savedHighScore = readHighScore(window.localStorage);
-      setHighScore(savedHighScore);
+      setHighScores(readHighScores(window.localStorage));
     } catch (error) {
       console.error('Unable to load the saved high score.', error);
       setScoreSaveError(true);
@@ -176,7 +181,7 @@ export default function App() {
         setGameState(state);
         if (result) {
           setMissionResult(result);
-          finalizeHighScore(result.score);
+          finalizeHighScore('flight', result.score);
           creditResearchOnce('flight-telemetry-pods', result.telemetryPodResearchPoints);
         }
       },
@@ -256,7 +261,7 @@ export default function App() {
       const finalScore = engineRef.current?.finalizeCurrentRunScore();
       if (finalScore) {
         scoreToKeep = finalScore.total;
-        finalizeHighScore(finalScore.total);
+        finalizeHighScore('flight', finalScore.total);
       }
     }
     setActiveQuizStage(null);
@@ -334,7 +339,7 @@ export default function App() {
 
   const handleExportResearchBank = () => {
     try {
-      const backup = createResearchBankBackup(researchBalance);
+      const backup = createResearchBankBackup(researchBalance, highScores);
       const url = URL.createObjectURL(new Blob([backup], { type: 'application/json' }));
       const download = document.createElement('a');
       download.href = url;
@@ -364,6 +369,8 @@ export default function App() {
     updateScore(nextScore);
   };
 
+  const finalizeOutpostHighScore = (finalScore: number) => finalizeHighScore('outpost', finalScore);
+
   const handleImportResearchBank = async (file: File) => {
     try {
       if (file.size > 16_384) {
@@ -371,12 +378,19 @@ export default function App() {
       }
 
       const backup = parseResearchBankBackup(await file.text());
+      const restoredHighScores = backup.highScores
+        ? writeHighScores(window.localStorage, backup.highScores)
+        : highScores;
       const restoredBalance = writeResearchBalance(window.localStorage, backup.balance);
       setResearchBalance(restoredBalance);
+      setHighScores(restoredHighScores);
       setResearchSaveError(false);
+      setScoreSaveError(false);
       setResearchBackupMessage({
         kind: 'success',
-        text: `Research balance restored: ${restoredBalance} RP. The previous balance was replaced.`,
+        text: backup.highScores
+          ? `Research balance and mode high scores restored. The previous saved values were replaced.`
+          : `Research balance restored: ${restoredBalance} RP. This older backup has no high scores; current records were kept.`,
       });
     } catch (error) {
       console.error('Unable to import the research bank backup.', error);
@@ -439,7 +453,8 @@ export default function App() {
         <TitleScreen
           researchBalance={researchBalance}
           score={score}
-          highScore={highScore}
+          flightHighScore={highScores.flight}
+          outpostHighScore={highScores.outpost}
           onStart={handleStart}
           onOutpost={handleOpenOutpost}
           onExportResearchBank={handleExportResearchBank}
@@ -451,11 +466,11 @@ export default function App() {
       {gameState === 'TITLE' && outpostOpen && (
         <OutpostMode
           researchBalance={researchBalance}
-          highScore={highScore}
+          highScore={highScores.outpost}
           onMissionStart={handleOutpostMissionStart}
           onMissionComplete={handleOutpostMissionComplete}
           onScoreUpdate={handleOutpostScoreUpdate}
-          onFinalizeScore={finalizeHighScore}
+          onFinalizeScore={finalizeOutpostHighScore}
           onExit={handleCloseOutpost}
         />
       )}
@@ -465,7 +480,7 @@ export default function App() {
         <HUD
           telemetry={telemetry}
           score={score}
-          highScore={highScore}
+          highScore={highScores.flight}
           researchBalance={researchBalance}
           inert={activeQuizStage !== null}
           onCycleCamera={handleCycleCamera}
@@ -503,7 +518,7 @@ export default function App() {
           totalResearchPoints={researchBalance}
           lives={telemetry.lives}
           maxLives={telemetry.maxLives}
-          highScore={highScore}
+          highScore={highScores.flight}
           newHighScore={newHighScore}
           onExit={handleReturnToLobby}
           onMajorExplosion={handleVictoryShake}
@@ -515,7 +530,7 @@ export default function App() {
           onExportFlightLog={handleExportFlightLog}
           result={missionResult}
           totalResearchPoints={researchBalance}
-          highScore={highScore}
+          highScore={highScores.flight}
           newHighScore={newHighScore}
           onRestart={handleRestart}
           onExit={handleReturnToLobby}

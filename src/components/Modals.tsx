@@ -328,7 +328,7 @@ const FlightScoreSummary: React.FC<{
   <div className="border border-[#00F0FF]/50 bg-[#00F0FF]/5 p-3 mb-4 text-[9px]">
     <div className="flex items-center justify-between gap-2">
       <div className="text-[#00F0FF] font-bold">FLIGHT SCORE: {result.score}</div>
-      <div className="text-[#FFB000]">HI-SCORE: {highScore}</div>
+      <div className="text-[#FFB000]">FLIGHT HI-SCORE: {highScore}</div>
     </div>
     {newHighScore && <div role="status" className="font-bold text-[#FFB000] mt-1">★ NEW HI-SCORE! ★</div>}
     <div className="grid grid-cols-2 gap-x-3 mt-2 text-[#A0AEC0]">
