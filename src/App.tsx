@@ -112,6 +112,7 @@ export default function App() {
   const [activeQuizStage, setActiveQuizStage] = useState<MissionStage | null>(null);
   const [badgesUnlocked, setBadgesUnlocked] = useState<string[]>([]);
   const [outpostOpen, setOutpostOpen] = useState(false);
+  const [hudDetails, setHudDetails] = useState(false);
   const [touchMode, setTouchMode] = useState<TouchMode>(() => {
     try { return parseTouchMode(window.localStorage.getItem(TOUCH_MODE_STORAGE_KEY)); } catch { return 'auto'; }
   });
@@ -524,6 +525,8 @@ export default function App() {
           highScore={highScores.flight}
           researchBalance={researchBalance}
           inert={activeQuizStage !== null}
+          hudDetails={hudDetails}
+          onToggleHudDetails={() => setHudDetails((v) => !v)}
           onCycleCamera={handleCycleCamera}
           onToggleFlightAssist={handleToggleFlightAssist}
           onToggleMute={handleToggleMute}

@@ -398,6 +398,8 @@ export class FlightEngine {
 
   public setGameState(state: GameState) {
     this.gameState = state;
+    // The hit flash only runs while playing; never leave the ship frozen invisible.
+    if (state !== 'PLAYING') this.craftGroup.visible = true;
     if (state === 'PLAYING') {
       audioEngine.ensureRunning();
     } else {

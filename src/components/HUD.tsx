@@ -16,6 +16,9 @@ interface HUDProps {
   highScore: number;
   researchBalance: number;
   inert?: boolean;
+  /** Minimal vs full HUD on small screens; owned by App so it survives a pause. */
+  hudDetails?: boolean;
+  onToggleHudDetails?: () => void;
   onCycleCamera: () => void;
   onToggleFlightAssist: () => void;
   onToggleMute: () => void;
@@ -29,6 +32,8 @@ export const HUD: React.FC<HUDProps> = ({
   highScore,
   researchBalance,
   inert = false,
+  hudDetails: hudDetailsProp,
+  onToggleHudDetails,
   onCycleCamera,
   onToggleFlightAssist,
   onToggleMute,
@@ -37,7 +42,9 @@ export const HUD: React.FC<HUDProps> = ({
 }) => {
   const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
   // Small screens show a minimal flight HUD so the ship stays visible; this reveals every panel.
-  const [hudDetails, setHudDetails] = useState<boolean>(false);
+  const [localHudDetails, setLocalHudDetails] = useState<boolean>(false);
+  const hudDetails = hudDetailsProp ?? localHudDetails;
+  const toggleHudDetails = onToggleHudDetails ?? (() => setLocalHudDetails((v) => !v));
   const prevStageRef = useRef<number>(telemetry.stage);
   const prevTaskCompleteRef = useRef<boolean>(telemetry.stageTaskComplete);
 
@@ -572,7 +579,7 @@ export const HUD: React.FC<HUDProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setHudDetails((v) => !v)}
+              onClick={toggleHudDetails}
               aria-pressed={hudDetails}
               aria-label={hudDetails ? 'Show the minimal HUD' : 'Show every HUD panel'}
               className="hud-detail-toggle retro-btn-secondary h-8 px-2 text-[8px] items-center gap-1 cursor-pointer"
