@@ -10,6 +10,7 @@ import { PixelConfetti } from './PixelConfetti.tsx';
 import { PixelFireworks } from './PixelFireworks.tsx';
 import { PlayerLives } from './PlayerLives.tsx';
 import { ExportFlightLogButton } from './ExportFlightLogButton.tsx';
+import { SimulationPreview } from './SimulationPreview.tsx';
 
 interface PauseModalProps {
   onResume: () => void;
@@ -90,6 +91,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({ onResume, onRestart, onE
         >
           EXIT TO LOBBY
         </button>
+        <SimulationPreview mode="academy" />
       </div>
     </div>
   );

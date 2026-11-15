@@ -365,3 +365,7 @@ html.touch-flight .flight-canvas { touch-action: none; }
 .project-credits ul { padding-left: 20px; list-style: square; margin-bottom: 12px; }
 .project-credits a { color: #8beaff; text-decoration: underline; }
 .project-credits :focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+.simulation-preview { width: min(920px, calc(100vw - 32px)); }
+.simulation-preview img { max-height: 300px; object-fit: contain; background: #050508; }
+.simulation-preview-trigger:focus-visible { outline: 2px solid #00f0ff; outline-offset: 2px; }
