@@ -196,6 +196,16 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ result, onRestart, o
           </div>
         </div>
 
+        <div className="border border-[#FFB000]/50 bg-[#FFB000]/10 p-3 mb-5 flex items-center justify-between gap-3">
+          <div className="text-[9px]">
+            <div className="text-[#FFB000] font-bold">TELEMETRY RESEARCH BONUS</div>
+            <div className="text-[#A0AEC0] mt-1">{result.telemetryPodsCollected} / 3 PODS SECURED</div>
+          </div>
+          <div className="text-sm text-[#FFB000] font-bold whitespace-nowrap">
+            +{result.telemetryPodResearchPoints} RP
+          </div>
+        </div>
+
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={onRestart}
@@ -261,6 +271,16 @@ export const DefeatModal: React.FC<DefeatModalProps> = ({ result, onRestart, onE
           <div className="border-t border-[#2A3B5C] pl-2 pt-2 mt-1">
             <span className="text-[#64748B]">DAMAGE:</span>
             <div className="text-xs text-[#FF3344] mt-1">{result.hullDamageTaken}%</div>
+          </div>
+        </div>
+
+        <div className="border border-[#FFB000]/50 bg-[#FFB000]/10 p-3 mb-5 flex items-center justify-between gap-3">
+          <div className="text-[9px]">
+            <div className="text-[#FFB000] font-bold">TELEMETRY RESEARCH BONUS</div>
+            <div className="text-[#A0AEC0] mt-1">{result.telemetryPodsCollected} / 3 PODS SECURED</div>
+          </div>
+          <div className="text-sm text-[#FFB000] font-bold whitespace-nowrap">
+            +{result.telemetryPodResearchPoints} RP
           </div>
         </div>
 
