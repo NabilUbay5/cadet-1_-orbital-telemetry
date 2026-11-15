@@ -100,12 +100,24 @@ interface VictoryModalProps {
   totalResearchPoints: number;
   lives: number;
   maxLives: number;
+  highScore: number;
+  newHighScore: boolean;
   onExit: () => void;
   onExportFlightLog: () => void;
   onMajorExplosion: () => void;
 }
 
-export const VictoryModal: React.FC<VictoryModalProps> = ({ result, totalResearchPoints, lives, maxLives, onExit, onExportFlightLog, onMajorExplosion }) => {
+export const VictoryModal: React.FC<VictoryModalProps> = ({
+  result,
+  totalResearchPoints,
+  lives,
+  maxLives,
+  highScore,
+  newHighScore,
+  onExit,
+  onExportFlightLog,
+  onMajorExplosion,
+}) => {
   return (
     <div className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-30 pointer-events-auto font-pixel">
       <PixelConfetti />
@@ -186,6 +198,8 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ result, totalResearc
           </div>
         </div>
 
+        <FlightScoreSummary result={result} highScore={highScore} newHighScore={newHighScore} />
+
         <div className="border border-[#FFB000]/50 bg-[#FFB000]/10 p-3 mb-5 flex items-center justify-between gap-3">
           <div className="text-[9px]">
             <div className="text-[#FFB000] font-bold">FLIGHT ACADEMY REWARDS</div>
@@ -215,12 +229,22 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ result, totalResearc
 interface DefeatModalProps {
   result: MissionResult;
   totalResearchPoints: number;
+  highScore: number;
+  newHighScore: boolean;
   onRestart: () => void;
   onExit: () => void;
   onExportFlightLog: () => void;
 }
 
-export const DefeatModal: React.FC<DefeatModalProps> = ({ result, totalResearchPoints, onRestart, onExit, onExportFlightLog }) => {
+export const DefeatModal: React.FC<DefeatModalProps> = ({
+  result,
+  totalResearchPoints,
+  highScore,
+  newHighScore,
+  onRestart,
+  onExit,
+  onExportFlightLog,
+}) => {
   return (
     <div className="absolute inset-0 bg-[#050508]/90 flex items-center justify-center p-4 z-30 pointer-events-auto font-pixel">
       <div role="dialog" aria-modal="true" aria-label="Mission ended" className="flight-modal w-full max-w-lg retro-window-red p-6 bg-[#0d111a] border-2 border-[#FF3344] shadow-[4px_4px_0_#000]">
@@ -262,6 +286,8 @@ export const DefeatModal: React.FC<DefeatModalProps> = ({ result, totalResearchP
           </div>
         </div>
 
+        <FlightScoreSummary result={result} highScore={highScore} newHighScore={newHighScore} />
+
         <div className="border border-[#FFB000]/50 bg-[#FFB000]/10 p-3 mb-5 flex items-center justify-between gap-3">
           <div className="text-[9px]">
             <div className="text-[#FFB000] font-bold">FLIGHT ACADEMY REWARDS</div>
@@ -293,3 +319,26 @@ export const DefeatModal: React.FC<DefeatModalProps> = ({ result, totalResearchP
     </div>
   );
 };
+
+const FlightScoreSummary: React.FC<{
+  result: MissionResult;
+  highScore: number;
+  newHighScore: boolean;
+}> = ({ result, highScore, newHighScore }) => (
+  <div className="border border-[#00F0FF]/50 bg-[#00F0FF]/5 p-3 mb-4 text-[9px]">
+    <div className="flex items-center justify-between gap-2">
+      <div className="text-[#00F0FF] font-bold">FLIGHT SCORE: {result.score}</div>
+      <div className="text-[#FFB000]">HI-SCORE: {highScore}</div>
+    </div>
+    {newHighScore && <div role="status" className="font-bold text-[#FFB000] mt-1">★ NEW HI-SCORE! ★</div>}
+    <div className="grid grid-cols-2 gap-x-3 mt-2 text-[#A0AEC0]">
+      <div>Gyro stabilization: {result.scoreBreakdown.gyroStabilization}</div>
+      <div>Vector rings: {result.scoreBreakdown.vectorRings}</div>
+      <div>Energy cubes: {result.scoreBreakdown.energyCubes}</div>
+      <div>Hull integrity: {result.scoreBreakdown.hullIntegrity}</div>
+      <div>Rapid alignment: {result.scoreBreakdown.satelliteSpeed}</div>
+      <div>Satellite lock: {result.scoreBreakdown.satelliteLock}</div>
+      <div>Quiz answers: {result.scoreBreakdown.quizAnswers}</div>
+    </div>
+  </div>
+);

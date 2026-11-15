@@ -69,7 +69,11 @@ function getSelectedQuestionIds(container: HTMLElement) {
   return container.firstElementChild?.getAttribute('data-selected-question-ids')?.split(',') ?? [];
 }
 
-function renderQuiz(stage: 1 | 2 | 3, onPass: (stage: 1 | 2 | 3) => void = () => undefined) {
+function renderQuiz(
+  stage: 1 | 2 | 3,
+  onPass: (stage: 1 | 2 | 3) => void = () => undefined,
+  onCorrectAnswer: (questionId: string) => void = () => undefined,
+) {
   const container = document.createElement('div');
   document.body.appendChild(container);
   const root = createRoot(container);
@@ -79,6 +83,7 @@ function renderQuiz(stage: 1 | 2 | 3, onPass: (stage: 1 | 2 | 3) => void = () =>
       React.createElement(CertificationQuizModal, {
         stage,
         onPass,
+        onCorrectAnswer,
         onClose: () => undefined,
       })
     );
@@ -163,6 +168,22 @@ describe('CertificationQuizModal helper logic', () => {
 });
 
 describe('CertificationQuizModal component interaction', () => {
+  test('reports each correct answer exactly once for score credit', () => {
+    const correctQuestionIds: string[] = [];
+    const { container, root } = renderQuiz(1, () => undefined, (questionId) => {
+      correctQuestionIds.push(questionId);
+    });
+    const question = getCurrentQuestion(container, 1);
+    clickButton(getQuestionButton(container, question));
+    clickButton(getButtonContaining(container, 'NEXT QUESTION'));
+    expect(correctQuestionIds).toEqual([question.id]);
+
+    act(() => {
+      root.unmount();
+    });
+    document.body.removeChild(container);
+  });
+
   test('completes a fully correct quiz and counts the final answer before passing', () => {
     const passedStages: number[] = [];
     const { container, root } = renderQuiz(1, (stage) => {

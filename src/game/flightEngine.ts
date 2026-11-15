@@ -59,6 +59,15 @@ import {
   stepSatelliteLockTimer,
   stepStabilizationTimer,
 } from './missionLogic.ts';
+import {
+  ENERGY_CUBE_SCORE,
+  FlightScoreTracker,
+  GYRO_STABILIZATION_POINTS_PER_SECOND,
+  getHullIntegrityScore,
+  getSatelliteQuickAlignmentBonus,
+  SATELLITE_LOCK_COMPLETION_BONUS,
+  VECTOR_RING_SCORE,
+} from './scoreLogic.ts';
 
 const RAD_TO_DEG = 180 / Math.PI;
 const DEG_TO_RAD = Math.PI / 180;
@@ -129,6 +138,7 @@ export class FlightEngine {
   private energyCubes: Array<ReturnType<typeof createEnergyCube>> = [];
   private telemetryPods: Array<ReturnType<typeof createTelemetryPod>> = [];
   private readonly telemetryPodTracker = new TelemetryPodTracker();
+  private readonly scoreTracker = new FlightScoreTracker();
   private o2Cans: Array<ReturnType<typeof createOxygenCanister>> = [];
   private asteroids: Array<ReturnType<typeof createAsteroidDebris>> = [];
   private pulseSphere: THREE.Mesh | null = null;
@@ -157,6 +167,10 @@ export class FlightEngine {
   private metSeconds: number = 0;
   private damageTakenCount: number = 0;
   private badgesUnlocked: string[] = [];
+  private stage1StableSeconds = 0;
+  private stage1ScoredSeconds = 0;
+  private stage3ElapsedSeconds = 0;
+  private runScoreFinalized = false;
 
   // Stage 1: Ground School & Gravity Basics (Balance & Stabilization Task)
   private stabilizationTimer: number = 0;
@@ -184,6 +198,7 @@ export class FlightEngine {
 
   // External Callbacks
   private onTelemetryUpdate?: (telemetry: TelemetryData) => void;
+  private onScoreUpdate?: (score: number) => void;
   private onStateChange?: (state: GameState, result?: MissionResult) => void;
   private onStageTaskCompleted?: (stage: MissionStage) => void;
 
@@ -191,12 +206,14 @@ export class FlightEngine {
     container: HTMLElement,
     callbacks: {
       onTelemetryUpdate?: (telemetry: TelemetryData) => void;
+      onScoreUpdate?: (score: number) => void;
       onStateChange?: (state: GameState, result?: MissionResult) => void;
       onStageTaskCompleted?: (stage: MissionStage) => void;
     }
   ) {
     this.container = container;
     this.onTelemetryUpdate = callbacks.onTelemetryUpdate;
+    this.onScoreUpdate = callbacks.onScoreUpdate;
     this.onStateChange = callbacks.onStateChange;
     this.onStageTaskCompleted = callbacks.onStageTaskCompleted;
 
@@ -416,6 +433,12 @@ export class FlightEngine {
     this.metSeconds = 0;
     this.damageTakenCount = 0;
     this.badgesUnlocked = [];
+    this.stage1StableSeconds = 0;
+    this.stage1ScoredSeconds = 0;
+    this.stage3ElapsedSeconds = 0;
+    this.runScoreFinalized = false;
+    this.scoreTracker.reset();
+    this.onScoreUpdate?.(0);
 
     this.stabilizationTimer = 0;
     this.isCraftStabilized = false;
@@ -480,6 +503,7 @@ export class FlightEngine {
       this.orientation.identity();
       this.satelliteLockTimer = 0;
       this.stage3Complete = false;
+      this.stage3ElapsedSeconds = 0;
     }
     this.craftGroup.position.copy(this.position);
     this.craftGroup.quaternion.copy(this.orientation);
@@ -488,6 +512,7 @@ export class FlightEngine {
   public triggerVictoryFinal() {
     this.setInputEnabled(false);
     this.setGameState('VICTORY');
+    const score = this.finalizeCurrentRunScore();
     const mins = Math.floor(this.metSeconds / 60);
     const secs = (this.metSeconds % 60).toFixed(1);
     const timeFormatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(4, '0')}`;
@@ -509,6 +534,8 @@ export class FlightEngine {
       badgesEarned: 3,
       triviaScore: 9,
       totalTrivia: 9,
+      score: score.total,
+      scoreBreakdown: score.breakdown,
     };
 
     audioEngine.playDockSuccess();
@@ -520,6 +547,26 @@ export class FlightEngine {
     if (this.cameraMode === 'CHASE') this.cameraMode = 'COCKPIT';
     else if (this.cameraMode === 'COCKPIT') this.cameraMode = 'ORBIT';
     else this.cameraMode = 'CHASE';
+  }
+
+  public awardQuizAnswer(questionId: string): void {
+    if (this.runScoreFinalized || !this.scoreTracker.awardQuizAnswer(questionId)) return;
+    this.onScoreUpdate?.(this.scoreTracker.total);
+  }
+
+  public finalizeCurrentRunScore(): { total: number; breakdown: MissionResult['scoreBreakdown'] } {
+    if (!this.runScoreFinalized) {
+      this.runScoreFinalized = true;
+      this.scoreTracker.award('hullIntegrity', getHullIntegrityScore(this.hullIntegrity));
+      this.onScoreUpdate?.(this.scoreTracker.total);
+    }
+    return { total: this.scoreTracker.total, breakdown: this.scoreTracker.breakdown };
+  }
+
+  private awardScore(category: keyof MissionResult['scoreBreakdown'], points: number): void {
+    if (this.runScoreFinalized || points <= 0) return;
+    this.scoreTracker.award(category, points);
+    this.onScoreUpdate?.(this.scoreTracker.total);
   }
 
   public setCameraMode(mode: CameraMode) {
@@ -914,6 +961,17 @@ export class FlightEngine {
       const isLevel = isCraftLevel(pitchDeg, yawDeg);
       this.isCraftStabilized = isLevel;
       this.stabilizationTimer = stepStabilizationTimer(this.stabilizationTimer, isLevel, dt);
+      if (isLevel) {
+        this.stage1StableSeconds += dt;
+        const wholeSeconds = Math.floor(this.stage1StableSeconds);
+        if (wholeSeconds > this.stage1ScoredSeconds) {
+          this.awardScore(
+            'gyroStabilization',
+            (wholeSeconds - this.stage1ScoredSeconds) * GYRO_STABILIZATION_POINTS_PER_SECOND,
+          );
+          this.stage1ScoredSeconds = wholeSeconds;
+        }
+      }
       if (isStabilizationComplete(this.stabilizationTimer)) {
         this.completeStageTask(1);
       }
@@ -926,6 +984,7 @@ export class FlightEngine {
             ring.passed = true;
             ring.group.visible = false;
             this.vectorRingsPassedCount++;
+            this.awardScore('vectorRings', VECTOR_RING_SCORE);
             this.stabilizationTimer = applyRingBonus(this.stabilizationTimer);
             audioEngine.playItemCollect();
 
@@ -944,6 +1003,7 @@ export class FlightEngine {
           cube.collected = true;
           cube.group.visible = false;
           this.energyCubesCollectedCount++;
+          this.awardScore('energyCubes', ENERGY_CUBE_SCORE);
           audioEngine.playItemCollect();
 
           if (isEnergyHarvestComplete(this.energyCubesCollectedCount)) {
@@ -964,9 +1024,12 @@ export class FlightEngine {
     const alignErrorDeg = Math.acos(alignDot) * RAD_TO_DEG;
 
     if (this.stage === 3 && !this.stage3Complete) {
+      this.stage3ElapsedSeconds += dt;
       const aligned = isSatelliteAligned(distToSat, alignErrorDeg);
       this.satelliteLockTimer = stepSatelliteLockTimer(this.satelliteLockTimer, aligned, dt);
       if (isSatelliteLockComplete(this.satelliteLockTimer)) {
+        this.awardScore('satelliteSpeed', getSatelliteQuickAlignmentBonus(this.stage3ElapsedSeconds));
+        this.awardScore('satelliteLock', SATELLITE_LOCK_COMPLETION_BONUS);
         this.completeStageTask(3);
       }
     }
@@ -1185,6 +1248,7 @@ export class FlightEngine {
 
   private triggerDefeat(reason: string) {
     this.setGameState('DEFEAT');
+    const score = this.finalizeCurrentRunScore();
     audioEngine.setThruster(0, false);
 
     const mins = Math.floor(this.metSeconds / 60);
@@ -1208,6 +1272,8 @@ export class FlightEngine {
       badgesEarned: this.badgesUnlocked.length,
       triviaScore: 0,
       totalTrivia: 9,
+      score: score.total,
+      scoreBreakdown: score.breakdown,
     };
 
     this.onStateChange?.('DEFEAT', result);

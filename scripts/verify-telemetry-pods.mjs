@@ -48,6 +48,7 @@ try {
     const researchBalance = page.getByTestId('research-balance');
     await researchBalance.waitFor();
     assert.equal((await researchBalance.textContent())?.trim(), '0 RP');
+    assert.equal((await page.getByTestId('high-score').textContent())?.trim(), '0');
     await page.evaluate(() => localStorage.setItem('cadet-1-research-points', '400'));
     await page.reload({ waitUntil: 'networkidle' });
     assert.equal((await page.getByTestId('research-balance').textContent())?.trim(), '400 RP');
@@ -84,6 +85,7 @@ try {
     console.log('PASS: export downloads a valid backup; import replaces balance and rejects invalid files');
 
     await page.getByRole('button', { name: /FLIGHT ACADEMY/ }).click();
+    assert.equal((await page.getByTestId('flight-score').textContent())?.trim(), '0');
 
     const podCounter = page.getByTestId('telemetry-pod-counter');
     await page.waitForFunction(() => {
@@ -101,18 +103,32 @@ try {
       await page.keyboard.up('w');
     }
     assert.equal(await podCounter.textContent(), '1 / 3');
+    assert.equal((await page.getByTestId('flight-score').textContent())?.trim(), '0');
     console.log('PASS: thrust collects a telemetry pod and updates the HUD and radar');
 
     await page.getByRole('button', { name: /PAUSE/ }).click();
     await page.getByRole('dialog', { name: 'Flight paused' }).waitFor();
+    await page.getByRole('button', { name: 'EXIT TO LOBBY' }).click();
+    await page.getByTestId('title-screen').waitFor();
+    assert.ok(Number((await page.getByTestId('score').textContent())?.trim()) > 0);
+    const savedHighScore = Number((await page.getByTestId('high-score').textContent())?.trim());
+    assert.ok(savedHighScore > 0);
+    assert.equal(await page.evaluate(() => localStorage.getItem('cadet-1-hi-score')), String(savedHighScore));
+
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.equal((await page.getByTestId('high-score').textContent())?.trim(), String(savedHighScore));
+    await page.getByRole('button', { name: /FLIGHT ACADEMY/ }).click();
+    assert.equal((await page.getByTestId('high-score').textContent())?.trim(), String(savedHighScore));
+    await page.getByRole('button', { name: /PAUSE/ }).click();
     await page.getByRole('button', { name: 'RESTART' }).click();
     await page.waitForFunction(() => {
       return document.querySelector('[data-testid="telemetry-pod-counter"]')?.textContent?.trim() === '0 / 3'
         && document.querySelectorAll('[title^="POD ["]').length === 3;
     });
+    assert.equal((await page.getByTestId('flight-score').textContent())?.trim(), '0');
     assert.equal((await page.getByTestId('research-balance').textContent())?.trim(), '400 RP');
     assert.deepEqual(errors, []);
-    console.log('PASS: restart restores pods and preserves the saved research balance');
+    console.log('PASS: exiting saves the hi-score; restarting resets the run score and restores pods');
   } finally {
     await browser.close();
   }
