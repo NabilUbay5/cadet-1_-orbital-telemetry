@@ -6,16 +6,8 @@
 import React from 'react';
 import { MissionResult } from '../types/game.ts';
 import { PixelBadge } from './PixelBadge.tsx';
+import { PixelConfetti } from './PixelConfetti.tsx';
 import { ExportFlightLogButton } from './ExportFlightLogButton.tsx';
-
-const confettiColors = ['#00F0FF', '#00FF66', '#FFB000', '#FFFFFF'];
-const pixelConfetti = Array.from({ length: 48 }, (_, index) => ({
-  left: `${(index * 37) % 100}%`,
-  color: confettiColors[index % confettiColors.length],
-  size: index % 5 === 0 ? 8 : 5,
-  duration: `${2.8 + (index % 7) * 0.3}s`,
-  delay: `${-((index * 13) % 35) / 10}s`,
-}));
 
 interface PauseModalProps {
   onResume: () => void;
@@ -111,22 +103,7 @@ interface VictoryModalProps {
 export const VictoryModal: React.FC<VictoryModalProps> = ({ result, onRestart, onExit, onExportFlightLog }) => {
   return (
     <div className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-30 pointer-events-auto font-pixel">
-      <div aria-hidden="true" className="pixel-confetti absolute inset-0 overflow-hidden pointer-events-none">
-        {pixelConfetti.map((piece, index) => (
-          <span
-            key={index}
-            className="pixel-confetti-piece"
-            style={{
-              left: piece.left,
-              width: piece.size,
-              height: piece.size,
-              backgroundColor: piece.color,
-              animationDuration: piece.duration,
-              animationDelay: piece.delay,
-            }}
-          />
-        ))}
-      </div>
+      <PixelConfetti />
       <div role="dialog" aria-modal="true" aria-label="Mission complete" className="flight-modal relative z-10 w-full max-w-lg retro-window-green p-6 bg-[#0d111a] border-2 border-[#00FF66] shadow-[6px_6px_0_#000]">
         {/* Header */}
         <div className="flex items-center justify-between border-b-2 border-[#2A3B5C] pb-3 mb-4">
