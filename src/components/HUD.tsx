@@ -36,6 +36,8 @@ export const HUD: React.FC<HUDProps> = ({
   onPause,
 }) => {
   const [showAnnouncement, setShowAnnouncement] = useState<boolean>(true);
+  // Small screens show a minimal flight HUD so the ship stays visible; this reveals every panel.
+  const [hudDetails, setHudDetails] = useState<boolean>(false);
   const prevStageRef = useRef<number>(telemetry.stage);
   const prevTaskCompleteRef = useRef<boolean>(telemetry.stageTaskComplete);
 
@@ -109,7 +111,7 @@ export const HUD: React.FC<HUDProps> = ({
   const currentDirective = stageDirectives[telemetry.stage] || stageDirectives[1];
 
   return (
-    <div inert={inert} className="cockpit-hud absolute inset-0 pointer-events-none z-10 flex flex-col justify-between overflow-hidden font-pixel">
+    <div inert={inert} className={`${hudDetails ? 'hud-details-open ' : ''}cockpit-hud absolute inset-0 pointer-events-none z-10 flex flex-col justify-between overflow-hidden font-pixel`}>
       {/* 1. TOP COMMAND DECK (Height 48px, 100% width) */}
       <header className="hud-header w-full min-h-12 shrink-0 bg-[#0d111a]/95 border-b-2 border-[#00F0FF] px-3 md:px-4 flex flex-wrap gap-2 py-2 items-center justify-between pointer-events-auto shadow-[0_3px_0_#000]">
         {/* Left: MET & Stage Name */}
@@ -278,7 +280,7 @@ export const HUD: React.FC<HUDProps> = ({
         <aside aria-label="Left telemetry wing" className="hud-wing w-[260px] md:w-[280px] flex flex-col gap-3 pointer-events-auto">
           <NasaTelemetryPanel metSeconds={telemetry.metSeconds} wing="state" />
           {/* Life Support & Hull Integrity Panel */}
-          <div className="retro-window p-3 flex flex-col gap-2.5 bg-[#0d111a]/90">
+          <div data-hud-panel="life" className="retro-window p-3 flex flex-col gap-2.5 bg-[#0d111a]/90">
             <div className="flex items-center justify-between">
               <span className="text-[9px] text-[#A0AEC0]">O2 RESERVES</span>
               <span
@@ -307,7 +309,7 @@ export const HUD: React.FC<HUDProps> = ({
           </div>
 
           {/* 8-Bit Inertial Stability Reticle */}
-          <div className="retro-window p-3 bg-[#0d111a]/90">
+          <div data-hud-panel="gyro" className="retro-window p-3 bg-[#0d111a]/90">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[9px] text-[#A0AEC0]">GYRO DRIFT</span>
               <span
@@ -376,7 +378,7 @@ export const HUD: React.FC<HUDProps> = ({
         <aside aria-label="Right telemetry wing" className="hud-wing w-[270px] md:w-[300px] flex flex-col gap-3 pointer-events-auto">
           <NasaTelemetryPanel metSeconds={telemetry.metSeconds} wing="source" />
           {/* Mission Stage Objectives & Live Task Progress */}
-          <div className="retro-window p-3 bg-[#0d111a]/90 text-[9px]">
+          <div data-hud-panel="mission" className="retro-window p-3 bg-[#0d111a]/90 text-[9px]">
             <div className="flex items-center justify-between text-[9px] text-[#A0AEC0] mb-2 uppercase">
               <span>MISSION SEQUENCE</span>
               <span className="text-[#00FF66] text-[8px]">PHASE {telemetry.stage} / 3</span>
@@ -492,7 +494,7 @@ export const HUD: React.FC<HUDProps> = ({
           </div>
 
           {/* 8-Bit Radar Scope */}
-          <div className="retro-window p-3 bg-[#0d111a]/90">
+          <div data-hud-panel="radar" className="retro-window p-3 bg-[#0d111a]/90">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[9px] text-[#A0AEC0]">RADAR SCOPE</span>
               <button
@@ -568,6 +570,15 @@ export const HUD: React.FC<HUDProps> = ({
 
           {/* Action Actuators */}
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setHudDetails((v) => !v)}
+              aria-pressed={hudDetails}
+              aria-label={hudDetails ? 'Show the minimal HUD' : 'Show every HUD panel'}
+              className="hud-detail-toggle retro-btn-secondary h-8 px-2 text-[8px] items-center gap-1 cursor-pointer"
+            >
+              HUD: {hudDetails ? 'FULL' : 'MIN'}
+            </button>
             <button
               onClick={onCycleCamera}
               className="retro-btn-secondary h-8 px-2 text-[8px] flex items-center gap-1 cursor-pointer"
