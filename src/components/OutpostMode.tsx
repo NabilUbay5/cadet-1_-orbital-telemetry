@@ -334,7 +334,7 @@ const Game: React.FC<{
           <span className="border border-[#2A3B5C] px-2 py-0.5">{env.night ? 'NIGHT' : env.storm ? 'DUST STORM' : `SUN ${Math.round(env.sunlight * 100)}%`}</span>
           <span className="border border-[#2A3B5C] px-2 py-0.5 tabular-nums">SAMPLES {s.science.toFixed(0)} / {SCIENCE_GOAL}</span>
           <span data-testid="outpost-score" className="border border-[#00FF66] px-2 py-0.5 tabular-nums text-[#00FF66]">SCORE {finalReport(s).score}</span>
-          <span className="border border-[#FFB000] px-2 py-0.5 tabular-nums text-[#FFB000]">HI {highScore}</span>
+          <span data-testid="outpost-high-score" className="border border-[#FFB000] px-2 py-0.5 tabular-nums text-[#FFB000]">OUTPOST HI {highScore}</span>
           <span className="border border-[#2A3B5C] px-2 py-0.5 tabular-nums" style={{ color: C.amber }}>BUILD PTS {Math.floor(s.buildPoints)}</span>
           <button className="retro-btn-secondary px-3 py-1 text-[9px]" onClick={onExit}>EXIT</button>
         </div>
@@ -613,7 +613,7 @@ const Debrief: React.FC<{
         <div>Daily survival: <b>+{r.dailySurvivalScore}</b></div>
         <div>Healthy 30-day crew bonus: <b>+{r.performanceBonus}</b></div>
         {r.difficultyMultiplier > 1 && <div>Commander multiplier: <b>×{r.difficultyMultiplier}</b></div>}
-        <div className="text-[#00FF66] font-bold">HIGH SCORE: {highScore}</div>
+        <div className="text-[#00FF66] font-bold">OUTPOST HI-SCORE: {highScore}</div>
         {newHighScore && <div role="status" className="font-pixel text-[#FFB000]">★ NEW HI-SCORE! ★</div>}
       </div>
       {s.result === 'complete' ? (

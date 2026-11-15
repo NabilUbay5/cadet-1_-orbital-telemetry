@@ -129,9 +129,10 @@ Research Points (RP) are credited to the local research bank as missions progres
 The balance is stored in browser local storage and shown in the lobby, flight
 HUD, and debriefs. It is local to the current browser profile and is not synced
 between devices. Use **EXPORT RESEARCH** in the lobby to download a versioned
-JSON backup, or **IMPORT RESEARCH** to restore one. Import replaces the current
-balance; invalid or unsupported files are rejected without changing saved
-progress.
+JSON backup, or **IMPORT RESEARCH** to restore one. New backups include the
+research balance and Flight/Outpost high scores. Import replaces saved values
+included in the backup; older version 1 backups still restore the balance and
+leave current high scores unchanged. Invalid or unsupported files are rejected.
 
 After the final certification, the victory screen keeps its pixel fireworks and
 confetti running until any key or **EXIT LOBBY** returns to the title screen.
@@ -145,8 +146,10 @@ speed bonus that starts at 1,500 and drops by 100 per elapsed stage second.
 Correct quiz answers are worth 500 points each (a question scores once per run).
 Outpost Ops awards 100 points per day with at least three crew alive, plus a
 healthy-crew 30-day completion bonus; Commander difficulty multiplies Outpost
-score by 1.5. The current score appears in the HUD and lobby, and the best score
-is saved separately in local storage and shown on the mission debrief.
+score by 1.5. Flight Academy and Outpost Ops keep separate high scores so their
+different scoring scales do not compete. The current score appears in the HUD
+and lobby, and each mode's record is shown in its debrief. The previous shared
+high score is retained as the Flight Academy record.
 
 ### Other data, libraries and tools
 

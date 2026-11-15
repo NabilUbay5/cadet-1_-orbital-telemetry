@@ -8,10 +8,12 @@ import {
   getHullIntegrityScore,
   getSatelliteQuickAlignmentBonus,
   getVectorRingScore,
-  HI_SCORE_STORAGE_KEY,
+  HI_SCORE_STORAGE_KEYS,
+  LEGACY_HI_SCORE_STORAGE_KEY,
   QUIZ_CORRECT_ANSWER_SCORE,
   recordHighScore,
   readHighScore,
+  readHighScores,
   SATELLITE_LOCK_COMPLETION_BONUS,
   SATELLITE_QUICK_ALIGNMENT_BASE_BONUS,
   SATELLITE_QUICK_ALIGNMENT_DECAY_PER_SECOND,
@@ -73,18 +75,43 @@ describe('flight score rules', () => {
 describe('persistent high score', () => {
   test('records a new best and leaves it unchanged for lower or tied scores', () => {
     const storage = new MemoryStorage();
-    expect(recordHighScore(storage, 2_500)).toEqual({ highScore: 2_500, isNewHighScore: true });
-    expect(storage.getItem(HI_SCORE_STORAGE_KEY)).toBe('2500');
-    expect(recordHighScore(storage, 2_000)).toEqual({ highScore: 2_500, isNewHighScore: false });
-    expect(recordHighScore(storage, 2_500)).toEqual({ highScore: 2_500, isNewHighScore: false });
-    expect(readHighScore(storage)).toBe(2_500);
+    expect(recordHighScore(storage, 'flight', 2_500)).toEqual({ highScore: 2_500, isNewHighScore: true });
+    expect(storage.getItem(HI_SCORE_STORAGE_KEYS.flight)).toBe('2500');
+    expect(recordHighScore(storage, 'flight', 2_000)).toEqual({ highScore: 2_500, isNewHighScore: false });
+    expect(recordHighScore(storage, 'flight', 2_500)).toEqual({ highScore: 2_500, isNewHighScore: false });
+    expect(readHighScore(storage, 'flight')).toBe(2_500);
   });
 
   test('treats missing or malformed saved values as zero and rejects invalid scores', () => {
     const storage = new MemoryStorage();
-    expect(readHighScore(storage)).toBe(0);
-    storage.setItem(HI_SCORE_STORAGE_KEY, 'oops');
-    expect(readHighScore(storage)).toBe(0);
-    expect(() => recordHighScore(storage, -1)).toThrow(RangeError);
+    expect(readHighScore(storage, 'flight')).toBe(0);
+    storage.setItem(HI_SCORE_STORAGE_KEYS.flight, 'oops');
+    expect(readHighScore(storage, 'flight')).toBe(0);
+    expect(() => recordHighScore(storage, 'flight', -1)).toThrow(RangeError);
+  });
+
+  test('keeps Flight and Outpost records independent', () => {
+    const storage = new MemoryStorage();
+    recordHighScore(storage, 'flight', 20_000);
+    recordHighScore(storage, 'outpost', 8_000);
+
+    expect(readHighScores(storage)).toEqual({ flight: 20_000, outpost: 8_000 });
+    expect(recordHighScore(storage, 'outpost', 12_000)).toEqual({
+      highScore: 12_000,
+      isNewHighScore: true,
+    });
+    expect(readHighScore(storage, 'flight')).toBe(20_000);
+  });
+
+  test('preserves the previous shared record as a Flight record only', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(LEGACY_HI_SCORE_STORAGE_KEY, '9000');
+
+    expect(readHighScores(storage)).toEqual({ flight: 9_000, outpost: 0 });
+    expect(recordHighScore(storage, 'outpost', 8_000)).toEqual({
+      highScore: 8_000,
+      isNewHighScore: true,
+    });
+    expect(readHighScores(storage)).toEqual({ flight: 9_000, outpost: 8_000 });
   });
 });

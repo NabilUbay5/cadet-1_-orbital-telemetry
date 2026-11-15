@@ -3,15 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import {
+  validateHighScores,
+  type HighScoreRecords,
+} from './scoreLogic.ts';
+
 export const RESEARCH_BANK_STORAGE_KEY = 'cadet-1-research-points';
 export const RESEARCH_BACKUP_FORMAT = 'cadet-1-research-bank';
-export const RESEARCH_BACKUP_VERSION = 1;
+export const RESEARCH_BACKUP_VERSION = 2;
+const PREVIOUS_RESEARCH_BACKUP_VERSION = 1;
 
 export interface ResearchBankBackup {
   format: typeof RESEARCH_BACKUP_FORMAT;
-  version: typeof RESEARCH_BACKUP_VERSION;
+  version: typeof RESEARCH_BACKUP_VERSION | typeof PREVIOUS_RESEARCH_BACKUP_VERSION;
   exportedAt: string;
   balance: number;
+  highScores?: HighScoreRecords;
 }
 
 export interface ResearchStorage {
@@ -56,8 +63,13 @@ export function addResearchPoints(storage: ResearchStorage, points: number): num
   return writeResearchBalance(storage, updatedBalance);
 }
 
-export function createResearchBankBackup(balance: number, exportedAt = new Date().toISOString()): string {
+export function createResearchBankBackup(
+  balance: number,
+  highScores: HighScoreRecords,
+  exportedAt = new Date().toISOString(),
+): string {
   validateBalance(balance);
+  validateHighScores(highScores);
 
   if (!Number.isFinite(Date.parse(exportedAt))) {
     throw new TypeError('Backup export time must be a valid date.');
@@ -68,6 +80,7 @@ export function createResearchBankBackup(balance: number, exportedAt = new Date(
     version: RESEARCH_BACKUP_VERSION,
     exportedAt,
     balance,
+    highScores: { ...highScores },
   };
   return `${JSON.stringify(backup, null, 2)}\n`;
 }
@@ -85,7 +98,10 @@ export function parseResearchBankBackup(contents: string): ResearchBankBackup {
   }
 
   const backup = parsed as Record<string, unknown>;
-  if (backup.format !== RESEARCH_BACKUP_FORMAT || backup.version !== RESEARCH_BACKUP_VERSION) {
+  if (
+    backup.format !== RESEARCH_BACKUP_FORMAT
+    || (backup.version !== RESEARCH_BACKUP_VERSION && backup.version !== PREVIOUS_RESEARCH_BACKUP_VERSION)
+  ) {
     throw new TypeError('Backup file format or version is not supported.');
   }
   if (typeof backup.exportedAt !== 'string' || !Number.isFinite(Date.parse(backup.exportedAt))) {
@@ -95,10 +111,32 @@ export function parseResearchBankBackup(contents: string): ResearchBankBackup {
     throw new TypeError('Backup file has an invalid research balance.');
   }
 
+  let highScores: HighScoreRecords | undefined;
+  if (backup.version === RESEARCH_BACKUP_VERSION) {
+    if (typeof backup.highScores !== 'object' || backup.highScores === null || Array.isArray(backup.highScores)) {
+      throw new TypeError('Backup file has invalid high scores.');
+    }
+
+    const rawHighScores = backup.highScores as Record<string, unknown>;
+    if (
+      typeof rawHighScores.flight !== 'number'
+      || typeof rawHighScores.outpost !== 'number'
+      || !Number.isSafeInteger(rawHighScores.flight)
+      || rawHighScores.flight < 0
+      || !Number.isSafeInteger(rawHighScores.outpost)
+      || rawHighScores.outpost < 0
+    ) {
+      throw new TypeError('Backup file has invalid high scores.');
+    }
+    highScores = { flight: rawHighScores.flight, outpost: rawHighScores.outpost };
+    validateHighScores(highScores);
+  }
+
   return {
     format: RESEARCH_BACKUP_FORMAT,
-    version: RESEARCH_BACKUP_VERSION,
+    version: backup.version,
     exportedAt: backup.exportedAt,
     balance: backup.balance,
+    ...(highScores ? { highScores } : {}),
   };
 }

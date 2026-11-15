@@ -48,8 +48,13 @@ try {
     const researchBalance = page.getByTestId('research-balance');
     await researchBalance.waitFor();
     assert.equal((await researchBalance.textContent())?.trim(), '0 RP');
-    assert.equal((await page.getByTestId('high-score').textContent())?.trim(), '0');
+    assert.equal((await page.getByTestId('flight-high-score').textContent())?.trim(), '0');
+    assert.equal((await page.getByTestId('outpost-high-score').textContent())?.trim(), '0');
     await page.evaluate(() => localStorage.setItem('cadet-1-research-points', '400'));
+    await page.evaluate(() => {
+      localStorage.setItem('cadet-1-flight-hi-score', '12000');
+      localStorage.setItem('cadet-1-outpost-hi-score', '8000');
+    });
     await page.reload({ waitUntil: 'networkidle' });
     assert.equal((await page.getByTestId('research-balance').textContent())?.trim(), '400 RP');
 
@@ -59,19 +64,28 @@ try {
     assert.match(download.suggestedFilename(), /^cadet-1-research-\d{4}-\d{2}-\d{2}\.json$/);
     const downloadedBackup = JSON.parse(await readFile(await download.path(), 'utf8'));
     assert.equal(downloadedBackup.format, 'cadet-1-research-bank');
-    assert.equal(downloadedBackup.version, 1);
+    assert.equal(downloadedBackup.version, 2);
     assert.equal(downloadedBackup.balance, 400);
+    assert.deepEqual(downloadedBackup.highScores, { flight: 12000, outpost: 8000 });
 
-    await page.evaluate(() => localStorage.setItem('cadet-1-research-points', '999'));
+    await page.evaluate(() => {
+      localStorage.setItem('cadet-1-research-points', '999');
+      localStorage.setItem('cadet-1-flight-hi-score', '90');
+      localStorage.setItem('cadet-1-outpost-hi-score', '80');
+    });
     await page.reload({ waitUntil: 'networkidle' });
     await page.getByLabel('Import research backup').setInputFiles({
       name: download.suggestedFilename(),
       mimeType: 'application/json',
       buffer: Buffer.from(JSON.stringify(downloadedBackup)),
     });
-    await page.getByRole('status').filter({ hasText: 'previous balance was replaced' }).waitFor();
+    await page.getByRole('status').filter({ hasText: 'Research balance and mode high scores restored' }).waitFor();
     assert.equal((await page.getByTestId('research-balance').textContent())?.trim(), '400 RP');
     assert.equal(await page.evaluate(() => localStorage.getItem('cadet-1-research-points')), '400');
+    assert.equal((await page.getByTestId('flight-high-score').textContent())?.trim(), '12000');
+    assert.equal((await page.getByTestId('outpost-high-score').textContent())?.trim(), '8000');
+    assert.equal(await page.evaluate(() => localStorage.getItem('cadet-1-flight-hi-score')), '12000');
+    assert.equal(await page.evaluate(() => localStorage.getItem('cadet-1-outpost-hi-score')), '8000');
 
     await page.getByLabel('Import research backup').setInputFiles({
       name: 'invalid.json',
@@ -80,8 +94,17 @@ try {
     });
     await page.getByRole('alert').filter({ hasText: 'Backup file is not valid JSON' }).waitFor();
     assert.equal(await page.evaluate(() => localStorage.getItem('cadet-1-research-points')), '400');
+    assert.equal(await page.evaluate(() => localStorage.getItem('cadet-1-flight-hi-score')), '12000');
+    assert.equal(await page.evaluate(() => localStorage.getItem('cadet-1-outpost-hi-score')), '8000');
     await page.reload({ waitUntil: 'networkidle' });
     assert.equal((await page.getByTestId('research-balance').textContent())?.trim(), '400 RP');
+    assert.equal((await page.getByTestId('flight-high-score').textContent())?.trim(), '12000');
+    assert.equal((await page.getByTestId('outpost-high-score').textContent())?.trim(), '8000');
+    await page.evaluate(() => {
+      localStorage.setItem('cadet-1-flight-hi-score', '0');
+      localStorage.setItem('cadet-1-outpost-hi-score', '0');
+    });
+    await page.reload({ waitUntil: 'networkidle' });
     console.log('PASS: export downloads a valid backup; import replaces balance and rejects invalid files');
 
     await page.getByRole('button', { name: /FLIGHT ACADEMY/ }).click();
@@ -111,14 +134,16 @@ try {
     await page.getByRole('button', { name: 'EXIT TO LOBBY' }).click();
     await page.getByTestId('title-screen').waitFor();
     assert.ok(Number((await page.getByTestId('score').textContent())?.trim()) > 0);
-    const savedHighScore = Number((await page.getByTestId('high-score').textContent())?.trim());
+    const savedHighScore = Number((await page.getByTestId('flight-high-score').textContent())?.trim());
     assert.ok(savedHighScore > 0);
-    assert.equal(await page.evaluate(() => localStorage.getItem('cadet-1-hi-score')), String(savedHighScore));
+    assert.equal(await page.evaluate(() => localStorage.getItem('cadet-1-flight-hi-score')), String(savedHighScore));
+    assert.equal(await page.evaluate(() => localStorage.getItem('cadet-1-outpost-hi-score')), '0');
 
     await page.reload({ waitUntil: 'networkidle' });
-    assert.equal((await page.getByTestId('high-score').textContent())?.trim(), String(savedHighScore));
+    assert.equal((await page.getByTestId('flight-high-score').textContent())?.trim(), String(savedHighScore));
+    assert.equal((await page.getByTestId('outpost-high-score').textContent())?.trim(), '0');
     await page.getByRole('button', { name: /FLIGHT ACADEMY/ }).click();
-    assert.equal((await page.getByTestId('high-score').textContent())?.trim(), String(savedHighScore));
+    assert.equal((await page.getByTestId('flight-high-score').textContent())?.trim(), String(savedHighScore));
     await page.getByRole('button', { name: /PAUSE/ }).click();
     await page.getByRole('button', { name: 'RESTART' }).click();
     await page.waitForFunction(() => {

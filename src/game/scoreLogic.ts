@@ -13,7 +13,13 @@ export const SATELLITE_LOCK_COMPLETION_BONUS = 2_500;
 export const SATELLITE_QUICK_ALIGNMENT_BASE_BONUS = 1_500;
 export const SATELLITE_QUICK_ALIGNMENT_DECAY_PER_SECOND = 100;
 export const QUIZ_CORRECT_ANSWER_SCORE = 500;
-export const HI_SCORE_STORAGE_KEY = 'cadet-1-hi-score';
+export type ScoreMode = 'flight' | 'outpost';
+export type HighScoreRecords = Record<ScoreMode, number>;
+export const LEGACY_HI_SCORE_STORAGE_KEY = 'cadet-1-hi-score';
+export const HI_SCORE_STORAGE_KEYS: Record<ScoreMode, string> = {
+  flight: 'cadet-1-flight-hi-score',
+  outpost: 'cadet-1-outpost-hi-score',
+};
 
 export interface ScoreStorage {
   getItem(key: string): string | null;
@@ -104,18 +110,38 @@ export class FlightScoreTracker {
   }
 }
 
-export function readHighScore(storage: ScoreStorage): number {
-  const savedScore = storage.getItem(HI_SCORE_STORAGE_KEY);
+export function readHighScore(storage: ScoreStorage, mode: ScoreMode): number {
+  const savedScore = storage.getItem(HI_SCORE_STORAGE_KEYS[mode])
+    ?? (mode === 'flight' ? storage.getItem(LEGACY_HI_SCORE_STORAGE_KEY) : null);
   if (savedScore === null || !/^\d+$/.test(savedScore)) return 0;
   const score = Number(savedScore);
   return Number.isSafeInteger(score) ? score : 0;
 }
 
-export function recordHighScore(storage: ScoreStorage, score: number): HighScoreResult {
+export function readHighScores(storage: ScoreStorage): HighScoreRecords {
+  return {
+    flight: readHighScore(storage, 'flight'),
+    outpost: readHighScore(storage, 'outpost'),
+  };
+}
+
+export function writeHighScores(storage: ScoreStorage, highScores: HighScoreRecords): HighScoreRecords {
+  validateHighScores(highScores);
+  storage.setItem(HI_SCORE_STORAGE_KEYS.flight, String(highScores.flight));
+  storage.setItem(HI_SCORE_STORAGE_KEYS.outpost, String(highScores.outpost));
+  return { ...highScores };
+}
+
+export function validateHighScores(highScores: HighScoreRecords): void {
+  validateScore(highScores.flight);
+  validateScore(highScores.outpost);
+}
+
+export function recordHighScore(storage: ScoreStorage, mode: ScoreMode, score: number): HighScoreResult {
   validateScore(score);
-  const highScore = readHighScore(storage);
+  const highScore = readHighScore(storage, mode);
   if (score <= highScore) return { highScore, isNewHighScore: false };
-  storage.setItem(HI_SCORE_STORAGE_KEY, String(score));
+  storage.setItem(HI_SCORE_STORAGE_KEYS[mode], String(score));
   return { highScore: score, isNewHighScore: true };
 }
 

@@ -9,6 +9,7 @@ import {
   ResearchStorage,
   writeResearchBalance,
 } from '../researchBank.ts';
+import { HI_SCORE_STORAGE_KEYS, readHighScores, writeHighScores } from '../scoreLogic.ts';
 
 function createStorage(initialValue: string | null = null): ResearchStorage {
   const values = new Map<string, string>();
@@ -54,18 +55,38 @@ describe('research bank', () => {
   });
 
   test('exports and restores a versioned research balance backup', () => {
-    const backupText = createResearchBankBackup(1234, '2026-11-15T00:00:00.000Z');
+    const highScores = { flight: 12_000, outpost: 8_000 };
+    const backupText = createResearchBankBackup(1234, highScores, '2026-11-15T00:00:00.000Z');
     const backup = parseResearchBankBackup(backupText);
     const storage = createStorage('900');
 
     expect(backup).toEqual({
       format: 'cadet-1-research-bank',
+      version: 2,
+      exportedAt: '2026-11-15T00:00:00.000Z',
+      balance: 1234,
+      highScores,
+    });
+    expect(writeResearchBalance(storage, backup.balance)).toBe(1234);
+    if (backup.highScores) writeHighScores(storage, backup.highScores);
+    expect(readResearchBalance(storage)).toBe(1234);
+    expect(readHighScores(storage)).toEqual(highScores);
+  });
+
+  test('accepts version 1 backups without replacing existing high scores', () => {
+    const backup = parseResearchBankBackup(JSON.stringify({
+      format: 'cadet-1-research-bank',
       version: 1,
       exportedAt: '2026-11-15T00:00:00.000Z',
       balance: 1234,
-    });
-    expect(writeResearchBalance(storage, backup.balance)).toBe(1234);
-    expect(readResearchBalance(storage)).toBe(1234);
+    }));
+    const storage = createStorage();
+    storage.setItem(HI_SCORE_STORAGE_KEYS.flight, '6000');
+    storage.setItem(HI_SCORE_STORAGE_KEYS.outpost, '3000');
+
+    expect(backup.version).toBe(1);
+    expect(backup.highScores).toBeUndefined();
+    expect(readHighScores(storage)).toEqual({ flight: 6000, outpost: 3000 });
   });
 
   test('rejects malformed, unsupported, or invalid-balance backups', () => {
@@ -73,16 +94,23 @@ describe('research bank', () => {
     expect(() => parseResearchBankBackup('[]')).toThrow('JSON object');
     expect(() => parseResearchBankBackup(JSON.stringify({
       format: 'cadet-1-research-bank',
-      version: 2,
+      version: 3,
       exportedAt: '2026-11-15T00:00:00.000Z',
       balance: 100,
     }))).toThrow('not supported');
+    expect(() => parseResearchBankBackup(JSON.stringify({
+      format: 'cadet-1-research-bank',
+      version: 2,
+      exportedAt: '2026-11-15T00:00:00.000Z',
+      balance: 100,
+      highScores: { flight: 1, outpost: -1 },
+    }))).toThrow('invalid high scores');
     expect(() => parseResearchBankBackup(JSON.stringify({
       format: 'cadet-1-research-bank',
       version: 1,
       exportedAt: '2026-11-15T00:00:00.000Z',
       balance: -100,
     }))).toThrow('invalid research balance');
-    expect(() => createResearchBankBackup(100, 'not a date')).toThrow('valid date');
+    expect(() => createResearchBankBackup(100, { flight: 1, outpost: 2 }, 'not a date')).toThrow('valid date');
   });
 });
