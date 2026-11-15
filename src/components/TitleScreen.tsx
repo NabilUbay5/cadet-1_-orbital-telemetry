@@ -130,6 +130,10 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) 
         </div>
         <div className="text-[#8494AD] mt-1 md:mt-0">
           © 1989 CADET-1 ARCADE LABS
+          <div className="mt-1 leading-relaxed">
+            Font: <a href="https://fontstruct.com/fontstructions/show/2368299" target="_blank" rel="noreferrer" className="underline">Determination by anonymous-1438277</a>
+            {' · '}<a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer" className="underline">CC BY 3.0</a>
+          </div>
         </div>
       </div>
     </div>
