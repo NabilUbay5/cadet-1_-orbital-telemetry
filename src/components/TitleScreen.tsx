@@ -7,11 +7,12 @@ import React from 'react';
 import { PixelBadge } from './PixelBadge.tsx';
 
 interface TitleScreenProps {
+  researchBalance: number;
   onStart: () => void;
   onOutpost: () => void;
 }
 
-export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) => {
+export const TitleScreen: React.FC<TitleScreenProps> = ({ researchBalance, onStart, onOutpost }) => {
   return (
     <div data-testid="title-screen" className="absolute inset-0 flex flex-col justify-between gap-3 overflow-y-auto overflow-x-hidden overscroll-contain p-4 md:p-6 z-20 font-pixel">
       {/* Top Arcade Marquee Stamp */}
@@ -23,6 +24,9 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) 
           </span>
         </div>
         <div className="flex items-center gap-4 text-[9px] md:text-[10px] text-[#A0AEC0]">
+          <span>
+            RESEARCH <span data-testid="research-balance" className="text-[#00FF66]">{researchBalance} RP</span>
+          </span>
           <span>HI-SCORE <span className="text-[#FFB000]">99990</span></span>
           <span className="text-[#2A3B5C]">|</span>
           <span className="text-[#00FF66]">CREDIT 01</span>

@@ -95,12 +95,13 @@ export const PauseModal: React.FC<PauseModalProps> = ({ onResume, onRestart, onE
 
 interface VictoryModalProps {
   result: MissionResult;
+  totalResearchPoints: number;
   onRestart: () => void;
   onExit: () => void;
   onExportFlightLog: () => void;
 }
 
-export const VictoryModal: React.FC<VictoryModalProps> = ({ result, onRestart, onExit, onExportFlightLog }) => {
+export const VictoryModal: React.FC<VictoryModalProps> = ({ result, totalResearchPoints, onRestart, onExit, onExportFlightLog }) => {
   return (
     <div className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-30 pointer-events-auto font-pixel">
       <PixelConfetti />
@@ -177,6 +178,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ result, onRestart, o
           <div className="text-[9px]">
             <div className="text-[#FFB000] font-bold">TELEMETRY RESEARCH BONUS</div>
             <div className="text-[#A0AEC0] mt-1">{result.telemetryPodsCollected} / 3 PODS SECURED</div>
+            <div className="text-[#00FF66] mt-1">BANK TOTAL: {totalResearchPoints} RP</div>
           </div>
           <div className="text-sm text-[#FFB000] font-bold whitespace-nowrap">
             +{result.telemetryPodResearchPoints} RP
@@ -204,12 +206,13 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ result, onRestart, o
 
 interface DefeatModalProps {
   result: MissionResult;
+  totalResearchPoints: number;
   onRestart: () => void;
   onExit: () => void;
   onExportFlightLog: () => void;
 }
 
-export const DefeatModal: React.FC<DefeatModalProps> = ({ result, onRestart, onExit, onExportFlightLog }) => {
+export const DefeatModal: React.FC<DefeatModalProps> = ({ result, totalResearchPoints, onRestart, onExit, onExportFlightLog }) => {
   return (
     <div className="absolute inset-0 bg-[#050508]/90 flex items-center justify-center p-4 z-30 pointer-events-auto font-pixel">
       <div role="dialog" aria-modal="true" aria-label="Mission ended" className="flight-modal w-full max-w-lg retro-window-red p-6 bg-[#0d111a] border-2 border-[#FF3344] shadow-[4px_4px_0_#000]">
@@ -255,6 +258,7 @@ export const DefeatModal: React.FC<DefeatModalProps> = ({ result, onRestart, onE
           <div className="text-[9px]">
             <div className="text-[#FFB000] font-bold">TELEMETRY RESEARCH BONUS</div>
             <div className="text-[#A0AEC0] mt-1">{result.telemetryPodsCollected} / 3 PODS SECURED</div>
+            <div className="text-[#00FF66] mt-1">BANK TOTAL: {totalResearchPoints} RP</div>
           </div>
           <div className="text-sm text-[#FFB000] font-bold whitespace-nowrap">
             +{result.telemetryPodResearchPoints} RP
