@@ -23,6 +23,7 @@ import {
   newOutpost,
   nextLightChange,
   openCrate,
+  displayedResourceNet,
   startDay,
   type Destination,
   type Difficulty,
@@ -70,6 +71,14 @@ function playOut(dest: Destination, difficulty: Difficulty, seed: number, smart:
   }
   return { s, report: finalReport(s) };
 }
+
+describe('resource gauge projections', () => {
+  test('does not report positive growth beyond the storage cap', () => {
+    expect(displayedResourceNet(95, 100, 20)).toBe(5);
+    expect(displayedResourceNet(100, 100, 20)).toBe(0);
+    expect(displayedResourceNet(95, 100, -20)).toBe(-20);
+  });
+});
 
 describe('NASA/JPL Horizons snapshot', () => {
   test('has one sunlight value per mission day for both sites, all in [0, 1]', () => {
