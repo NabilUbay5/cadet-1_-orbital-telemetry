@@ -106,6 +106,27 @@ describe('procedural audio lifecycle', () => {
     audio.dispose();
   });
 
+  test('outpost comms, typing and tactile cues reuse voices and obey global mute', () => {
+    const graph = contextDouble();
+    const audio = new AudioEngine(() => graph.ctx as unknown as AudioContext);
+    audio.ensureRunning();
+    const sources = graph.oscillators.length;
+    const countNotes = () => graph.oscillators.reduce((count, oscillator) => count + oscillator.events.length, 0);
+    const before = countNotes();
+    audio.playCommsIncoming();
+    audio.playTelemetryTick();
+    audio.playUiClick();
+    audio.playUiClick(true);
+    expect(countNotes() - before).toBe(5);
+    expect(graph.oscillators.length).toBe(sources);
+    audio.toggleMute();
+    const mutedNotes = countNotes();
+    audio.playCommsIncoming(); audio.playTelemetryTick(); audio.playUiClick(true);
+    expect(countNotes()).toBe(mutedNotes);
+    expect(graph.gains[0].events.at(-1)).toBe(0);
+    audio.dispose();
+  });
+
   test('missing Web Audio is nonfatal and allows a later retry', () => {
     let attempts = 0;
     const audio = new AudioEngine(() => { attempts++; throw new Error('unsupported'); });

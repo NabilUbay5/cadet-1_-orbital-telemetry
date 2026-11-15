@@ -3,10 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { HORIZONS_SNAPSHOT } from '../data/nasa/horizonsSnapshot.ts';
 import { claimResearchReward } from '../game/researchBank.ts';
 import { OutpostScene } from './OutpostScene.tsx';
+import { FlightDirector } from './FlightDirector.tsx';
+import { playOutpostControl } from '../audio/outpostAudio.ts';
+import { audioEngine } from '../game/audioEngine.ts';
 import {
   CAP,
   CRATES,
@@ -62,7 +65,14 @@ const REST_COLOR = '#94A3B8';
 const SERVICE_COLOR: Record<ServiceKey, string> = { hab: '#FF7A5C', o2: C.cyan, rec: C.water, gh: C.green, ice: '#9FB4FF', sci: C.rad, bld: C.amber };
 const KIND_COLOR: Record<LineKind, string> = { good: C.green, warn: C.amber, bad: C.red, info: C.cyan };
 
-interface LogEntry { day: number; kind: LineKind; text: string }
+function controlSound(event: React.MouseEvent<HTMLElement>) {
+  const control = (event.target as HTMLElement).closest('button, summary, input[type="checkbox"]');
+  if (control && !control.hasAttribute('disabled') && !control.hasAttribute('data-silent')) {
+    playOutpostControl(control.hasAttribute('data-heavy'));
+  }
+}
+
+interface LogEntry { id: number; day: number; kind: LineKind; text: string }
 
 interface Props {
   researchBalance: number;
@@ -96,8 +106,13 @@ export const OutpostMode: React.FC<Props> = ({
   const [setup, setSetup] = useState<{ dest: Destination; diff: Difficulty }>({ dest: 'moon', diff: 'cadet' });
   const s = stateRef.current;
 
+  const logSequence = useRef(0);
+
   // Newest day first, but each day's lines stay in the order they happened ("Why:" follows its problem).
-  const addLog = (entries: LogEntry[]) => setLog((l) => [...entries, ...l].slice(0, 80));
+  const addLog = (entries: Omit<LogEntry, 'id'>[]) => {
+    const stamped = entries.map(entry => ({ ...entry, id: ++logSequence.current }));
+    setLog(previous => [...stamped, ...previous].slice(0, 80));
+  };
 
   const finalizeScore = (score: number) => {
     if (scoreFinalizedRef.current) return;
@@ -123,7 +138,7 @@ export const OutpostMode: React.FC<Props> = ({
     onScoreUpdate(0);
     onMissionStart();
     stateRef.current = st;
-    setLog([{ day: 1, kind: 'info', text: `Landed at ${DESTINATIONS[st.dest].site}. Crew of 4 ready.` }]);
+    setLog([{ id: ++logSequence.current, day: 1, kind: 'info', text: `Landed at ${DESTINATIONS[st.dest].site}. Crew of 4 ready.` }]);
     setTab('schedule');
     beginDay(st, { alloc: { maint: 1, build: 3, farm: 0, ice: 1, sci: 1 }, shelter: false });
   };
@@ -168,11 +183,11 @@ export const OutpostMode: React.FC<Props> = ({
     onExit();
   };
 
-  if (!s) return <SetupScreen setup={setup} setSetup={setSetup} onStart={start} onExit={exit} />;
+  if (!s) return <div className="outpost-ui" onClickCapture={controlSound}><SetupScreen setup={setup} setSetup={setSetup} onStart={start} onExit={exit} /></div>;
 
   return (
-    <div className="absolute inset-0 z-30 overflow-y-auto font-telemetry text-[13px] leading-snug" style={{ background: C.bg, color: '#fff' }}>
-      <Game s={s} plan={plan} setPlan={setPlan} tab={tab} setTab={setTab} log={log} highScore={highScore} onRun={runDay} onJob={changeJob} onBuild={doBuild} onExit={exit} />
+    <div onClickCapture={controlSound} className="outpost-ui absolute inset-0 z-30 overflow-y-auto font-telemetry text-[13px] leading-snug" style={{ background: C.bg, color: '#fff' }}>
+      <Game s={s} plan={plan} setPlan={setPlan} tab={tab} setTab={setTab} log={log} highScore={highScore} commsSuspended={queue.length > 0 || s.phase !== 'play'} onRun={runDay} onJob={changeJob} onBuild={doBuild} onExit={exit} />
       {queue.length > 0 && <EventModal ev={queue[0]} onDone={dismissEvent} />}
       {s.phase === 'over' && (
         <Debrief
@@ -196,7 +211,7 @@ const SetupScreen: React.FC<{
   onStart: () => void;
   onExit: () => void;
 }> = ({ setup, setSetup, onStart, onExit }) => {
-  const card = (active: boolean) => `text-left p-3 border-2 cursor-pointer ${active ? 'border-[#00F0FF] bg-[#00F0FF]/10' : 'border-[#2A3B5C] bg-[#050508] hover:border-[#00F0FF]'}`;
+  const card = (active: boolean) => `outpost-button clip-tactical text-left p-3 border-2 cursor-pointer ${active ? 'border-[#00F0FF] bg-[#00F0FF]/10' : 'border-[#2A3B5C] bg-[#050508] hover:border-[#00F0FF]'}`;
   return (
     <div className="absolute inset-0 z-30 overflow-y-auto flex items-start md:items-center justify-center p-4" style={{ background: 'rgba(5,5,8,0.96)' }}>
       <div className="retro-window w-full max-w-3xl p-5 md:p-6 space-y-4">
@@ -232,8 +247,8 @@ const SetupScreen: React.FC<{
           <li><span className="text-white">Run the day:</span> watch the forecast so nothing runs out before day 30.</li>
         </ol>
         <div className="flex flex-wrap gap-3">
-          <button className="retro-btn h-11 px-5 text-xs" onClick={onStart}>START MISSION</button>
-          <button className="retro-btn-secondary h-11 px-5 text-xs" onClick={onExit}>BACK TO TITLE</button>
+          <button className="outpost-button clip-tactical retro-btn h-11 px-5 text-xs" onClick={onStart}>START MISSION</button>
+          <button className="outpost-button clip-tactical retro-btn-secondary h-11 px-5 text-xs" onClick={onExit}>BACK TO TITLE</button>
         </div>
       </div>
     </div>
@@ -261,13 +276,13 @@ const Gauge: React.FC<{ label: string; hint: string; color: string; value: numbe
   const displayNet = displayedResourceNet(value, cap, net);
   const st = daysLeft(value, cap, net, remaining);
   return (
-    <div className="space-y-1">
+    <div className="outpost-vital" title={hint}>
       <div className="flex justify-between gap-2"><span style={{ color }} className="font-bold">{label}</span><span className="tabular-nums">{Math.round(value)}<span className="text-[#A0AEC0]"> / {cap} {unit}</span></span></div>
-      <div className="text-[12px] text-[#A0AEC0]">{hint}</div>
-      <Bar pct={(value / cap) * 100} color={color} />
+
+      <Bar pct={(value / cap) * 100} color={st.color === C.red ? C.red : color} />
       <div className="flex justify-between gap-2 text-[12px]">
         <span style={{ color: displayNet >= 0 ? C.green : C.amber }}>{displayNet >= 0 ? '+' : '−'}{Math.abs(displayNet).toFixed(1)} / day</span>
-        <span className="font-pixel text-[9px] px-1.5 py-0.5 border" style={{ color: st.color, borderColor: st.color }}>{st.label}</span>
+        <span className="outpost-label" style={{ color: st.color }}>{st.label}</span>
       </div>
     </div>
   );
@@ -286,8 +301,8 @@ const Panel: React.FC<{ title: string; right?: React.ReactNode; className?: stri
 const Game: React.FC<{
   s: OutpostState; plan: Plan; setPlan: (p: Plan) => void;
   tab: 'schedule' | 'build'; setTab: (t: 'schedule' | 'build') => void;
-  log: LogEntry[]; highScore: number; onRun: () => void; onJob: (k: JobKey, d: number) => void; onBuild: (k: ModuleKey) => void; onExit: () => void;
-}> = ({ s, plan, setPlan, tab, setTab, log, highScore, onRun, onJob, onBuild, onExit }) => {
+  log: LogEntry[]; highScore: number; commsSuspended: boolean; onRun: () => void; onJob: (k: JobKey, d: number) => void; onBuild: (k: ModuleKey) => void; onExit: () => void;
+}> = ({ s, plan, setPlan, tab, setTab, log, highScore, commsSuspended, onRun, onJob, onBuild, onExit }) => {
   const D = DESTINATIONS[s.dest];
   const f = forecastDay(s, plan);
   const a = effectiveAllocation(s, plan);
@@ -325,7 +340,7 @@ const Game: React.FC<{
   else verdict = [C.red, 'Blackout risk. Life support is powered first, then jobs slow down.'];
 
   return (
-    <div className="max-w-[1400px] mx-auto p-3 md:p-4 space-y-3">
+    <div className="outpost-dashboard max-w-[1600px] mx-auto p-3 md:p-5 space-y-4">
       <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b-2 border-[#00F0FF] pb-2">
         <div className="font-pixel text-[11px] text-[#00F0FF]">OUTPOST OPS</div>
         <div className="text-[#A0AEC0] text-xs">{D.site}</div>
@@ -336,37 +351,40 @@ const Game: React.FC<{
           <span data-testid="outpost-score" className="border border-[#00FF66] px-2 py-0.5 tabular-nums text-[#00FF66]">SCORE {finalReport(s).score}</span>
           <span data-testid="outpost-high-score" className="border border-[#FFB000] px-2 py-0.5 tabular-nums text-[#FFB000]">OUTPOST HI {highScore}</span>
           <span className="border border-[#2A3B5C] px-2 py-0.5 tabular-nums" style={{ color: C.amber }}>BUILD PTS {Math.floor(s.buildPoints)}</span>
-          <button className="retro-btn-secondary px-3 py-1 text-[9px]" onClick={onExit}>EXIT</button>
+          <OutpostMute />
+          <button className="outpost-button clip-tactical retro-btn-secondary px-3 py-1 text-[9px]" onClick={onExit}>EXIT</button>
         </div>
       </header>
 
-      <div className="grid gap-3 lg:grid-cols-[300px_minmax(0,1fr)_360px] items-start">
+      <div className="grid gap-3 xl:grid-cols-[240px_minmax(0,1fr)_340px] items-start">
         {/* Vitals */}
-        <div className="space-y-3 min-w-0 order-2 lg:order-1">
-          <Panel title="LIFE SUPPORT">
-            <div className="space-y-3">
+        <div className="space-y-3 min-w-0 order-2 xl:order-1">
+          <Panel title="LIFE SUPPORT" right={<span className="outpost-label">LIVE</span>}>
+            <div className="space-y-2.5">
               <Gauge label="Battery" hint="Stored electricity for nights and storms" color={C.amber} value={s.res.battery} cap={f.batteryCap} unit="kWh" net={surplus} remaining={remaining} />
               <Gauge label="Oxygen" hint="Air for the crew to breathe" color={C.cyan} value={s.res.o2} cap={CAP.o2} unit="units" net={f.o2Net} remaining={remaining} />
               <Gauge label="Water" hint="Drinking and washing water" color={C.water} value={s.res.water} cap={CAP.water} unit="units" net={f.waterNet} remaining={remaining} />
               <Gauge label="Food" hint="Meals: each astronaut eats 1 a day" color={C.green} value={s.res.food} cap={CAP.food} unit="units" net={f.foodNet} remaining={remaining} />
               <div className="space-y-1">
                 <div className="flex justify-between gap-2"><span style={{ color: C.rad }} className="font-bold">Radiation dose</span><span className="tabular-nums">{s.dose.toFixed(1)}<span className="text-[#A0AEC0]"> / {DOSE_LIMIT} mSv</span></span></div>
-                <div className="text-[12px] text-[#A0AEC0]">Space radiation each astronaut has absorbed. Keep it under {DOSE_LIMIT}.</div>
+
                 <Bar pct={(s.dose / DOSE_LIMIT) * 100} color={C.rad} />
                 <div className="flex justify-between gap-2 text-[12px]">
-                  <span>Shield layers {s.modules.shield} / 5</span>
-                  <span className="font-pixel text-[9px] px-1.5 py-0.5 border" style={{ color: proj > DOSE_LIMIT ? C.red : proj > DOSE_LIMIT * 0.85 ? C.amber : C.green, borderColor: 'currentColor' }}>END ~{proj.toFixed(0)}</span>
+                  <span>Shield {s.modules.shield}/5</span>
+                  <span className="font-pixel text-[9px] px-1.5 py-0.5 border" style={{ color: proj > DOSE_LIMIT ? C.red : proj > DOSE_LIMIT * 0.85 ? C.amber : C.green, borderColor: 'currentColor' }}>{proj > DOSE_LIMIT ? '⚠ ' : ''}END ~{proj.toFixed(0)}</span>
                 </div>
               </div>
             </div>
           </Panel>
-          <Panel title="CREW">
+          <Panel title="CREW" right={<span className="outpost-label">{f.crew} ABOARD</span>}>
             <div className="space-y-2.5">
               {s.crew.map((c) => (
                 <div key={c.name} className={c.aboard ? '' : 'opacity-40'}>
-                  <div className="flex justify-between text-xs"><b>{c.name}</b><span className="text-[#A0AEC0]">{c.aboard ? c.role : 'Evacuated'}</span></div>
-                  <div className="grid grid-cols-[52px_1fr] items-center gap-2 text-[11px] text-[#A0AEC0] mt-1">Health<Bar h={6} pct={c.hp} color={c.hp < 35 ? C.red : c.hp < 65 ? C.amber : C.green} /></div>
-                  <div className="grid grid-cols-[52px_1fr] items-center gap-2 text-[11px] text-[#A0AEC0] mt-0.5">Morale<Bar h={6} pct={c.morale} color={c.morale < 35 ? C.red : c.morale < 60 ? C.amber : C.cyan} /></div>
+                  <div className="flex justify-between text-xs"><b>{c.name}</b><span className="text-[#A0AEC0]">{c.aboard ? `${Math.round(c.hp)} HP · ${Math.round(c.morale)} MO` : 'Evacuated'}</span></div>
+                  <div className="grid grid-cols-2 gap-2 mt-1" title={`${c.role}. Health ${Math.round(c.hp)}%, morale ${Math.round(c.morale)}%`}>
+                    <div aria-label={`${c.name} health ${Math.round(c.hp)}%`}><Bar h={5} pct={c.hp} color={c.hp < 35 ? C.red : c.hp < 65 ? C.amber : C.green} /></div>
+                    <div aria-label={`${c.name} morale ${Math.round(c.morale)}%`}><Bar h={5} pct={c.morale} color={c.morale < 35 ? C.red : c.morale < 60 ? C.amber : C.cyan} /></div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -374,23 +392,22 @@ const Game: React.FC<{
         </div>
 
         {/* Center */}
-        <div className="space-y-3 min-w-0 order-1 lg:order-2">
+        <div className="space-y-3 min-w-0 order-1 xl:order-2">
           <OutpostScene s={s} f={f} shelter={!!(s.flareToday && plan.shelter)} outdoorBlocks={a.build + a.ice + a.sci} />
-          <Panel title="SUNLIGHT AT YOUR SITE" right={<span className="text-[11px] text-[#A0AEC0]">NASA/JPL Horizons</span>}>
+          <FlightDirector suspended={commsSuspended} message={directorMessage(s, f, proj, bulletins, log)} />
+          <div className="flex flex-wrap gap-2" aria-label="Mission advisories">
+            <span className="outpost-pill" style={{ color: light?.kind === 'sunset' && light.inDays <= 5 ? C.amber : C.cyan }}>{env.night ? '◐ LUNAR NIGHT' : env.storm ? '⚠ DUST STORM' : `☀ SUN ${Math.round(env.sunlight * 100)}%`}{light ? ` · ${light.kind === 'sunset' ? 'Night' : 'Dawn'} in ${light.inDays}d` : ''}</span>
+            <span className="outpost-pill" style={{ color: verdict[0] }}>{surplus >= 0 ? '+' : ''}{surplus.toFixed(0)} kWh BALANCE</span>
+            {brokenTotal(s) > 0 && <span className="outpost-pill text-[#FFB000]">⚠ {brokenTotal(s)} OFFLINE</span>}
+          </div>
+          <Drawer title="SUNLIGHT AT YOUR SITE" summary="NASA/JPL · 30-day outlook">
             <SunStrip s={s} />
             <p className="text-[12px] text-[#A0AEC0] mt-2">
               Each bar is one {D.dayWord.toLowerCase()}: the share of it with the Sun above the horizon at {site.lat}° N, {site.lonE}° E, from {site.startUtc.slice(0, 10)}
               {s.dest === 'mars' ? `, times ${Math.round((site.solarConstantWm2.mean / HORIZONS_SNAPSHOT.moon.solarConstantWm2.mean) * 100)}% because Mars is farther from the Sun` : ''}.
             </p>
-          </Panel>
-          {bulletins.length > 0 && (
-            <div className="space-y-2">
-              {bulletins.map(([k, t], i) => (
-                <div key={i} className="border-2 px-3 py-2 text-xs" style={{ borderColor: KIND_COLOR[k], background: `${KIND_COLOR[k]}14` }}>{t}</div>
-              ))}
-            </div>
-          )}
-          <Panel title="POWER BUDGET" right={<span className="text-[11px] text-[#A0AEC0] tabular-nums">{f.generated.toFixed(0)} made · {f.totalDemand.toFixed(0)} wanted kWh</span>}>
+          </Drawer>
+          <Drawer title="POWER BUDGET" summary={`${f.generated.toFixed(0)} made / ${f.totalDemand.toFixed(0)} kWh demand`}>
             <div className="grid grid-cols-[60px_1fr] gap-2 items-center text-[12px] text-[#A0AEC0] mb-2">
               Supply<StackBar parts={supply} scale={scale} />
               Demand<StackBar parts={SERVICES.map((sv) => [sv.label, f.demand[sv.key], SERVICE_COLOR[sv.key]] as [string, number, string])} scale={scale} />
@@ -402,23 +419,23 @@ const Game: React.FC<{
             </div>
             <div className="text-xs font-bold" style={{ color: verdict[0] }}>{verdict[1]}</div>
             <div className="text-[11px] text-[#A0AEC0] mt-1">Power goes to the habitat first, then oxygen, water and greenhouses, then jobs.</div>
-          </Panel>
-          <Panel title="MISSION LOG">
+          </Drawer>
+          <Drawer title="MISSION LOG" summary={`${log.length} entries · ${log[0]?.text ?? 'Awaiting telemetry'}`}>
             <div className="max-h-56 overflow-y-auto space-y-1 pr-1 text-xs">
-              {log.map((l, i) => (
-                <div key={i} className="grid grid-cols-[52px_1fr] gap-2"><span className="text-[#8494AD] tabular-nums">{D.dayWord.slice(0, 1)}{l.day}</span><span style={{ color: l.kind === 'info' ? '#fff' : KIND_COLOR[l.kind] }}>{l.text}</span></div>
+              {log.map((l) => (
+                <div key={l.id} className="grid grid-cols-[52px_1fr] gap-2"><span className="text-[#8494AD] tabular-nums">{D.dayWord.slice(0, 1)}{l.day}</span><span style={{ color: l.kind === 'info' ? '#fff' : KIND_COLOR[l.kind] }}>{l.text}</span></div>
               ))}
             </div>
-          </Panel>
+          </Drawer>
         </div>
 
         {/* Command */}
-        <div className="space-y-3 min-w-0 order-3">
+        <div className="space-y-3 min-w-0 order-3 outpost-orders">
           <FirstSteps s={s} plan={plan} />
           <Panel title="TODAY'S ORDERS">
             <div className="grid grid-cols-2 gap-2 mb-3">
               {(['schedule', 'build'] as const).map((t) => (
-                <button key={t} onClick={() => setTab(t)} className={`font-pixel text-[9px] py-2 border-2 ${tab === t ? 'bg-[#00F0FF] text-[#050508] border-[#00F0FF]' : 'border-[#2A3B5C] hover:border-[#00F0FF]'}`}>{t === 'schedule' ? 'CREW SCHEDULE' : 'BUILD'}</button>
+                <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)} className={`outpost-button clip-tab font-pixel text-[9px] py-2 border-2 ${tab === t ? 'bg-[#00F0FF] text-[#050508] border-[#00F0FF]' : 'border-[#2A3B5C] hover:border-[#00F0FF]'}`}>{t === 'schedule' ? 'CREW SCHEDULE' : 'BUILD'}</button>
               ))}
             </div>
             {tab === 'schedule' ? (
@@ -435,9 +452,9 @@ const Game: React.FC<{
                     <div key={j.key} className="grid grid-cols-[1fr_auto] gap-2 items-center border border-[#2A3B5C] bg-[#050508] p-2">
                       <div className="min-w-0"><div className="text-xs font-bold" style={{ color: JOB_COLOR[j.key] }}>{j.name}</div><div className="text-[11px] text-[#A0AEC0]">{j.hint}</div></div>
                       <div className="flex items-center gap-1">
-                        <button aria-label={`Fewer ${j.name} blocks`} className="w-8 h-8 border-2 border-[#2A3B5C] hover:border-[#00F0FF] disabled:opacity-30" disabled={plan.alloc[j.key] <= 0} onClick={() => onJob(j.key, -1)}>−</button>
+                        <button aria-label={`Fewer ${j.name} blocks`} className="outpost-button clip-hex w-11 h-11 disabled:opacity-30" disabled={plan.alloc[j.key] <= 0} onClick={() => onJob(j.key, -1)}>−</button>
                         <span className="w-6 text-center font-pixel text-[12px] tabular-nums">{a[j.key]}</span>
-                        <button aria-label={`More ${j.name} blocks`} className="w-8 h-8 border-2 border-[#2A3B5C] hover:border-[#00F0FF] disabled:opacity-30" disabled={used >= allowed || lockedOut} onClick={() => onJob(j.key, 1)}>+</button>
+                        <button aria-label={`More ${j.name} blocks`} className="outpost-button clip-hex w-11 h-11 disabled:opacity-30" disabled={used >= allowed || lockedOut} onClick={() => onJob(j.key, 1)}>+</button>
                       </div>
                     </div>
                   );
@@ -462,7 +479,7 @@ const Game: React.FC<{
                     <div key={k} className="border border-[#2A3B5C] bg-[#050508] p-2 space-y-1">
                       <div className="flex justify-between items-center gap-2">
                         <b className="text-xs">{m.name}</b>
-                        <button className="retro-btn px-2 py-1 text-[8px] disabled:opacity-30 disabled:cursor-not-allowed" disabled={!canBuild(s, k)} onClick={() => onBuild(k)}>{s.modules[k] >= m.max ? 'MAX' : `BUILD ${m.cost}`}</button>
+                        <button className="outpost-button clip-tactical retro-btn px-2 py-1 text-[8px] disabled:opacity-30 disabled:cursor-not-allowed" disabled={!canBuild(s, k)} onClick={() => onBuild(k)}>{s.modules[k] >= m.max ? 'MAX' : `BUILD ${m.cost}`}</button>
                       </div>
                       <div className="text-[11px] text-[#A0AEC0]">{m.desc}</div>
                       <div className="text-[11px] text-[#A0AEC0] tabular-nums">Built {s.modules[k]} of {m.max}{brk ? <span style={{ color: C.red }}> · {brk} offline</span> : null}</div>
@@ -471,19 +488,43 @@ const Game: React.FC<{
                 })}
               </div>
             )}
-            <button className="retro-btn w-full h-12 mt-3 text-xs disabled:opacity-40" disabled={s.phase !== 'play'} onClick={onRun}>RUN {D.dayWord.toUpperCase()} {s.day}</button>
+            <button data-heavy className="outpost-button outpost-run clip-tactical w-full h-12 mt-3 text-xs disabled:opacity-40" disabled={s.phase !== 'play'} onClick={onRun}>RUN {D.dayWord.toUpperCase()} {s.day}</button>
             <div className="text-[12px] text-[#A0AEC0] mt-2">
               Tonight: +{f.dose.toFixed(2)} mSv each{s.flareToday ? (plan.shelter ? ' (sheltered)' : ' (flare, no shelter)') : ''}. Expect {f.science > 0 ? `+${f.science.toFixed(0)} samples` : 'no samples'} and {f.buildPoints > 0 ? `+${f.buildPoints.toFixed(0)} build points` : 'no build points'}.
             </div>
           </Panel>
-          <Panel title="FLIGHT DIRECTOR">
-            <p className="text-xs">{tip(s, f, proj)}</p>
-          </Panel>
+
         </div>
       </div>
     </div>
   );
 };
+
+function OutpostMute() {
+  const [muted, setMuted] = useState(() => audioEngine.getIsMuted());
+  return <button data-silent className="outpost-button clip-tactical px-3 py-1 text-[9px]" aria-label="Mute outpost audio" aria-pressed={muted}
+    onClick={() => { audioEngine.ensureRunning(); setMuted(audioEngine.toggleMute()); }}>{muted ? 'AUDIO OFF' : 'AUDIO ON'}</button>;
+}
+
+function Drawer({ title, summary, children }: { title: string; summary: string; children: React.ReactNode }) {
+  return <details className="outpost-drawer">
+    <summary><span className="font-pixel text-[10px]">{title}</span><span className="outpost-drawer-summary">{summary}</span><span className="outpost-drawer-arrow" aria-hidden="true">+</span></summary>
+    <div className="outpost-drawer-body">{children}</div>
+  </details>;
+}
+
+function directorMessage(s: OutpostState, f: ReturnType<typeof forecastDay>, proj: number, bulletins: Array<[LineKind, string]>, log: LogEntry[]) {
+  const guidance = tip(s, f, proj);
+  const lowSupply = [[s.res.o2, f.o2Net], [s.res.water, f.waterNet], [s.res.food, f.foodNet]]
+    .some(([stock, net]) => net < -0.05 && stock / -net < 5);
+  const urgent = bulletins.some(([kind]) => kind === 'bad' || kind === 'warn') || f.lifeSupportShort || lowSupply || (s.day > 1 && proj > DOSE_LIMIT);
+  const update = log[0]?.day === s.day ? log[0].text : '';
+  const text = [...bulletins.slice(0, 2).map(([, text]) => text), guidance, !urgent ? update : ''].filter(Boolean).join(' ');
+  // Continuous numeric forecast changes are not new transmissions. A new day,
+  // warning category, guidance or logged action is; snapshot that message in the UI.
+  const category = guidance.replace(/[\d.]+/g, '#');
+  return { id: `${s.day}:${urgent ? 'priority' : 'routine'}:${bulletins.map(([kind, text]) => kind + text.replace(/[\d.]+/g, '#')).join('|')}:${category}:${urgent ? 'priority' : log[0]?.id ?? ''}`, text, urgent };
+}
 
 const StackBar: React.FC<{ parts: Array<[string, number, string]>; scale: number }> = ({ parts, scale }) => (
   <div className="flex h-6 border border-[#2A3B5C] bg-[#050508] overflow-hidden">
@@ -524,13 +565,20 @@ const FirstSteps: React.FC<{ s: OutpostState; plan: Plan }> = ({ s, plan }) => {
   const steps: Array<[boolean, string]> = [
     [gh, 'Open BUILD and build a greenhouse (5 points). Without one, food runs out.'],
     [gh && plan.alloc.farm >= s.modules.greenhouse, 'In CREW SCHEDULE, give each greenhouse 1 Farming block.'],
-    [s.day > 1, 'Check the gauges on the left. Green LASTS means you are fine. Then press RUN DAY.'],
+    [s.day > 1, 'Check Life Support, then run your first day. Green LASTS means supplies cover the mission.'],
   ];
   if (s.dest === 'moon') steps.push([s.modules.reactor > 0, 'Before night falls (see the sunlight chart), save up for a fission reactor.']);
-  if (s.day > 4 || steps.every(([done]) => done)) return null;
+  const allDone = steps.every(([done]) => done);
+  const [completed, setCompleted] = useState(false);
+  const [open, setOpen] = useState(true);
+  useEffect(() => { if (allDone) { setCompleted(true); setOpen(false); } }, [allDone]);
+  if (s.day > 4) return null;
   return (
-    <section className="border-2 border-[#FFB000] bg-[#FFB000]/10 p-3" aria-label="First steps">
-      <h2 className="font-pixel text-[11px] text-[#FFB000] mb-2">FIRST STEPS</h2>
+    <section className="outpost-checklist" aria-label="First steps">
+      <button className="outpost-button clip-tab w-full flex justify-between p-3 text-left" aria-expanded={open} onClick={() => setOpen(value => !value)}>
+        <span className="font-pixel text-[11px]">{completed ? '✓ BRIEFING COMPLETE' : 'FIRST STEPS'}</span><span aria-hidden="true">{open ? '−' : '+'}</span>
+      </button>
+      {open && <div className="p-3">
       <ol className="space-y-1.5 text-[13px]">
         {steps.map(([done, text], i) => (
           <li key={i} className="flex gap-2" style={{ color: done ? C.green : '#fff' }}>
@@ -539,6 +587,7 @@ const FirstSteps: React.FC<{ s: OutpostState; plan: Plan }> = ({ s, plan }) => {
           </li>
         ))}
       </ol>
+      </div>}
     </section>
   );
 };
@@ -546,7 +595,7 @@ const FirstSteps: React.FC<{ s: OutpostState; plan: Plan }> = ({ s, plan }) => {
 function tip(s: OutpostState, f: ReturnType<typeof forecastDay>, proj: number): string {
   const left = (v: number, n: number) => (n < -0.05 ? v / -n : Infinity);
   const light = nextLightChange(s);
-  if (s.day === 1) return 'Welcome, Commander. Each gauge shows how long a supply lasts at today’s rate. Aim for every one to say LASTS. Food runs out first without a greenhouse.';
+  if (s.day === 1) return 'Welcome, Commander. Build a greenhouse, assign Farming, then run the day. Watch amber and red Life Support warnings.';
   if (f.lifeSupportShort) return 'Brownout. When power runs short, life support is served first and jobs slow down. Add a reactor, solar arrays or a battery bank.';
   if (light && light.kind === 'sunset' && light.inDays <= 6 && s.modules.reactor < 2) return `Horizons says the Sun sets in ${light.inDays} days and stays down for about two weeks. Solar arrays will make nothing. Save for fission reactors and batteries now.`;
   if (left(s.res.battery, f.generated - f.totalDemand) < 4) return 'The battery will run flat soon at this rate. Build power or drop some power-hungry jobs.';
@@ -584,7 +633,7 @@ const EventModal: React.FC<{ ev: OutpostEvent; onDone: (crate?: CrateKey) => voi
         ))}
       </div>
     ) : (
-      <div className="flex justify-end"><button autoFocus className="retro-btn px-4 py-2 text-[11px]" onClick={() => onDone()}>GOT IT</button></div>
+      <div className="flex justify-end"><button autoFocus className="outpost-button clip-tactical retro-btn px-4 py-2 text-[11px]" onClick={() => onDone()}>GOT IT</button></div>
     )}
   </Modal>
 );
@@ -655,8 +704,8 @@ const Debrief: React.FC<{
       </div>
       <p className="text-[11px] text-[#8494AD]">The {DOSE_LIMIT} mSv limit is game-sized. Real agencies set career limits in the hundreds of mSv. Sunlight data: NASA/JPL Horizons.</p>
       <div className="flex flex-wrap gap-2 justify-end">
-        <button className="retro-btn-secondary px-4 py-2 text-[11px]" onClick={onExit}>TITLE SCREEN</button>
-        <button autoFocus className="retro-btn px-4 py-2 text-[11px]" onClick={onAgain}>NEW MISSION</button>
+        <button className="outpost-button clip-tactical retro-btn-secondary px-4 py-2 text-[11px]" onClick={onExit}>TITLE SCREEN</button>
+        <button autoFocus className="outpost-button clip-tactical retro-btn px-4 py-2 text-[11px]" onClick={onAgain}>NEW MISSION</button>
       </div>
     </Modal>
   );

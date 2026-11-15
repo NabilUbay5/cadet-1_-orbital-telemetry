@@ -185,6 +185,19 @@ export class AudioEngine {
     this.sequence(FIREWORK_BURST_NOTES, 0.035, 0.16, 1.1);
   }
   public playRadioDispatch(): void { this.sequence(DISPATCH_NOTES, 0.05); }
+
+  /** Outpost cues reuse the existing voice pool and global master/mute control. */
+  public playCommsIncoming(): void {
+    this.tone(880, 0, 0.08, 0.045);
+    this.tone(1320, 0.09, 0.12, 0.04);
+  }
+
+  public playTelemetryTick(): void { this.tone(620, 0, 0.025, 0.008); }
+
+  public playUiClick(heavy = false): void {
+    this.tone(heavy ? 110 : 240, 0, heavy ? 0.10 : 0.035, heavy ? 0.055 : 0.025);
+  }
+
   public playCollision(impactRatio = 0.5): void {
     const impact = Number.isFinite(impactRatio) ? Math.max(0, Math.min(1, impactRatio)) : 0.5;
     this.tone(140, 0, 0.12, 0.05 + impact * 0.05);
