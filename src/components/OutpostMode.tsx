@@ -66,16 +66,29 @@ interface LogEntry { day: number; kind: LineKind; text: string }
 
 interface Props {
   researchBalance: number;
+  highScore: number;
   onMissionStart: () => void;
   onMissionComplete: (reward: OutpostResearchReward) => void;
+  onScoreUpdate: (score: number) => void;
+  onFinalizeScore: (score: number) => boolean;
   onExit: () => void;
 }
 
-export const OutpostMode: React.FC<Props> = ({ researchBalance, onMissionStart, onMissionComplete, onExit }) => {
+export const OutpostMode: React.FC<Props> = ({
+  researchBalance,
+  highScore,
+  onMissionStart,
+  onMissionComplete,
+  onScoreUpdate,
+  onFinalizeScore,
+  onExit,
+}) => {
   const stateRef = useRef<OutpostState | null>(null);
   const missionRewardEventsRef = useRef(new Set<string>());
+  const scoreFinalizedRef = useRef(false);
   const [, setTick] = useState(0);
   const rerender = () => setTick((t) => t + 1);
+  const [newHighScore, setNewHighScore] = useState(false);
   const [plan, setPlan] = useState<Plan>({ alloc: { maint: 1, build: 3, farm: 0, ice: 1, sci: 1 }, shelter: false });
   const [tab, setTab] = useState<'schedule' | 'build'>('schedule');
   const [log, setLog] = useState<LogEntry[]>([]);
@@ -85,6 +98,12 @@ export const OutpostMode: React.FC<Props> = ({ researchBalance, onMissionStart, 
 
   // Newest day first, but each day's lines stay in the order they happened ("Why:" follows its problem).
   const addLog = (entries: LogEntry[]) => setLog((l) => [...entries, ...l].slice(0, 80));
+
+  const finalizeScore = (score: number) => {
+    if (scoreFinalizedRef.current) return;
+    scoreFinalizedRef.current = true;
+    setNewHighScore(onFinalizeScore(score));
+  };
 
   const beginDay = (st: OutpostState, p: Plan) => {
     const events = startDay(st);
@@ -99,6 +118,9 @@ export const OutpostMode: React.FC<Props> = ({ researchBalance, onMissionStart, 
   const start = () => {
     const st = newOutpost(setup.dest, setup.diff, Math.floor(Math.random() * 1e9));
     missionRewardEventsRef.current.clear();
+    scoreFinalizedRef.current = false;
+    setNewHighScore(false);
+    onScoreUpdate(0);
     onMissionStart();
     stateRef.current = st;
     setLog([{ day: 1, kind: 'info', text: `Landed at ${DESTINATIONS[st.dest].site}. Crew of 4 ready.` }]);
@@ -110,12 +132,15 @@ export const OutpostMode: React.FC<Props> = ({ researchBalance, onMissionStart, 
     if (!s || s.phase !== 'play' || queue.length) return;
     const day = s.day;
     const lines = endDay(s, plan);
+    const report = finalReport(s);
+    onScoreUpdate(report.score);
     addLog(lines.map((l) => ({ day, ...l })));
     if (s.phase === 'play') beginDay(s, plan);
     else {
       if (s.result === 'complete' && claimResearchReward(missionRewardEventsRef.current, 'outpost-completion')) {
         onMissionComplete(getOutpostResearchReward(s.dest, s.difficulty, s.result));
       }
+      finalizeScore(report.score);
       rerender();
     }
   };
@@ -138,18 +163,25 @@ export const OutpostMode: React.FC<Props> = ({ researchBalance, onMissionStart, 
     setQueue((q) => q.slice(1));
   };
 
-  if (!s) return <SetupScreen setup={setup} setSetup={setSetup} onStart={start} onExit={onExit} />;
+  const exit = () => {
+    if (s && !scoreFinalizedRef.current) finalizeScore(finalReport(s).score);
+    onExit();
+  };
+
+  if (!s) return <SetupScreen setup={setup} setSetup={setSetup} onStart={start} onExit={exit} />;
 
   return (
     <div className="absolute inset-0 z-30 overflow-y-auto font-telemetry text-[13px] leading-snug" style={{ background: C.bg, color: '#fff' }}>
-      <Game s={s} plan={plan} setPlan={setPlan} tab={tab} setTab={setTab} log={log} onRun={runDay} onJob={changeJob} onBuild={doBuild} onExit={onExit} />
+      <Game s={s} plan={plan} setPlan={setPlan} tab={tab} setTab={setTab} log={log} highScore={highScore} onRun={runDay} onJob={changeJob} onBuild={doBuild} onExit={exit} />
       {queue.length > 0 && <EventModal ev={queue[0]} onDone={dismissEvent} />}
       {s.phase === 'over' && (
         <Debrief
           s={s}
           researchBalance={researchBalance}
+          highScore={highScore}
+          newHighScore={newHighScore}
           onAgain={() => { stateRef.current = null; setQueue([]); rerender(); }}
-          onExit={onExit}
+          onExit={exit}
         />
       )}
     </div>
@@ -254,8 +286,8 @@ const Panel: React.FC<{ title: string; right?: React.ReactNode; className?: stri
 const Game: React.FC<{
   s: OutpostState; plan: Plan; setPlan: (p: Plan) => void;
   tab: 'schedule' | 'build'; setTab: (t: 'schedule' | 'build') => void;
-  log: LogEntry[]; onRun: () => void; onJob: (k: JobKey, d: number) => void; onBuild: (k: ModuleKey) => void; onExit: () => void;
-}> = ({ s, plan, setPlan, tab, setTab, log, onRun, onJob, onBuild, onExit }) => {
+  log: LogEntry[]; highScore: number; onRun: () => void; onJob: (k: JobKey, d: number) => void; onBuild: (k: ModuleKey) => void; onExit: () => void;
+}> = ({ s, plan, setPlan, tab, setTab, log, highScore, onRun, onJob, onBuild, onExit }) => {
   const D = DESTINATIONS[s.dest];
   const f = forecastDay(s, plan);
   const a = effectiveAllocation(s, plan);
@@ -301,6 +333,8 @@ const Game: React.FC<{
           <span className="border border-[#FFB000] px-2 py-0.5 tabular-nums">{D.dayWord.toUpperCase()} {s.day} / {MISSION_DAYS}</span>
           <span className="border border-[#2A3B5C] px-2 py-0.5">{env.night ? 'NIGHT' : env.storm ? 'DUST STORM' : `SUN ${Math.round(env.sunlight * 100)}%`}</span>
           <span className="border border-[#2A3B5C] px-2 py-0.5 tabular-nums">SAMPLES {s.science.toFixed(0)} / {SCIENCE_GOAL}</span>
+          <span data-testid="outpost-score" className="border border-[#00FF66] px-2 py-0.5 tabular-nums text-[#00FF66]">SCORE {finalReport(s).score}</span>
+          <span className="border border-[#FFB000] px-2 py-0.5 tabular-nums text-[#FFB000]">HI {highScore}</span>
           <span className="border border-[#2A3B5C] px-2 py-0.5 tabular-nums" style={{ color: C.amber }}>BUILD PTS {Math.floor(s.buildPoints)}</span>
           <button className="retro-btn-secondary px-3 py-1 text-[9px]" onClick={onExit}>EXIT</button>
         </div>
@@ -558,9 +592,11 @@ const EventModal: React.FC<{ ev: OutpostEvent; onDone: (crate?: CrateKey) => voi
 const Debrief: React.FC<{
   s: OutpostState;
   researchBalance: number;
+  highScore: number;
+  newHighScore: boolean;
   onAgain: () => void;
   onExit: () => void;
-}> = ({ s, researchBalance, onAgain, onExit }) => {
+}> = ({ s, researchBalance, highScore, newHighScore, onAgain, onExit }) => {
   const r = finalReport(s);
   const top = mainCause(s);
   const researchReward = getOutpostResearchReward(s.dest, s.difficulty, s.result);
@@ -572,6 +608,14 @@ const Debrief: React.FC<{
       <h2 className="font-pixel text-sm leading-relaxed" style={{ color: s.result === 'complete' ? C.green : C.red }}>{s.result === 'complete' ? 'MISSION COMPLETE' : 'MISSION ABORTED'}</h2>
       <div className="font-pixel text-lg" style={{ color: C.amber }}>{'★'.repeat(r.stars)}<span className="text-[#2A3B5C]">{'★'.repeat(3 - r.stars)}</span></div>
       <div className="text-sm">Rank: <b>{r.rank}</b> · Score <b className="tabular-nums">{r.score}</b></div>
+      <div className="border border-[#2A3B5C] bg-[#050508] p-3 space-y-1 text-xs">
+        <div>Operations and mission score: <b>+{r.baseScore}</b></div>
+        <div>Daily survival: <b>+{r.dailySurvivalScore}</b></div>
+        <div>Healthy 30-day crew bonus: <b>+{r.performanceBonus}</b></div>
+        {r.difficultyMultiplier > 1 && <div>Commander multiplier: <b>×{r.difficultyMultiplier}</b></div>}
+        <div className="text-[#00FF66] font-bold">HIGH SCORE: {highScore}</div>
+        {newHighScore && <div role="status" className="font-pixel text-[#FFB000]">★ NEW HI-SCORE! ★</div>}
+      </div>
       {s.result === 'complete' ? (
         <div className="border border-[#00FF66]/60 bg-[#00FF66]/5 p-3 space-y-1 text-xs">
           <div className="font-pixel text-[9px] text-[#00FF66]">RESEARCH POINTS EARNED</div>

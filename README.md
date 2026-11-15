@@ -133,6 +133,16 @@ JSON backup, or **IMPORT RESEARCH** to restore one. Import replaces the current
 balance; invalid or unsupported files are rejected without changing saved
 progress.
 
+Flight Academy also tracks an arcade score: stable gyro time earns 100 points
+per second, vector rings 500 each, energy cubes 1,000 each, and remaining hull
+integrity up to 1,000. Satellite lock adds a 2,500-point completion bonus and a
+speed bonus that starts at 1,500 and drops by 100 per elapsed stage second.
+Correct quiz answers are worth 500 points each (a question scores once per run).
+Outpost Ops awards 100 points per day with at least three crew alive, plus a
+healthy-crew 30-day completion bonus; Commander difficulty multiplies Outpost
+score by 1.5. The current score appears in the HUD and lobby, and the best score
+is saved separately in local storage and shown on the mission debrief.
+
 ### Other data, libraries and tools
 
 For the submission form's "Space Agency Partner & Other Data" field. The software libraries are open source; the literature references below are separate, unverified scenario references.

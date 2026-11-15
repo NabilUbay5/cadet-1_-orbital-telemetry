@@ -24,6 +24,11 @@ export type ServiceKey = 'hab' | 'o2' | 'rec' | 'gh' | 'ice' | 'sci' | 'bld';
 export type LineKind = 'good' | 'warn' | 'bad' | 'info';
 
 export const MISSION_DAYS = 30;
+export const OUTPOST_DAILY_SURVIVAL_SCORE = 100;
+export const OUTPOST_HEALTHY_CREW_THRESHOLD = 75;
+export const OUTPOST_COMPLETION_PERFORMANCE_BONUS = 1_000;
+export const OUTPOST_HEALTH_SCORE_PER_PERCENT = 10;
+export const OUTPOST_COMMANDER_SCORE_MULTIPLIER = 1.5;
 /** Game-scale mission radiation limit per astronaut, in mSv. */
 export const DOSE_LIMIT = 30;
 export const CAP = { o2: 120, water: 160, food: 120 } as const;
@@ -137,6 +142,7 @@ export interface OutpostState {
   broken: Record<FailableKey, number>;
   buildPoints: number;
   science: number;
+  dailySurvivalScore: number;
   dose: number;
   flareDays: number[];
   storm: { start: number; length: number } | null;
@@ -186,7 +192,7 @@ export function newOutpost(dest: Destination, difficulty: Difficulty, seed: numb
       ? { solar: 5, reactor: 0, battery: 1, o2gen: 1, recycler: 1, greenhouse: 0, shield: 0 }
       : { solar: 8, reactor: 1, battery: 1, o2gen: 1, recycler: 1, greenhouse: 0, shield: 0 },
     broken: { solar: 0, reactor: 0, o2gen: 0, recycler: 0, greenhouse: 0 },
-    buildPoints: 8, science: 0, dose: 0,
+    buildPoints: 8, science: 0, dailySurvivalScore: 0, dose: 0,
     flareDays: [], storm: null, resupplyDays: [10, 20], meteorDays: [], iceDay: 0, flareToday: false,
     stats: { brownouts: 0, noWater: 0, noOxygen: 0, noFood: 0, flaresHit: 0, flaresSheltered: 0, evacuations: 0, breakdowns: 0, repaired: 0, wastedKwh: 0, lowMoraleDays: 0 },
     causes: {},
@@ -546,6 +552,7 @@ export function endDay(s: OutpostState, plan: Plan): LogLine[] {
   }
   const left = aboard(s);
   if (left.length && left.reduce((t, c) => t + c.morale, 0) / left.length < 40) s.stats.lowMoraleDays++;
+  s.dailySurvivalScore += getOutpostDailySurvivalScore(left.length);
 
   if (left.length <= 2) { s.phase = 'over'; s.result = 'aborted'; }
   else if (s.day >= MISSION_DAYS) { s.phase = 'over'; s.result = 'complete'; }
@@ -563,7 +570,32 @@ export function mainCause(s: OutpostState): { cause: string; days: number } | nu
 export interface Report {
   crewSafe: boolean; scienceMet: boolean; doseOk: boolean;
   stars: number; score: number; rank: string;
+  baseScore: number;
+  dailySurvivalScore: number;
+  performanceBonus: number;
+  difficultyMultiplier: number;
 }
+
+export function getOutpostDailySurvivalScore(survivingCrewCount: number): number {
+  if (!Number.isInteger(survivingCrewCount) || survivingCrewCount < 0 || survivingCrewCount > 4) {
+    throw new RangeError('Surviving crew count must be an integer from 0 to 4.');
+  }
+  return survivingCrewCount >= 3 ? OUTPOST_DAILY_SURVIVAL_SCORE : 0;
+}
+
+export function getOutpostCompletionPerformanceScore(s: OutpostState): number {
+  const healthyCrew = s.result === 'complete'
+    && s.crew.length === 4
+    && s.crew.every((crew) => crew.aboard && crew.hp >= OUTPOST_HEALTHY_CREW_THRESHOLD);
+  if (!healthyCrew) return 0;
+  const healthScore = s.crew.reduce((total, crew) => total + crew.hp * OUTPOST_HEALTH_SCORE_PER_PERCENT, 0);
+  return OUTPOST_COMPLETION_PERFORMANCE_BONUS + healthScore;
+}
+
+export function getOutpostScoreMultiplier(difficulty: Difficulty): number {
+  return difficulty === 'commander' ? OUTPOST_COMMANDER_SCORE_MULTIPLIER : 1;
+}
+
 export function finalReport(s: OutpostState): Report {
   const complete = s.result === 'complete';
   const crewSafe = complete && s.stats.evacuations === 0;
@@ -571,9 +603,14 @@ export function finalReport(s: OutpostState): Report {
   // Like the other two objectives, the dose star only counts on a completed mission.
   const doseOk = complete && s.dose <= DOSE_LIMIT;
   const stars = Number(crewSafe) + Number(scienceMet) + Number(doseOk);
-  const score = Math.round(s.science * 10 + aboard(s).length * 150 + Math.max(0, DOSE_LIMIT - s.dose) * 8 + stars * 100 + (complete ? 200 : 0));
+  const baseScore = s.result === null
+    ? 0
+    : Math.round(s.science * 10 + aboard(s).length * 150 + Math.max(0, DOSE_LIMIT - s.dose) * 8 + stars * 100 + (complete ? 200 : 0));
+  const performanceBonus = getOutpostCompletionPerformanceScore(s);
+  const difficultyMultiplier = getOutpostScoreMultiplier(s.difficulty);
+  const score = Math.round((baseScore + s.dailySurvivalScore + performanceBonus) * difficultyMultiplier);
   const rank = complete ? ['Cadet in training', 'Mission specialist', 'Flight engineer', 'Commander'][stars] : 'Mission aborted';
-  return { crewSafe, scienceMet, doseOk, stars, score, rank };
+  return { crewSafe, scienceMet, doseOk, stars, score, rank, baseScore, dailySurvivalScore: s.dailySurvivalScore, performanceBonus, difficultyMultiplier };
 }
 
 export function lessons(s: OutpostState): Array<{ title: string; body: string }> {

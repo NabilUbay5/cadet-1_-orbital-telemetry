@@ -5,6 +5,11 @@ import {
   DESTINATIONS,
   DOSE_LIMIT,
   MISSION_DAYS,
+  OUTPOST_COMMANDER_SCORE_MULTIPLIER,
+  OUTPOST_COMPLETION_PERFORMANCE_BONUS,
+  OUTPOST_DAILY_SURVIVAL_SCORE,
+  OUTPOST_HEALTH_SCORE_PER_PERCENT,
+  OUTPOST_HEALTHY_CREW_THRESHOLD,
   MODULES,
   PANEL_KWH,
   REACTOR_KWH,
@@ -13,6 +18,9 @@ import {
   canBuild,
   effectiveAllocation,
   endDay,
+  getOutpostCompletionPerformanceScore,
+  getOutpostDailySurvivalScore,
+  getOutpostScoreMultiplier,
   explainPowerShortage,
   explainShortage,
   mainCause,
@@ -78,6 +86,60 @@ describe('resource gauge projections', () => {
     expect(displayedResourceNet(95, 100, 20)).toBe(5);
     expect(displayedResourceNet(100, 100, 20)).toBe(0);
     expect(displayedResourceNet(95, 100, -20)).toBe(-20);
+  });
+});
+
+describe('Outpost Ops scoring', () => {
+  test('awards daily survival points while at least three crew remain', () => {
+    expect(getOutpostDailySurvivalScore(4)).toBe(OUTPOST_DAILY_SURVIVAL_SCORE);
+    expect(getOutpostDailySurvivalScore(3)).toBe(OUTPOST_DAILY_SURVIVAL_SCORE);
+    expect(getOutpostDailySurvivalScore(2)).toBe(0);
+    expect(() => getOutpostDailySurvivalScore(4.5)).toThrow(RangeError);
+  });
+
+  test('awards a completion bonus only when all crew finish healthy', () => {
+    const state = newOutpost('moon', 'cadet', 4);
+    state.result = 'complete';
+    expect(getOutpostCompletionPerformanceScore(state)).toBe(
+      OUTPOST_COMPLETION_PERFORMANCE_BONUS + 4 * 100 * OUTPOST_HEALTH_SCORE_PER_PERCENT,
+    );
+
+    state.crew[0]!.hp = OUTPOST_HEALTHY_CREW_THRESHOLD - 1;
+    expect(getOutpostCompletionPerformanceScore(state)).toBe(0);
+    state.crew[0]!.hp = 100;
+    state.crew[0]!.aboard = false;
+    expect(getOutpostCompletionPerformanceScore(state)).toBe(0);
+  });
+
+  test('applies the Commander score multiplier', () => {
+    expect(getOutpostScoreMultiplier('cadet')).toBe(1);
+    expect(getOutpostScoreMultiplier('commander')).toBe(OUTPOST_COMMANDER_SCORE_MULTIPLIER);
+  });
+
+  test('adds a daily survival score to mission reports', () => {
+    const state = newOutpost('moon', 'cadet', 9);
+    state.result = 'complete';
+    state.dailySurvivalScore = MISSION_DAYS * OUTPOST_DAILY_SURVIVAL_SCORE;
+    const report = finalReport(state);
+    expect(report.dailySurvivalScore).toBe(3_000);
+    expect(report.performanceBonus).toBe(5_000);
+    expect(report.score).toBe(report.baseScore + 8_000);
+  });
+
+  test('credits a survival day after the crew survives it', () => {
+    const state = newOutpost('mars', 'cadet', 37);
+    expect(finalReport(state).score).toBe(0);
+    startDay(state);
+    endDay(state, basePlan());
+    expect(state.dailySurvivalScore).toBe(OUTPOST_DAILY_SURVIVAL_SCORE);
+    expect(finalReport(state).score).toBe(OUTPOST_DAILY_SURVIVAL_SCORE);
+  });
+
+  test('multiplies the full Outpost score on Commander difficulty', () => {
+    const state = newOutpost('moon', 'commander', 9);
+    state.result = 'complete';
+    const report = finalReport(state);
+    expect(report.score).toBe(Math.round((report.baseScore + report.performanceBonus) * OUTPOST_COMMANDER_SCORE_MULTIPLIER));
   });
 });
 
