@@ -180,6 +180,10 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   animation-iteration-count: infinite;
 }
 
+.pixel-fireworks {
+  image-rendering: pixelated;
+}
+
 @keyframes pixelConfettiFall {
   0% {
     transform: translateY(-12px) rotate(0deg);
@@ -194,45 +198,20 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   }
 }
 
-.pixel-firework-burst {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  transform: translate(-50%, -50%);
+.victory-lives-glow .pixel-heart-full {
+  animation: victoryHeartGlow 1.4s steps(2, end) infinite;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
-.pixel-firework-spark {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 5px;
-  height: 5px;
-  image-rendering: pixelated;
-  opacity: 0;
-  animation: pixelFireworkSpark 760ms steps(6, end) both;
-}
-
-.pixel-firework-spark--north { --firework-x: 0px; --firework-y: -30px; }
-.pixel-firework-spark--north-east { --firework-x: 21px; --firework-y: -21px; }
-.pixel-firework-spark--east { --firework-x: 30px; --firework-y: 0px; }
-.pixel-firework-spark--south-east { --firework-x: 21px; --firework-y: 21px; }
-.pixel-firework-spark--south { --firework-x: 0px; --firework-y: 30px; }
-.pixel-firework-spark--south-west { --firework-x: -21px; --firework-y: 21px; }
-.pixel-firework-spark--west { --firework-x: -30px; --firework-y: 0px; }
-.pixel-firework-spark--north-west { --firework-x: -21px; --firework-y: -21px; }
-
-@keyframes pixelFireworkSpark {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0) scale(0.5);
+@keyframes victoryHeartGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 2px #FF4FD8);
+    transform: scale(1);
   }
-  18% {
-    opacity: 1;
-    transform: translate(0, 0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(var(--firework-x), var(--firework-y)) scale(0.75);
+  50% {
+    filter: drop-shadow(0 0 7px #FF4FD8);
+    transform: scale(1.08);
   }
 }
 
@@ -261,4 +240,8 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   }
   .pixel-heart-breaking { animation: none; fill: #2A3B5C; }
   .pixel-hearts-hit { animation: none; }
+  .victory-lives-glow .pixel-heart-full {
+    animation: none;
+    filter: none;
+  }
 }

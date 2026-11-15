@@ -486,6 +486,7 @@ export class FlightEngine {
   }
 
   public triggerVictoryFinal() {
+    this.setInputEnabled(false);
     this.setGameState('VICTORY');
     const mins = Math.floor(this.metSeconds / 60);
     const secs = (this.metSeconds % 60).toFixed(1);
@@ -594,7 +595,7 @@ export class FlightEngine {
     if (e.code === 'Space' && this.gameState === 'TITLE') {
       this.resetSimulation();
     }
-    if (e.code === 'KeyR' && (this.gameState === 'VICTORY' || this.gameState === 'DEFEAT')) {
+    if (e.code === 'KeyR' && this.gameState === 'DEFEAT') {
       this.resetSimulation();
     }
     if (e.code === 'Space' && this.gameState === 'PLAYING') {

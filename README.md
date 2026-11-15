@@ -133,6 +133,11 @@ JSON backup, or **IMPORT RESEARCH** to restore one. Import replaces the current
 balance; invalid or unsupported files are rejected without changing saved
 progress.
 
+After the final certification, the victory screen keeps its pixel fireworks and
+confetti running until any key or **EXIT LOBBY** returns to the title screen.
+The heart bar reflects remaining player lives; reduced-motion settings disable
+the animated effects.
+
 ### Other data, libraries and tools
 
 For the submission form's "Space Agency Partner & Other Data" field. The software libraries are open source; the literature references below are separate, unverified scenario references.
@@ -634,7 +639,7 @@ The build runs strict TypeScript checks and splits React, the Three.js core and 
 | **Scanner pulse**        | `Space` during flight                  | Spend 15 energy on a visual pulse expanding to 160 m; radar updates separately.     |
 | **Toggle audio**         | `M`                                    | Toggle the sound manager's mute state.                                              |
 | **Pause / resume**       | `Esc` / `P`                            | Toggle flight between playing and paused.                                           |
-| **Restart after result** | `R`                                    | Start a new run from victory or defeat.                                             |
+| **Victory exit / defeat retry** | Any key / `R`                    | Victory returns to the title screen; `R` restarts after defeat.                    |
 | **Toggle dispatch**      | Click **DISPATCH** / **MISSION BRIEF** | Show or hide the mission announcement; click **[X]** to dismiss it.                 |
 
 ---
@@ -670,7 +675,7 @@ cadet-1_-orbital-telemetry/
 │   │   ├── CertificationQuizModal.tsx  # Three questions per stage
 │   │   ├── PixelBadge.tsx              # Stage badge graphics
 │   │   ├── PixelConfetti.tsx           # Certification and victory confetti
-│   │   └── PixelFireworks.tsx          # Staggered victory firework bursts
+│   │   └── PixelFireworks.tsx          # Continuous pooled victory fireworks
 │   ├── audio/soundManager.ts           # Compatibility export for audioEngine
 │   └── data/
 │       ├── triviaBank.ts               # Nine questions total, three per stage
