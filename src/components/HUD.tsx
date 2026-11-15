@@ -154,9 +154,9 @@ export const HUD: React.FC<HUDProps> = ({
 
         {/* Right: Dispatch Toggle, Readiness & Pause */}
         <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-1.5">
-            <span className="text-[9px] text-[#A0AEC0]">RESEARCH</span>
-            <span data-testid="research-balance" className="text-xs md:text-sm text-[#00FF66]">
+          <div className="flex items-center gap-1">
+            <span className="hidden md:inline text-[9px] text-[#A0AEC0]">RESEARCH</span>
+            <span data-testid="research-balance" className="text-[9px] md:text-sm text-[#00FF66]">
               {researchBalance} RP
             </span>
           </div>

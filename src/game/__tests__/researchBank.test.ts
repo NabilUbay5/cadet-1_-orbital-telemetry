@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   addResearchPoints,
+  claimResearchReward,
   createResearchBankBackup,
   parseResearchBankBackup,
   readResearchBalance,
@@ -20,6 +21,15 @@ function createStorage(initialValue: string | null = null): ResearchStorage {
 }
 
 describe('research bank', () => {
+  test('claims each mission reward event at most once until a new run resets the ledger', () => {
+    const processedEvents = new Set<string>();
+
+    expect(claimResearchReward(processedEvents, 'flight-stage-1')).toBe(true);
+    expect(claimResearchReward(processedEvents, 'flight-stage-1')).toBe(false);
+    processedEvents.clear();
+    expect(claimResearchReward(processedEvents, 'flight-stage-1')).toBe(true);
+  });
+
   test('accumulates mission rewards and reads the saved balance again', () => {
     const storage = createStorage('200');
 

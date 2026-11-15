@@ -19,6 +19,12 @@ export interface ResearchStorage {
   setItem(key: string, value: string): void;
 }
 
+export function claimResearchReward(processedEvents: Set<string>, eventId: string): boolean {
+  if (processedEvents.has(eventId)) return false;
+  processedEvents.add(eventId);
+  return true;
+}
+
 function validateBalance(balance: number): void {
   if (!Number.isSafeInteger(balance) || balance < 0) {
     throw new RangeError('Research balance must be a non-negative safe integer.');

@@ -35,6 +35,17 @@ export const NIGHT_HEAT_KWH = 8;
 /** Dust storms on Mars let through about a quarter of the clear-sky sunlight (game value). */
 export const STORM_SUNLIGHT = 0.25;
 export const SCIENCE_GOAL = 40;
+export const MOON_MISSION_RESEARCH_REWARD = 500;
+export const MARS_MISSION_RESEARCH_REWARD = 800;
+export const COMMANDER_RESEARCH_REWARD_MULTIPLIER = 1.5;
+
+export interface OutpostResearchReward {
+  basePoints: number;
+  difficultyBonusPoints: number;
+  points: number;
+  siteTier: 'Standard' | 'Hard';
+  difficulty: Difficulty;
+}
 
 export interface DestinationInfo {
   name: string;
@@ -53,6 +64,24 @@ export const DESTINATIONS: Record<Destination, DestinationInfo> = {
   moon: { name: 'Moon', site: HORIZONS_SNAPSHOT.moon.site, dose: 1.37, flare: 14, heat: 6, dayWord: 'Day' },
   mars: { name: 'Mars', site: HORIZONS_SNAPSHOT.mars.site, dose: 0.64, flare: 8, heat: 12, dayWord: 'Sol' },
 };
+
+export function getOutpostResearchReward(
+  dest: Destination,
+  difficulty: Difficulty,
+  result: OutpostState['result'],
+): OutpostResearchReward {
+  const basePoints = dest === 'moon' ? MOON_MISSION_RESEARCH_REWARD : MARS_MISSION_RESEARCH_REWARD;
+  const multiplier = difficulty === 'commander' ? COMMANDER_RESEARCH_REWARD_MULTIPLIER : 1;
+  const points = result === 'complete' ? Math.round(basePoints * multiplier) : 0;
+
+  return {
+    basePoints: result === 'complete' ? basePoints : 0,
+    difficultyBonusPoints: result === 'complete' ? points - basePoints : 0,
+    points,
+    siteTier: dest === 'moon' ? 'Standard' : 'Hard',
+    difficulty,
+  };
+}
 
 export interface ModuleInfo { name: string; cost: number; max: number; failable: boolean; desc: string }
 export const MODULES: Record<ModuleKey, ModuleInfo> = {

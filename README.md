@@ -121,13 +121,17 @@ PLAYWRIGHT_MODULE=/path/to/playwright-core/index.mjs \
   CHROMIUM_PATH=/usr/bin/chromium node scripts/verify-telemetry-pods.mjs
 ```
 
-Each pod earns 100 research points, credited to a research bank when the mission
-ends. The balance is stored in the browser's local storage and shown in the
-lobby, flight HUD, and victory or defeat debrief. It is local to the current
-browser profile and is not synced between devices. Use **EXPORT RESEARCH** in
-the lobby to download a versioned JSON backup, or **IMPORT RESEARCH** to restore
-one. Import replaces the current balance; invalid or unsupported files are
-rejected without changing saved progress.
+Research Points (RP) are credited to the local research bank as missions progress:
+
+- **Flight Academy:** 150 RP for Stage 1, 250 RP for Stage 2, and 400 RP for Stage 3 quiz completion, plus a 200 RP full-certification bonus. A full academy run earns 1,000 base RP, plus 100 RP per telemetry pod.
+- **Outpost Ops:** completing 30 days earns 500 RP for the Moon (Standard site) or 800 RP for Mars (Hard site). Commander difficulty applies a 1.5× multiplier; Cadet earns the site base reward. Aborted missions earn no completion RP.
+
+The balance is stored in browser local storage and shown in the lobby, flight
+HUD, and debriefs. It is local to the current browser profile and is not synced
+between devices. Use **EXPORT RESEARCH** in the lobby to download a versioned
+JSON backup, or **IMPORT RESEARCH** to restore one. Import replaces the current
+balance; invalid or unsupported files are rejected without changing saved
+progress.
 
 ### Other data, libraries and tools
 

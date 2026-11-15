@@ -5,6 +5,7 @@
 
 import React, { useMemo, useRef, useState } from 'react';
 import { HORIZONS_SNAPSHOT } from '../data/nasa/horizonsSnapshot.ts';
+import { claimResearchReward } from '../game/researchBank.ts';
 import { OutpostScene } from './OutpostScene.tsx';
 import {
   CAP,
@@ -27,6 +28,7 @@ import {
   finalReport,
   fitPlan,
   forecastDay,
+  getOutpostResearchReward,
   horizonsSunlight,
   lessons,
   mainCause,
@@ -44,6 +46,7 @@ import {
   type LineKind,
   type ModuleKey,
   type OutpostEvent,
+  type OutpostResearchReward,
   type OutpostState,
   type Plan,
   type ServiceKey,
@@ -61,10 +64,16 @@ const KIND_COLOR: Record<LineKind, string> = { good: C.green, warn: C.amber, bad
 
 interface LogEntry { day: number; kind: LineKind; text: string }
 
-interface Props { onExit: () => void }
+interface Props {
+  researchBalance: number;
+  onMissionStart: () => void;
+  onMissionComplete: (reward: OutpostResearchReward) => void;
+  onExit: () => void;
+}
 
-export const OutpostMode: React.FC<Props> = ({ onExit }) => {
+export const OutpostMode: React.FC<Props> = ({ researchBalance, onMissionStart, onMissionComplete, onExit }) => {
   const stateRef = useRef<OutpostState | null>(null);
+  const missionRewardEventsRef = useRef(new Set<string>());
   const [, setTick] = useState(0);
   const rerender = () => setTick((t) => t + 1);
   const [plan, setPlan] = useState<Plan>({ alloc: { maint: 1, build: 3, farm: 0, ice: 1, sci: 1 }, shelter: false });
@@ -89,6 +98,8 @@ export const OutpostMode: React.FC<Props> = ({ onExit }) => {
 
   const start = () => {
     const st = newOutpost(setup.dest, setup.diff, Math.floor(Math.random() * 1e9));
+    missionRewardEventsRef.current.clear();
+    onMissionStart();
     stateRef.current = st;
     setLog([{ day: 1, kind: 'info', text: `Landed at ${DESTINATIONS[st.dest].site}. Crew of 4 ready.` }]);
     setTab('schedule');
@@ -101,7 +112,12 @@ export const OutpostMode: React.FC<Props> = ({ onExit }) => {
     const lines = endDay(s, plan);
     addLog(lines.map((l) => ({ day, ...l })));
     if (s.phase === 'play') beginDay(s, plan);
-    else rerender();
+    else {
+      if (s.result === 'complete' && claimResearchReward(missionRewardEventsRef.current, 'outpost-completion')) {
+        onMissionComplete(getOutpostResearchReward(s.dest, s.difficulty, s.result));
+      }
+      rerender();
+    }
   };
 
   const changeJob = (k: JobKey, d: number) => {
@@ -128,7 +144,14 @@ export const OutpostMode: React.FC<Props> = ({ onExit }) => {
     <div className="absolute inset-0 z-30 overflow-y-auto font-telemetry text-[13px] leading-snug" style={{ background: C.bg, color: '#fff' }}>
       <Game s={s} plan={plan} setPlan={setPlan} tab={tab} setTab={setTab} log={log} onRun={runDay} onJob={changeJob} onBuild={doBuild} onExit={onExit} />
       {queue.length > 0 && <EventModal ev={queue[0]} onDone={dismissEvent} />}
-      {s.phase === 'over' && <Debrief s={s} onAgain={() => { stateRef.current = null; setQueue([]); rerender(); }} onExit={onExit} />}
+      {s.phase === 'over' && (
+        <Debrief
+          s={s}
+          researchBalance={researchBalance}
+          onAgain={() => { stateRef.current = null; setQueue([]); rerender(); }}
+          onExit={onExit}
+        />
+      )}
     </div>
   );
 };
@@ -532,9 +555,15 @@ const EventModal: React.FC<{ ev: OutpostEvent; onDone: (crate?: CrateKey) => voi
   </Modal>
 );
 
-const Debrief: React.FC<{ s: OutpostState; onAgain: () => void; onExit: () => void }> = ({ s, onAgain, onExit }) => {
+const Debrief: React.FC<{
+  s: OutpostState;
+  researchBalance: number;
+  onAgain: () => void;
+  onExit: () => void;
+}> = ({ s, researchBalance, onAgain, onExit }) => {
   const r = finalReport(s);
   const top = mainCause(s);
+  const researchReward = getOutpostResearchReward(s.dest, s.difficulty, s.result);
   const obj = (ok: boolean, text: string) => (
     <div className="flex gap-2 text-xs"><span style={{ color: ok ? C.green : '#64748B' }}>{ok ? '■' : '□'}</span><span>{text}</span></div>
   );
@@ -543,6 +572,26 @@ const Debrief: React.FC<{ s: OutpostState; onAgain: () => void; onExit: () => vo
       <h2 className="font-pixel text-sm leading-relaxed" style={{ color: s.result === 'complete' ? C.green : C.red }}>{s.result === 'complete' ? 'MISSION COMPLETE' : 'MISSION ABORTED'}</h2>
       <div className="font-pixel text-lg" style={{ color: C.amber }}>{'★'.repeat(r.stars)}<span className="text-[#2A3B5C]">{'★'.repeat(3 - r.stars)}</span></div>
       <div className="text-sm">Rank: <b>{r.rank}</b> · Score <b className="tabular-nums">{r.score}</b></div>
+      {s.result === 'complete' ? (
+        <div className="border border-[#00FF66]/60 bg-[#00FF66]/5 p-3 space-y-1 text-xs">
+          <div className="font-pixel text-[9px] text-[#00FF66]">RESEARCH POINTS EARNED</div>
+          <div>
+            Mission Reward ({DESTINATIONS[s.dest].name} - {researchReward.siteTier}):{' '}
+            <b>+{researchReward.basePoints} RP</b>
+          </div>
+          {researchReward.difficultyBonusPoints > 0 && (
+            <div>
+              Commander Difficulty Bonus: <b>+{researchReward.difficultyBonusPoints} RP</b>
+            </div>
+          )}
+          <div className="font-bold">Total Earned: +{researchReward.points} RP</div>
+          <div className="text-[#00FF66]">Research Bank: {researchBalance} RP</div>
+        </div>
+      ) : (
+        <div className="border border-[#FF3344]/60 bg-[#FF3344]/5 p-3 text-xs text-[#FF3344]">
+          No completion research reward for an aborted mission.
+        </div>
+      )}
       <div className="space-y-1">
         {obj(r.crewSafe, 'Everyone stayed healthy for all 30 days')}
         {obj(r.scienceMet, `Collected ${SCIENCE_GOAL}+ science samples (you: ${s.science.toFixed(0)})`)}
