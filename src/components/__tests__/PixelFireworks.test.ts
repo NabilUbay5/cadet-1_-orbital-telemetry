@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, test } from 'bun:test';
 import { VictoryModal } from '../Modals.tsx';
 import { PixelFireworks } from '../PixelFireworks.tsx';
+import type { MissionResult } from '../../types/game.ts';
 
 describe('PixelFireworks', () => {
   test('renders a decorative canvas for the continuous fireworks loop', () => {
@@ -14,7 +15,7 @@ describe('PixelFireworks', () => {
   });
 
   test('keeps the player lives bar and lobby exit on the victory screen', () => {
-    const result = {
+    const result: MissionResult = {
       victory: true,
       reason: 'Mission complete',
       cadetRank: 'CHIEF ORBITAL COMMANDER',
@@ -31,12 +32,24 @@ describe('PixelFireworks', () => {
       badgesEarned: 3,
       triviaScore: 9,
       totalTrivia: 9,
+      score: 1375,
+      scoreBreakdown: {
+        gyroStabilization: 500,
+        vectorRings: 250,
+        energyCubes: 300,
+        hullIntegrity: 100,
+        satelliteSpeed: 125,
+        satelliteLock: 100,
+        quizAnswers: 0,
+      },
     };
     const markup = renderToStaticMarkup(React.createElement(VictoryModal, {
       result,
       totalResearchPoints: 300,
       lives: 2,
       maxLives: 3,
+      highScore: 2000,
+      newHighScore: true,
       onExit: () => {},
       onExportFlightLog: () => {},
       onMajorExplosion: () => {},
@@ -44,6 +57,7 @@ describe('PixelFireworks', () => {
 
     expect(markup).toContain('MISSION ACCOMPLISHED');
     expect(markup).toContain('Lives: 2 of 3');
+    expect(markup).toContain('FLIGHT SCORE: 1375');
     expect(markup).toContain('EXIT LOBBY');
   });
 });
