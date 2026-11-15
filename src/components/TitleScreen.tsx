@@ -13,9 +13,9 @@ interface TitleScreenProps {
 
 export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) => {
   return (
-    <div className="absolute inset-0 flex flex-col justify-between p-4 md:p-8 pointer-events-none z-20 font-pixel">
+    <div data-testid="title-screen" className="absolute inset-0 flex flex-col justify-between gap-4 overflow-y-auto overflow-x-hidden overscroll-contain p-4 md:p-8 z-20 font-pixel">
       {/* Top Arcade Marquee Stamp */}
-      <div className="flex items-center justify-between border-b-2 border-[#00F0FF] pb-2.5 pointer-events-auto bg-[#050508]/90 px-4 py-2 shadow-[0_3px_0_#000]">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b-2 border-[#00F0FF] pb-2.5 pointer-events-auto bg-[#050508]/90 px-4 py-2 shadow-[0_3px_0_#000]">
         <div className="flex items-center gap-3">
           <span className="w-2.5 h-2.5 bg-[#FFB000] inline-block animate-pulse" />
           <span className="text-[10px] md:text-xs text-[#00F0FF] uppercase tracking-wider">
@@ -30,7 +30,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) 
       </div>
 
       {/* Center 8-Bit Title Lockup & Mission Dossier */}
-      <div className="max-w-2xl my-auto pointer-events-auto">
+      <div className="max-w-2xl shrink-0 my-auto pointer-events-auto">
         {/* Pixel Title Banner */}
         <div className="retro-window p-5 md:p-6 mb-4 border-2 border-[#00F0FF] bg-[#0d111a]/95">
           <div className="flex items-center gap-2 mb-2 text-[9px] text-[#FFB000]">
@@ -123,7 +123,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) 
       </div>
 
       {/* Flat Single Control Hint Line in 8-Bit Pixel Typography */}
-      <div className="border-t-2 border-[#2A3B5C] pt-3 pb-1 flex flex-col md:flex-row items-center justify-between text-[9px] text-[#A0AEC0] pointer-events-auto bg-[#050508]/90 px-4 shadow-[0_-3px_0_#000]">
+      <div className="shrink-0 border-t-2 border-[#2A3B5C] pt-3 pb-1 flex flex-col md:flex-row items-center justify-between text-[9px] text-[#A0AEC0] pointer-events-auto bg-[#050508]/90 px-4 shadow-[0_-3px_0_#000]">
         <div className="leading-normal">
           <span className="text-[#00F0FF]">W/S</span> THROTTLE · <span className="text-[#00F0FF]">A/D</span> YAW · <span className="text-[#00F0FF]">R/F</span> PITCH · <span className="text-[#00F0FF]">Q/E</span> ROLL · <span className="text-[#FFB000]">SHIFT</span> BOOST · <span className="text-[#00FF66]">SPACE</span> SCAN · <span className="text-[#FFFFFF]">C</span> CAM · <span className="text-[#FF3344]">ESC</span> PAUSE
         </div>

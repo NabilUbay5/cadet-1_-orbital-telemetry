@@ -672,6 +672,19 @@ bun run build
 
 CI runs all three on every push to `main` and every pull request: strict TypeScript checking, the `bun test` suite, and the Vite production build.
 
+The title screen scrolls independently on small and short viewports. With the dev
+server running, check that real touch and wheel gestures can reach and activate
+both mission buttons at 320×568, 390×844, 568×320, and 1280×800:
+
+```bash
+PLAYWRIGHT_MODULE=/path/to/playwright-core/index.mjs \
+  CHROMIUM_PATH=/usr/bin/chromium node scripts/verify-title.mjs
+```
+
+This check uses coordinate taps/clicks after native scrolling, so automation cannot
+hide an unreachable button by scrolling it into view automatically. `APP_URL` can
+select a production preview; `TITLE_SCREENSHOT_DIR` optionally saves screenshots.
+
 For the production offline smoke check, run `bun run preview --host 127.0.0.1 --port 4173 --strictPort`, then in another terminal:
 
 ```bash
