@@ -297,7 +297,21 @@ describe('determinism and endings', () => {
   test('stars match the three objectives', () => {
     const { s, report } = playOut('moon', 'cadet', 7, true);
     expect(report.stars).toBe(Number(report.crewSafe) + Number(report.scienceMet) + Number(report.doseOk));
-    expect(report.doseOk).toBe(s.dose <= DOSE_LIMIT);
+    expect(report.doseOk).toBe(s.result === 'complete' && s.dose <= DOSE_LIMIT);
+  });
+
+  test('an aborted mission earns no stars, even with a low dose', () => {
+    const s = newOutpost('mars', 'cadet', 1);
+    s.phase = 'over';
+    s.result = 'aborted';
+    s.dose = 5;
+    s.crew[0].aboard = false;
+    s.crew[1].aboard = false;
+    s.stats.evacuations = 2;
+    const report = finalReport(s);
+    expect(report.doseOk).toBe(false);
+    expect(report.stars).toBe(0);
+    expect(report.rank).toBe('Mission aborted');
   });
 });
 

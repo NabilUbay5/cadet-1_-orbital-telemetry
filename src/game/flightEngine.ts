@@ -384,6 +384,8 @@ export class FlightEngine {
   public advanceToStage(nextStage: MissionStage) {
     this.stage = nextStage;
     this.throttle = 0.22; // Gentle baseline cruise speed
+    // Start each stage level and still, so spin from the previous stage doesn't carry over.
+    this.angularVelocity.set(0, 0, 0);
     audioEngine.ensureRunning();
     audioEngine.playWaypointPass();
 
