@@ -644,7 +644,9 @@ The build runs strict TypeScript checks and splits React, the Three.js core and 
 
 | Action                   | Key or control                         | Behavior                                                                            |
 | ------------------------ | -------------------------------------- | ----------------------------------------------------------------------------------- |
-| **Start mission**        | `Enter` / `Space` / **PRESS START**    | Start from the title screen.                                                        |
+| **Start Outpost Ops**    | `Enter` on the title screen            | Open the main mode: Moon or Mars outpost setup.                                     |
+| **Start Flight Academy** | `Space` on the title screen            | Launch the three-stage flight with certification quizzes.                           |
+| **Touch controls**       | On-screen stick and buttons            | Stick steers; THRUST, BRAKE, BOOST and SCAN buttons. Shown automatically on phones and tablets; the lobby toggle forces them on or off. |
 | **Throttle up**          | `W` / `↑`                              | Increase throttle up to 100%.                                                       |
 | **Throttle down**        | `S` / `↓`                              | Decrease throttle down to 0%.                                                       |
 | **Yaw left / right**     | `A` / `←` and `D` / `→`                | Apply positive / negative yaw input.                                                |
@@ -845,8 +847,8 @@ Project maintainer: [@NabilUbay5](https://github.com/NabilUbay5)
 ### Visual Assets
 
 1. Regenerate actual screenshots/GIF and metadata with `scripts/capture-previews.mjs` after `bun test`
-2. Save them under the exact filenames in `public/assets/` listed above. These six filenames are allowed by `.gitignore`; other local captures remain ignored.
-3. Replace the corresponding WIP status with an embed such as `![Telemetry HUD](./public/assets/telemetry-hud.png)` only after that file exists.
+2. Save them under the exact filenames in `public/assets/` used in the table above. Only the filenames listed in `.gitignore` are committed; other local captures remain ignored.
+3. Update `public/assets/preview-metadata.json` and [simulationPreviews.ts](src/data/simulationPreviews.ts) if a capture's content or the test count changes.
 4. Include both the image and README update in the same PR so GitHub can render the preview.
 
 ### Code Contributions
