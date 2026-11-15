@@ -6,16 +6,8 @@
 import React from 'react';
 import { MissionResult } from '../types/game.ts';
 import { PixelBadge } from './PixelBadge.tsx';
+import { PixelConfetti } from './PixelConfetti.tsx';
 import { ExportFlightLogButton } from './ExportFlightLogButton.tsx';
-
-const confettiColors = ['#00F0FF', '#00FF66', '#FFB000', '#FFFFFF'];
-const pixelConfetti = Array.from({ length: 48 }, (_, index) => ({
-  left: `${(index * 37) % 100}%`,
-  color: confettiColors[index % confettiColors.length],
-  size: index % 5 === 0 ? 8 : 5,
-  duration: `${2.8 + (index % 7) * 0.3}s`,
-  delay: `${-((index * 13) % 35) / 10}s`,
-}));
 
 interface PauseModalProps {
   onResume: () => void;
@@ -111,22 +103,7 @@ interface VictoryModalProps {
 export const VictoryModal: React.FC<VictoryModalProps> = ({ result, onRestart, onExit, onExportFlightLog }) => {
   return (
     <div className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-30 pointer-events-auto font-pixel">
-      <div aria-hidden="true" className="pixel-confetti absolute inset-0 overflow-hidden pointer-events-none">
-        {pixelConfetti.map((piece, index) => (
-          <span
-            key={index}
-            className="pixel-confetti-piece"
-            style={{
-              left: piece.left,
-              width: piece.size,
-              height: piece.size,
-              backgroundColor: piece.color,
-              animationDuration: piece.duration,
-              animationDelay: piece.delay,
-            }}
-          />
-        ))}
-      </div>
+      <PixelConfetti />
       <div role="dialog" aria-modal="true" aria-label="Mission complete" className="flight-modal relative z-10 w-full max-w-lg retro-window-green p-6 bg-[#0d111a] border-2 border-[#00FF66] shadow-[6px_6px_0_#000]">
         {/* Header */}
         <div className="flex items-center justify-between border-b-2 border-[#2A3B5C] pb-3 mb-4">
@@ -196,6 +173,16 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ result, onRestart, o
           </div>
         </div>
 
+        <div className="border border-[#FFB000]/50 bg-[#FFB000]/10 p-3 mb-5 flex items-center justify-between gap-3">
+          <div className="text-[9px]">
+            <div className="text-[#FFB000] font-bold">TELEMETRY RESEARCH BONUS</div>
+            <div className="text-[#A0AEC0] mt-1">{result.telemetryPodsCollected} / 3 PODS SECURED</div>
+          </div>
+          <div className="text-sm text-[#FFB000] font-bold whitespace-nowrap">
+            +{result.telemetryPodResearchPoints} RP
+          </div>
+        </div>
+
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={onRestart}
@@ -261,6 +248,16 @@ export const DefeatModal: React.FC<DefeatModalProps> = ({ result, onRestart, onE
           <div className="border-t border-[#2A3B5C] pl-2 pt-2 mt-1">
             <span className="text-[#8494AD]">DAMAGE:</span>
             <div className="text-xs text-[#FF3344] mt-1">{result.hullDamageTaken}%</div>
+          </div>
+        </div>
+
+        <div className="border border-[#FFB000]/50 bg-[#FFB000]/10 p-3 mb-5 flex items-center justify-between gap-3">
+          <div className="text-[9px]">
+            <div className="text-[#FFB000] font-bold">TELEMETRY RESEARCH BONUS</div>
+            <div className="text-[#A0AEC0] mt-1">{result.telemetryPodsCollected} / 3 PODS SECURED</div>
+          </div>
+          <div className="text-sm text-[#FFB000] font-bold whitespace-nowrap">
+            +{result.telemetryPodResearchPoints} RP
           </div>
         </div>
 

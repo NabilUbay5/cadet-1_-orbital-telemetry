@@ -111,6 +111,17 @@ PLAYWRIGHT_MODULE=/path/to/playwright-core/index.mjs \
   CHROMIUM_PATH=/usr/bin/chromium node scripts/verify-hud.mjs
 ```
 
+The telemetry-pod browser smoke test starts a mission, collects a pod using
+thrust, verifies the HUD counter and radar marker update, then restarts and
+checks that all pods return. It can run with Playwright and Chromium installed:
+
+```bash
+PLAYWRIGHT_MODULE=/path/to/playwright-core/index.mjs \
+  CHROMIUM_PATH=/usr/bin/chromium node scripts/verify-telemetry-pods.mjs
+```
+
+Each pod also earns 100 research points, shown in the victory or defeat debrief.
+
 ### Other data, libraries and tools
 
 For the submission form's "Space Agency Partner & Other Data" field. The software libraries are open source; the literature references below are separate, unverified scenario references.
@@ -709,7 +720,9 @@ bun test
 bun run build
 ```
 
-CI runs all three on every push to `main` and every pull request: strict TypeScript checking, the `bun test` suite, and the Vite production build.
+CI runs strict TypeScript checking, the `bun test` suite, the Vite production
+build, and the telemetry-pod browser smoke test on every push to `main` and
+every pull request.
 
 The title screen scrolls independently on small and short viewports. With the dev
 server running, check that real touch and wheel gestures can reach and activate

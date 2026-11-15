@@ -463,7 +463,7 @@ export const HUD: React.FC<HUDProps> = ({
 
               <div className="flex items-center justify-between border-t border-[#2A3B5C]/60 pt-1.5 mt-2 text-[8px] text-[#A0AEC0]">
                 <span>TELEMETRY PODS</span>
-                <span className="text-[#00F0FF]">
+                <span data-testid="telemetry-pod-counter" className="text-[#00F0FF]">
                   {telemetry.telemetryPodsCollected} / {telemetry.totalTelemetryPods}
                 </span>
               </div>

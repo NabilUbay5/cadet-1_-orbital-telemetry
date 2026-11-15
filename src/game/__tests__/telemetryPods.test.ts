@@ -1,7 +1,18 @@
 import { describe, expect, test } from 'bun:test';
-import { TELEMETRY_POD_PICKUP_RADIUS, TelemetryPodTracker } from '../telemetryPods.ts';
+import {
+  getTelemetryPodResearchPoints,
+  TELEMETRY_POD_PICKUP_RADIUS,
+  TELEMETRY_POD_RESEARCH_POINTS,
+  TelemetryPodTracker,
+} from '../telemetryPods.ts';
 
 describe('TelemetryPodTracker', () => {
+  test('awards 100 research points for each collected pod', () => {
+    expect(getTelemetryPodResearchPoints(0)).toBe(0);
+    expect(getTelemetryPodResearchPoints(1)).toBe(TELEMETRY_POD_RESEARCH_POINTS);
+    expect(getTelemetryPodResearchPoints(3)).toBe(3 * TELEMETRY_POD_RESEARCH_POINTS);
+  });
+
   test('collects each pod once, rejects out-of-range pickups, and resets collection state', () => {
     const pods = [{ collected: false }, { collected: false }, { collected: false }];
     const tracker = new TelemetryPodTracker();

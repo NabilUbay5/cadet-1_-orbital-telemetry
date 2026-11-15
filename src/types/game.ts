@@ -81,6 +81,8 @@ export interface MissionResult {
   readinessScore: number;
   hullDamageTaken: number;
   energyCubesCollected: number;
+  telemetryPodsCollected: number;
+  telemetryPodResearchPoints: number;
   badgesEarned: number;
   triviaScore: number;
   totalTrivia: number;
