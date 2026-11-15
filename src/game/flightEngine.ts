@@ -196,6 +196,8 @@ export class FlightEngine {
   // Input System (Held & JustPressed)
   private inputEnabled = true;
   private heldKeys: Record<string, boolean> = {};
+  // On-screen buttons are tracked apart from the keyboard, so releasing one never cancels the other.
+  private touchKeys: Record<string, boolean> = {};
   // A Set is cleared in place each step instead of re-allocating an object literal.
   private readonly justPressedKeys = new Set<string>();
 
@@ -429,6 +431,7 @@ export class FlightEngine {
     this.lives = MAX_LIVES;
     this.invulnerableTimer = 0;
     this.touchSteerX = this.touchSteerY = 0;
+    for (const key in this.touchKeys) this.touchKeys[key] = false;
     this.craftGroup.visible = true;
     this.oxygen = 100;
     this.energy = 100;
@@ -604,6 +607,7 @@ export class FlightEngine {
       for (const key in this.heldKeys) this.heldKeys[key] = false;
       this.justPressedKeys.clear();
       this.touchSteerX = this.touchSteerY = 0;
+    for (const key in this.touchKeys) this.touchKeys[key] = false;
     }
   }
 
@@ -618,8 +622,8 @@ export class FlightEngine {
   public setVirtualKey(code: string, down: boolean) {
     if (!this.inputEnabled) return;
     const key = code.toLowerCase();
-    if (down && !this.heldKeys[key]) this.justPressedKeys.add(key);
-    this.heldKeys[key] = down;
+    if (down && !this.heldKeys[key] && !this.touchKeys[key]) this.justPressedKeys.add(key);
+    this.touchKeys[key] = down;
   }
 
   private onKeyDown = (e: KeyboardEvent) => {
@@ -679,6 +683,7 @@ export class FlightEngine {
     this.heldKeys = {};
     this.justPressedKeys.clear();
     this.touchSteerX = this.touchSteerY = 0;
+    for (const key in this.touchKeys) this.touchKeys[key] = false;
   };
 
   private onWindowResize = () => {
@@ -828,15 +833,17 @@ export class FlightEngine {
 
     // 2. Flight Controls
     const held = this.heldKeys;
+    const touch = this.touchKeys;
 
-    if (held['keyw'] || held['arrowup']) {
+    // Touch BOOST also thrusts: on a tablet it is the main button, and boost needs speed.
+    if (held['keyw'] || held['arrowup'] || touch['keyw'] || touch['shiftleft']) {
       this.throttle = Math.min(1.0, this.throttle + 0.9 * dt);
-    } else if (held['keys'] || held['arrowdown']) {
+    } else if (held['keys'] || held['arrowdown'] || touch['keys']) {
       this.throttle = Math.max(0.0, this.throttle - 1.2 * dt);
     }
 
     this.isBoosting = false;
-    if ((held['shiftleft'] || held['shiftright']) && this.boostCharge > 2 && this.throttle > 0.1) {
+    if ((held['shiftleft'] || held['shiftright'] || touch['shiftleft']) && this.boostCharge > 2 && this.throttle > 0.1) {
       this.isBoosting = true;
       this.boostCharge = Math.max(0, this.boostCharge - 26 * dt);
     } else {

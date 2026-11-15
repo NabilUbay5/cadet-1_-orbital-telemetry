@@ -46,6 +46,26 @@ export function shouldShowTouchControls(mode: TouchMode, coarsePointer: boolean,
   return coarsePointer && maxTouchPoints > 0;
 }
 
+export interface DeviceSignals {
+  /** matchMedia('(pointer: coarse)'): the main pointer is a finger. */
+  coarsePointer: boolean;
+  maxTouchPoints: number;
+  platform: string;
+  userAgent: string;
+}
+
+/**
+ * Touch-first means a phone or tablet, not a touchscreen laptop. iPadOS reports a
+ * desktop Mac and a fine pointer once a trackpad or Magic Keyboard is attached, so
+ * it is recognised by "Mac platform with multi-touch" (real Macs have no touch points).
+ */
+export function isTouchFirstDevice(d: DeviceSignals): boolean {
+  if (!(d.maxTouchPoints > 0)) return false;
+  if (d.coarsePointer) return true;
+  if (/iPad|iPhone|Android.*Mobile/i.test(d.userAgent)) return true;
+  return /Mac/i.test(d.platform) && d.maxTouchPoints > 1;
+}
+
 export function nextTouchMode(mode: TouchMode): TouchMode {
   return TOUCH_MODES[(TOUCH_MODES.indexOf(mode) + 1) % TOUCH_MODES.length];
 }

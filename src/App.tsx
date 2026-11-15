@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { TouchControls } from './components/TouchControls.tsx';
 import {
   TOUCH_MODE_STORAGE_KEY,
+  isTouchFirstDevice,
   nextTouchMode,
   parseTouchMode,
   shouldShowTouchControls,
@@ -113,7 +114,12 @@ export default function App() {
   // Touch-first devices (phones, tablets) get the on-screen controller in auto mode.
   useEffect(() => {
     const query = window.matchMedia?.('(pointer: coarse)');
-    const update = () => setTouchFirst(!!query?.matches && navigator.maxTouchPoints > 0);
+    const update = () => setTouchFirst(isTouchFirstDevice({
+      coarsePointer: !!query?.matches,
+      maxTouchPoints: navigator.maxTouchPoints || 0,
+      platform: navigator.platform || '',
+      userAgent: navigator.userAgent || '',
+    }));
     update();
     query?.addEventListener?.('change', update);
     return () => query?.removeEventListener?.('change', update);

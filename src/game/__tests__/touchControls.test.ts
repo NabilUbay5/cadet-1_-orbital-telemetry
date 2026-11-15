@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import {
   STICK_DEADZONE,
+  isTouchFirstDevice,
   knobOffset,
   nextTouchMode,
   parseTouchMode,
@@ -70,6 +71,21 @@ describe('when to show the controller', () => {
     expect(parseTouchMode('on')).toBe('on');
     expect(parseTouchMode('nonsense')).toBe('auto');
     expect(parseTouchMode(null)).toBe('auto');
+  });
+});
+
+describe('isTouchFirstDevice', () => {
+  const base = { coarsePointer: false, maxTouchPoints: 0, platform: '', userAgent: '' };
+  test('phones and tablets with a finger as the main pointer', () => {
+    expect(isTouchFirstDevice({ ...base, coarsePointer: true, maxTouchPoints: 5, platform: 'Linux armv8l' })).toBe(true);
+  });
+  test('an iPad with a trackpad or Magic Keyboard (fine pointer, Mac platform, multi-touch)', () => {
+    expect(isTouchFirstDevice({ ...base, maxTouchPoints: 5, platform: 'MacIntel', userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' })).toBe(true);
+  });
+  test('a real Mac, a desktop and a touchscreen Windows laptop stay keyboard-first', () => {
+    expect(isTouchFirstDevice({ ...base, platform: 'MacIntel', userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' })).toBe(false);
+    expect(isTouchFirstDevice({ ...base, platform: 'Win32' })).toBe(false);
+    expect(isTouchFirstDevice({ ...base, maxTouchPoints: 10, platform: 'Win32', userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' })).toBe(false);
   });
 });
 
