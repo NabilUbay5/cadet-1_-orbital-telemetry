@@ -734,7 +734,7 @@ EXPOSE 80
 Project maintainer: [@NabilUbay5](https://github.com/NabilUbay5)
 
 - [@faustinamgo-rgb](https://github.com/faustinamgo-rgb)
-- [@lulzbot02](https://github.com/lulzbot02)
+- Fabian — [@lulzbot02](https://github.com/lulzbot02)
 - [@nauracahya](https://github.com/nauracahya)
 - [@tyo1616](https://github.com/tyo1616)
 
