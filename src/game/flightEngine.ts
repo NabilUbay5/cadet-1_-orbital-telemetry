@@ -26,6 +26,8 @@ import { isTelemetryUpdateDue } from './telemetrySchedule.ts';
 import { createTelemetrySnapshot } from './telemetrySnapshot.ts';
 import { TelemetryPodTracker, TOTAL_TELEMETRY_PODS } from './telemetryPods.ts';
 import {
+  STAGE1_START_PITCH_DEG,
+  STAGE1_START_YAW_DEG,
   STAGE1_TARGET_TIME,
   STAGE1_TOTAL_RINGS,
   STAGE2_REQUIRED_CUBES,
@@ -41,6 +43,7 @@ import {
 } from './missionLogic.ts';
 
 const RAD_TO_DEG = 180 / Math.PI;
+const DEG_TO_RAD = Math.PI / 180;
 const PREVENT_DEFAULT_KEYS = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
 export function getMissionProgressCounters({
@@ -370,7 +373,9 @@ export class FlightEngine {
     this.position.set(0, 0, 150);
     this.velocity.set(0, 0, 0);
     this.angularVelocity.set(0, 0, 0);
-    this.orientation.identity();
+    // Start tilted so Stage 1 (hold level for 4 s) needs real stick input.
+    this._deltaEuler.set(STAGE1_START_PITCH_DEG * DEG_TO_RAD, STAGE1_START_YAW_DEG * DEG_TO_RAD, 0, 'YXZ');
+    this.orientation.setFromEuler(this._deltaEuler);
     this.craftGroup.position.copy(this.position);
     this.craftGroup.quaternion.copy(this.orientation);
 

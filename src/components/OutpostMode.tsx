@@ -73,7 +73,8 @@ export const OutpostMode: React.FC<Props> = ({ onExit }) => {
   const [setup, setSetup] = useState<{ dest: Destination; diff: Difficulty }>({ dest: 'moon', diff: 'cadet' });
   const s = stateRef.current;
 
-  const addLog = (entries: LogEntry[]) => setLog((l) => [...entries.reverse(), ...l].slice(0, 80));
+  // Newest day first, but each day's lines stay in the order they happened ("Why:" follows its problem).
+  const addLog = (entries: LogEntry[]) => setLog((l) => [...entries, ...l].slice(0, 80));
 
   const beginDay = (st: OutpostState, p: Plan) => {
     const events = startDay(st);

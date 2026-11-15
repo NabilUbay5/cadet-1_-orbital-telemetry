@@ -19,6 +19,12 @@ export const STAGE1_TARGET_TIME = 4.0;
 export const STAGE1_DECAY_RATE = 0.5;
 export const STAGE1_RING_BONUS = 1.0;
 export const STAGE1_TOTAL_RINGS = 3;
+/**
+ * The craft starts Stage 1 tilted outside the ±4.5° window, so the cadet has to
+ * fly it level. Starting perfectly level let the stage finish with no input.
+ */
+export const STAGE1_START_PITCH_DEG = 12;
+export const STAGE1_START_YAW_DEG = -9;
 
 // Stage 2: Orbital Entry — energy cube harvest
 export const STAGE2_REQUIRED_CUBES = 3;
