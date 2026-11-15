@@ -194,8 +194,50 @@ button:focus-visible, a:focus-visible, input:focus-visible {
   }
 }
 
+.pixel-firework-burst {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  transform: translate(-50%, -50%);
+}
+
+.pixel-firework-spark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  image-rendering: pixelated;
+  opacity: 0;
+  animation: pixelFireworkSpark 760ms steps(6, end) both;
+}
+
+.pixel-firework-spark--north { --firework-x: 0px; --firework-y: -30px; }
+.pixel-firework-spark--north-east { --firework-x: 21px; --firework-y: -21px; }
+.pixel-firework-spark--east { --firework-x: 30px; --firework-y: 0px; }
+.pixel-firework-spark--south-east { --firework-x: 21px; --firework-y: 21px; }
+.pixel-firework-spark--south { --firework-x: 0px; --firework-y: 30px; }
+.pixel-firework-spark--south-west { --firework-x: -21px; --firework-y: 21px; }
+.pixel-firework-spark--west { --firework-x: -30px; --firework-y: 0px; }
+.pixel-firework-spark--north-west { --firework-x: -21px; --firework-y: -21px; }
+
+@keyframes pixelFireworkSpark {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.5);
+  }
+  18% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--firework-x), var(--firework-y)) scale(0.75);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .pixel-confetti {
+  .pixel-confetti, .pixel-fireworks {
     display: none;
   }
   .animate-arcade-blink, .animate-pulse {

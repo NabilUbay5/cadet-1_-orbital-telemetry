@@ -87,6 +87,25 @@ describe('procedural audio lifecycle', () => {
     audio.dispose();
   });
 
+  test('victory firework cues reuse pooled voices and respect mute', () => {
+    const graph = contextDouble();
+    const audio = new AudioEngine(() => graph.ctx as unknown as AudioContext);
+    audio.ensureRunning();
+    const oscillatorCount = graph.oscillators.length;
+    const notesBefore = graph.oscillators.reduce((count, oscillator) => count + oscillator.events.length, 0);
+
+    audio.playVictoryFireworks();
+
+    const notesAfter = graph.oscillators.reduce((count, oscillator) => count + oscillator.events.length, 0);
+    expect(notesAfter - notesBefore).toBe(7);
+    expect(graph.oscillators.length).toBe(oscillatorCount);
+
+    audio.toggleMute();
+    audio.playVictoryFireworks();
+    expect(graph.oscillators.reduce((count, oscillator) => count + oscillator.events.length, 0)).toBe(notesAfter);
+    audio.dispose();
+  });
+
   test('missing Web Audio is nonfatal and allows a later retry', () => {
     let attempts = 0;
     const audio = new AudioEngine(() => { attempts++; throw new Error('unsupported'); });

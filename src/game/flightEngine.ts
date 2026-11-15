@@ -489,6 +489,7 @@ export class FlightEngine {
     };
 
     audioEngine.playDockSuccess();
+    audioEngine.playVictoryFireworks();
     this.onStateChange?.('VICTORY', result);
   }
 

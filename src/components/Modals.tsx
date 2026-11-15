@@ -7,6 +7,7 @@ import React from 'react';
 import { MissionResult } from '../types/game.ts';
 import { PixelBadge } from './PixelBadge.tsx';
 import { PixelConfetti } from './PixelConfetti.tsx';
+import { PixelFireworks } from './PixelFireworks.tsx';
 import { ExportFlightLogButton } from './ExportFlightLogButton.tsx';
 
 interface PauseModalProps {
@@ -105,6 +106,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ result, totalResearc
   return (
     <div className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-30 pointer-events-auto font-pixel">
       <PixelConfetti />
+      <PixelFireworks />
       <div role="dialog" aria-modal="true" aria-label="Mission complete" className="flight-modal relative z-10 w-full max-w-lg retro-window-green p-6 bg-[#0d111a] border-2 border-[#00FF66] shadow-[6px_6px_0_#000]">
         {/* Header */}
         <div className="flex items-center justify-between border-b-2 border-[#2A3B5C] pb-3 mb-4">

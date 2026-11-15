@@ -664,7 +664,9 @@ cadet-1_-orbital-telemetry/
 │   │   ├── OutpostMode.tsx             # Outpost Ops screen (Moon/Mars base)
 │   │   ├── Modals.tsx                  # Pause, victory, and defeat screens
 │   │   ├── CertificationQuizModal.tsx  # Three questions per stage
-│   │   └── PixelBadge.tsx              # Stage badge graphics
+│   │   ├── PixelBadge.tsx              # Stage badge graphics
+│   │   ├── PixelConfetti.tsx           # Certification and victory confetti
+│   │   └── PixelFireworks.tsx          # Staggered victory firework bursts
 │   ├── audio/soundManager.ts           # Compatibility export for audioEngine
 │   └── data/
 │       ├── triviaBank.ts               # Nine questions total, three per stage
