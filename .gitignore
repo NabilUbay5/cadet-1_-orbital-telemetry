@@ -5,6 +5,22 @@ coverage/
 .DS_Store
 *.log
 .env*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.sqlite*
+*.db
+*.token
+credentials
+credentials.*
+secrets
+secrets.*
+__pycache__/
+venv/
+.venv/
+.cache/
 
 # Ignore local captures except the named README preview assets
 public/assets/*
