@@ -67,6 +67,26 @@ try {
       assert(wing.left >= 0 && wing.right <= viewport.width, `Wing outside viewport: ${JSON.stringify({ viewport, wing })}`);
       assert(wing.scrollWidth <= wing.width + 1, `Wing content overflow: ${JSON.stringify({ viewport, wing })}`);
     }
+    if (viewport.width <= 640 || viewport.height <= 500) {
+      const miniStatus = page.getByTestId('hud-mini-status');
+      await miniStatus.waitFor({ state: 'visible' });
+      assert.match(await miniStatus.innerText(), /STAGE: 01 \/\/ GROUND SCHOOL/);
+      assert.match(await miniStatus.innerText(), /STABILIZE FLIGHT GYROS/);
+      const minimizedLayout = await page.evaluate(() => ({
+        wings: [...document.querySelectorAll('.hud-wing')].map(wing => getComputedStyle(wing).display),
+        dispatch: getComputedStyle(document.querySelector('.hud-dispatch')).display,
+        status: document.querySelector('[data-testid="hud-mini-status"]').getBoundingClientRect().toJSON(),
+      }));
+      assert(minimizedLayout.wings.every(display => display === 'none'));
+      assert.equal(minimizedLayout.dispatch, 'none');
+      assert(minimizedLayout.status.left >= 0 && minimizedLayout.status.right <= viewport.width);
+      assert(minimizedLayout.status.top >= 0 && minimizedLayout.status.bottom <= viewport.height);
+
+      await miniStatus.click();
+      await page.getByRole('region', { name: 'NASA orbital reference', exact: true }).waitFor();
+      await page.getByRole('button', { name: 'Show the minimal HUD' }).click();
+      await miniStatus.waitFor({ state: 'visible' });
+    }
     console.log('Canvas and wings:', viewport, layout);
     if (process.env.HUD_SCREENSHOT_DIR) {
       await mkdir(process.env.HUD_SCREENSHOT_DIR, { recursive: true });
@@ -96,8 +116,9 @@ try {
   await page.evaluate(() => window.__hudTestEngine.triggerVictoryFinal());
   await page.getByRole('dialog', { name: 'Mission complete', exact: true }).waitFor();
   await exportLog('Victory (controlled transition)');
-  // After restart, prior flight readings must not leak into the new log.
-  await page.getByRole('button', { name: /NEXT CYCLE/ }).click();
+  // Return to the lobby and start a fresh run; prior readings must not leak into it.
+  await page.getByRole('button', { name: 'EXIT LOBBY', exact: true }).click();
+  await page.getByRole('button', { name: /PRESS START/ }).click();
   await page.keyboard.press('p');
   const restarted = await exportLog('Restart');
   assert(restarted.samples.every(sample => sample.metSeconds < 1));

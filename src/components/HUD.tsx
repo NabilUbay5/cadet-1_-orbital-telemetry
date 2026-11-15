@@ -212,6 +212,24 @@ export const HUD: React.FC<HUDProps> = ({
         </div>
       </header>
 
+      <div className="hud-mini-status relative z-20 w-full max-w-sm self-center px-2 pt-2 pointer-events-auto">
+        <button
+          type="button"
+          onClick={toggleHudDetails}
+          aria-label="Show every HUD panel"
+          data-testid="hud-mini-status"
+          className="retro-window w-full border border-[#00F0FF]/70 bg-[#0d111a]/90 px-3 py-2 text-left shadow-[3px_3px_0_#000] flex flex-col gap-1 cursor-pointer hover:border-[#00FF66]"
+        >
+          <span className="text-[8px] uppercase tracking-wider text-[#00F0FF]">
+            STAGE: {telemetry.stageTitle}
+          </span>
+          <span className={`text-[9px] leading-snug ${telemetry.stageTaskComplete ? 'text-[#00FF66]' : 'text-white'}`}>
+            {telemetry.stageTaskComplete ? '✓ TASK COMPLETE · EXAM READY' : `▶ ${telemetry.stageTaskTitle}`}
+          </span>
+          <span className="sr-only">Tap to restore the full HUD</span>
+        </button>
+      </div>
+
       {/* ========================================================================= */}
       {/* ★ MISSION ANNOUNCEMENT POPUP IN THE TOP RIGHT CORNER ★ */}
       {/* ========================================================================= */}
