@@ -8,6 +8,7 @@ import { audioEngine } from '../game/audioEngine.ts';
 import { TelemetryData } from '../types/game.ts';
 import { PixelBadge } from './PixelBadge.tsx';
 import { NasaTelemetryPanel } from './NasaTelemetryPanel.tsx';
+import { PlayerLives } from './PlayerLives.tsx';
 
 interface HUDProps {
   telemetry: TelemetryData;
@@ -291,6 +292,8 @@ export const HUD: React.FC<HUDProps> = ({
               </span>
             </div>
             {renderPixelBar(telemetry.hullIntegrity, 10, telemetry.hullIntegrity < 30)}
+
+            <PlayerLives lives={telemetry.lives} maxLives={telemetry.maxLives} invulnerable={telemetry.isInvulnerable} />
           </div>
 
           {/* 8-Bit Inertial Stability Reticle */}

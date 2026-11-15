@@ -22,6 +22,17 @@ import { ExhaustParticles } from './exhaustParticles.ts';
 import { FLIGHT_EPHEMERIS } from '../data/nasa/flightEphemeris.ts';
 import { FlightTelemetryLog } from './flightTelemetryLog.ts';
 import { FIXED_DT, FixedTimestep } from './fixedTimestep.ts';
+import {
+  INVULNERABLE_SECONDS,
+  MAX_LIVES,
+  RECOIL_RESTITUTION,
+  canTakeHit,
+  hullPercentForLives,
+  isFlashHidden,
+  isOutOfLives,
+  loseLife,
+  stepInvulnerability,
+} from './livesLogic.ts';
 import { isTelemetryUpdateDue } from './telemetrySchedule.ts';
 import { createTelemetrySnapshot } from './telemetrySnapshot.ts';
 import {
@@ -130,6 +141,8 @@ export class FlightEngine {
   private boostCharge: number = 100; // 0 - 100 %
   private isBoosting: boolean = false;
   private hullIntegrity: number = 100;
+  private lives: number = MAX_LIVES;
+  private invulnerableTimer: number = 0;
   private oxygen: number = 100;
   private energy: number = 100;
   private flightAssist: boolean = true;
@@ -390,6 +403,9 @@ export class FlightEngine {
     this.boostCharge = 100;
     this.isBoosting = false;
     this.hullIntegrity = 100;
+    this.lives = MAX_LIVES;
+    this.invulnerableTimer = 0;
+    this.craftGroup.visible = true;
     this.oxygen = 100;
     this.energy = 100;
 
@@ -815,23 +831,38 @@ export class FlightEngine {
     this.leftThrusterLight.intensity = this.throttle * (this.isBoosting ? 4.0 : 2.0);
     this.rightThrusterLight.intensity = this.throttle * (this.isBoosting ? 4.0 : 2.0);
 
+    // Invulnerability countdown and ship flash after a hit
+    this.invulnerableTimer = stepInvulnerability(this.invulnerableTimer, dt);
+    this.craftGroup.visible = !isFlashHidden(this.invulnerableTimer);
+
     // Collision with Asteroids
     for (const ast of this.asteroids) {
       const dist = this.position.distanceTo(ast.mesh.position);
       if (dist < ast.radius + 3.2) {
-        const impactSpeed = this.velocity.length();
-        const damage = Math.min(45, Math.max(8, Math.round(impactSpeed * 1.2)));
-        this.hullIntegrity = Math.max(0, this.hullIntegrity - damage);
-        this.damageTakenCount += damage;
-
+        // Recoil: bounce off along the collision normal and push the craft back
+        // to the asteroid surface so it cannot clip inside or stick.
         this._tmpVec.subVectors(this.position, ast.mesh.position).normalize();
-        this.velocity.reflect(this._tmpVec).multiplyScalar(0.5);
+        if (this.velocity.dot(this._tmpVec) < 0) {
+          this.velocity.reflect(this._tmpVec).multiplyScalar(RECOIL_RESTITUTION);
+        }
+        this.position.copy(ast.mesh.position).addScaledVector(this._tmpVec, ast.radius + 3.2);
+        this.craftGroup.position.copy(this.position);
+
+        // Invulnerability frames: bounce only, no second heart from the same crash.
+        if (!canTakeHit(this.invulnerableTimer)) continue;
+
+        const previousHull = this.hullIntegrity;
+        this.lives = loseLife(this.lives);
+        this.hullIntegrity = hullPercentForLives(this.lives);
+        this.damageTakenCount += previousHull - this.hullIntegrity;
+        this.invulnerableTimer = INVULNERABLE_SECONDS;
 
         this.hitstopDuration = 0.055;
-        this.cameraShake = Math.min(1.4, 0.4 + damage * 0.03);
-        audioEngine.playCollision(damage / 45);
+        this.cameraShake = 1.1;
+        audioEngine.playCollision(0.8);
 
-        if (this.hullIntegrity <= 0) {
+        if (isOutOfLives(this.lives)) {
+          this.craftGroup.visible = true;
           this.triggerDefeat('HULL BREACH: SEVERE DEBRIS IMPACT');
           return;
         }
@@ -1108,6 +1139,9 @@ export class FlightEngine {
       driftAngle: Math.round(driftAngle * 10) / 10,
       isInertialDrifting: driftAngle > 5.0,
       hullIntegrity: Math.round(this.hullIntegrity),
+      lives: this.lives,
+      maxLives: MAX_LIVES,
+      isInvulnerable: this.invulnerableTimer > 0,
       oxygen: Math.round(this.oxygen),
       energy: Math.round(this.energy),
       boostCharge: Math.round(this.boostCharge),

@@ -21,6 +21,9 @@ export interface TelemetryData {
   driftAngle: number; // degrees
   isInertialDrifting: boolean; // drift > 5 degrees
   hullIntegrity: number; // 0 - 100 %
+  lives: number; // hearts left, 0 - maxLives
+  maxLives: number;
+  isInvulnerable: boolean; // brief protection after an asteroid hit
   oxygen: number; // 0 - 100 %
   energy: number; // 0 - 100 %
   boostCharge: number; // 0 - 100 %
