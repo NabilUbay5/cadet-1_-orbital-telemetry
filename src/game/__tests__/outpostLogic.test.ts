@@ -13,6 +13,8 @@ import {
   canBuild,
   effectiveAllocation,
   endDay,
+  explainPowerShortage,
+  explainShortage,
   environment,
   finalReport,
   fitPlan,
@@ -330,5 +332,47 @@ describe('balance', () => {
 
   test('ignoring the outpost on the Moon usually fails, so the choices matter', () => {
     expect(rate('moon', 'commander', false)).toBeLessThanOrEqual(0.35);
+  });
+});
+
+describe('shortage explanations', () => {
+  const nightDay = HORIZONS_SNAPSHOT.moon.sunlight.indexOf(0) + 1;
+
+  test('a lunar-night brownout names the night and the missing reactor', () => {
+    const s = newOutpost('moon', 'commander', 1);
+    s.day = nightDay;
+    s.res.battery = 0;
+    const why = explainPowerShortage(s, forecastDay(s, basePlan()));
+    expect(why).toContain('lunar night');
+    expect(why).toContain('no working reactor');
+    expect(why).toContain('battery was empty');
+  });
+
+  test('oxygen running out traces back to the power shortage', () => {
+    const s = newOutpost('moon', 'commander', 1);
+    s.day = nightDay;
+    s.res.battery = 0;
+    s.res.o2 = 0;
+    const plan = basePlan();
+    const why = explainShortage(s, forecastDay(s, plan), effectiveAllocation(s, plan), 'o2');
+    expect(why).toContain('oxygen generator got only');
+    expect(why).toContain('lunar night');
+  });
+
+  test('broken and missing machines are named directly', () => {
+    const s = newOutpost('mars', 'cadet', 1);
+    const plan = basePlan();
+    s.broken.o2gen = 1;
+    expect(explainShortage(s, forecastDay(s, plan), effectiveAllocation(s, plan), 'o2')).toContain('broken');
+    expect(explainShortage(s, forecastDay(s, plan), effectiveAllocation(s, plan), 'food')).toContain('no greenhouse');
+  });
+
+  test('endDay logs a Why line whenever a supply runs out', () => {
+    const s = newOutpost('moon', 'commander', 1);
+    s.res.food = 0;
+    const lines = endDay(s, basePlan());
+    const i = lines.findIndex((l) => l.text === 'Food ran out.');
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(lines[i + 1].text.startsWith('Why: ')).toBe(true);
   });
 });

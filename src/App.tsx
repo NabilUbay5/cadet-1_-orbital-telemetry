@@ -136,6 +136,20 @@ export default function App() {
     setOutpostOpen(false);
   };
 
+  // Enter on the title screen opens Outpost Ops, the mode built for the challenge.
+  useEffect(() => {
+    if (gameState !== 'TITLE' || outpostOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'Enter' || e.repeat) return;
+      if (e.target instanceof HTMLElement && e.target.closest('button, a, input, select, textarea')) return;
+      e.preventDefault();
+      engineRef.current?.setInputEnabled(false);
+      setOutpostOpen(true);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [gameState, outpostOpen]);
+
   const handleResume = () => {
     engineRef.current?.setGameState('PLAYING');
     setGameState('PLAYING');

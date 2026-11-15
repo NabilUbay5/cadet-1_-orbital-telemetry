@@ -34,9 +34,9 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) 
         {/* Pixel Title Banner */}
         <div className="retro-window p-5 md:p-6 mb-4 border-2 border-[#00F0FF] bg-[#0d111a]/95">
           <div className="flex items-center gap-2 mb-2 text-[9px] text-[#FFB000]">
-            <span>▶ FLIGHT ACADEMY: CADET-1</span>
+            <span>▶ CADET-1</span>
             <span className="text-[#2A3B5C]">·</span>
-            <span>ORBITAL RECON // SECTOR 7</span>
+            <span>MOON & MARS OUTPOST TRAINING</span>
           </div>
 
           <h1 className="text-xl md:text-3xl text-[#FFFFFF] tracking-wider leading-relaxed mb-2">
@@ -48,6 +48,15 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) 
 
           <div className="h-0.5 w-full bg-[#00F0FF] mb-4" />
 
+          {/* Featured mission: the outpost manager built for the Space Apps challenge */}
+          <div className="border-2 border-[#FFB000] bg-[#FFB000]/10 p-3 mb-3">
+            <div className="text-[10px] text-[#FFB000] font-bold mb-1">★ MAIN MISSION · OUTPOST OPS</div>
+            <div className="text-[11px] text-white leading-relaxed">Run a Moon or Mars base for 30 days.</div>
+            <div className="text-[10px] text-[#A0AEC0] leading-relaxed mt-1">Balance power, air, water, food and radiation shielding. Day and night come from real NASA/JPL Horizons data.</div>
+          </div>
+
+          <div className="text-[9px] text-[#A0AEC0] mb-2">BONUS · FLIGHT ACADEMY (3 STAGES + QUIZZES)</div>
+
           {/* 3-Stage Progression Roadmap */}
           <div className="space-y-2 mb-5">
             <div className="border border-[#2A3B5C] bg-[#050508] p-2.5 flex items-center justify-between gap-3">
@@ -55,7 +64,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) 
                 <PixelBadge stage={1} size="sm" />
                 <div>
                   <div className="text-[9px] text-[#00F0FF] font-bold">STAGE 1: GROUND SCHOOL & GRAVITY BASICS</div>
-                  <div className="text-[8px] text-[#A0AEC0]">Task: Counter gravitational turbulence & stabilize flight gyros.</div>
+                  <div className="text-[9px] text-[#A0AEC0]">Task: Counter gravitational turbulence & stabilize flight gyros.</div>
                 </div>
               </div>
               <span className="text-[8px] text-[#FFB000] shrink-0">[QUIZ GATE 1]</span>
@@ -66,7 +75,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) 
                 <PixelBadge stage={2} size="sm" />
                 <div>
                   <div className="text-[9px] text-[#FFB000] font-bold">STAGE 2: ATMOSPHERE & ORBITAL ENTRY</div>
-                  <div className="text-[8px] text-[#A0AEC0]">Task: Collect 3 glowing Energy Cubes while dodging debris hazards.</div>
+                  <div className="text-[9px] text-[#A0AEC0]">Task: Collect 3 glowing Energy Cubes while dodging debris hazards.</div>
                 </div>
               </div>
               <span className="text-[8px] text-[#FFB000] shrink-0">[QUIZ GATE 2]</span>
@@ -77,37 +86,30 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) 
                 <PixelBadge stage={3} size="sm" />
                 <div>
                   <div className="text-[9px] text-[#00FF66] font-bold">STAGE 3: DEEP SPACE NAVIGATION</div>
-                  <div className="text-[8px] text-[#A0AEC0]">Task: Align telemetry coordinates with the Deep Space Satellite.</div>
+                  <div className="text-[9px] text-[#A0AEC0]">Task: Align telemetry coordinates with the Deep Space Satellite.</div>
                 </div>
               </div>
               <span className="text-[8px] text-[#FFB000] shrink-0">[QUIZ GATE 3]</span>
             </div>
 
-            <div className="border border-[#FFB000] bg-[#050508] p-2.5 flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[9px] text-[#FFB000] font-bold">OUTPOST OPS: RUN A MOON OR MARS BASE</div>
-                <div className="text-[8px] text-[#A0AEC0]">Task: Balance power, oxygen, water, food & radiation shielding for 30 days.</div>
-              </div>
-              <span className="text-[8px] text-[#00F0FF] shrink-0">[NASA JPL HORIZONS DATA]</span>
-            </div>
           </div>
 
           {/* Primary Arcade Start CTA */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
             <button
-              onClick={onStart}
-              className="retro-btn h-12 px-6 text-xs md:text-sm tracking-wider flex items-center justify-center gap-3 cursor-pointer"
+              onClick={onOutpost}
+              className="retro-btn h-14 px-6 text-xs md:text-sm tracking-wider flex items-center justify-center gap-3 cursor-pointer"
             >
-              <span>PRESS START</span>
-              <span className="text-[10px] opacity-80">[ENTER / SPACE]</span>
+              <span>OUTPOST OPS</span>
+              <span className="text-[10px] opacity-80">[ENTER]</span>
             </button>
 
             <button
-              onClick={onOutpost}
+              onClick={onStart}
               className="retro-btn-secondary h-12 px-5 text-[10px] md:text-xs tracking-wider flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>OUTPOST OPS</span>
-              <span className="text-[9px] text-[#FFB000]">MOON / MARS BASE</span>
+              <span>FLIGHT ACADEMY · PRESS START</span>
+              <span className="text-[9px] text-[#FFB000]">[SPACE]</span>
             </button>
 
             <div className="text-[10px] text-[#FFB000] animate-arcade-blink text-center sm:text-left">
