@@ -490,6 +490,12 @@ export interface TelemetryData {
 | **React integration**    | Engine stored in a ref; telemetry and UI in state; effect cleanup calls engine disposal.              | [App](src/App.tsx)                                                                    |
 | **Outpost Ops**          | Turn-based Moon/Mars base for a crew of four over 30 days: crew work blocks, seven buildable modules, power priority for life support, radiation dose and shielding, flares, dust storms, breakdowns, supply drones, and an end-of-mission debrief. An animated outpost scene shows buildings, night, dust storms and broken machines. A first-steps guide walks new players through day 1, and every shortage is logged with a plain-language "Why" that traces it to its cause. Sunlight per day comes from NASA/JPL Horizons. It is the main mission on the title screen (Enter); Flight Academy is the bonus mode (Space). | [Rules](src/game/outpostLogic.ts), [Screen](src/components/OutpostMode.tsx), [Data](src/data/nasa/horizonsSnapshot.ts) |
 
+Outpost water is allocated once per day: stored water and powered ice mining
+cover net crew needs first (after recycling), then oxygen generators, then
+greenhouses. Water-dependent production scales down when supply is short; the
+forecast and end-of-day results use the same allocation. Machines still draw
+their assigned power while water-limited. These are game-scale rules.
+
 ---
 
 ## 🌐 Play Online
@@ -683,7 +689,7 @@ This launches a fresh browser context, blocks all external requests, loads the l
 | **Trivia bank**        | Three questions per stage, unique ids, four distinct options, in-range `correctIndex`, and one badge per stage.                       |
 | **Outpost Ops**        | Horizons snapshot shape and the lunar night; solar output following the data; life support powered before jobs; shelter and shielding dose rules; build caps; stock limits; seeded replay; a balance check that a sensible scripted player completes most missions while a neglected Moon base usually fails; and the "Why" explanations for power, oxygen, water and food shortages. |
 
-Tests live in [`src/game/__tests__/`](src/game/__tests__) and exercise the pure modules ([missionLogic.ts](src/game/missionLogic.ts), [fixedTimestep.ts](src/game/fixedTimestep.ts), [triviaBank.ts](src/data/triviaBank.ts)), so they run without WebGL or a browser. Audio graph lifecycle and exhaust buffer reuse are also covered by Bun tests. The optional browser checks render audio using OfflineAudioContext and exercise mute, quiz retry/pass, stage transitions, and pause/resume. There is no automated visual-regression suite.
+Tests live in [`src/game/__tests__/`](src/game/__tests__) and exercise the pure modules ([missionLogic.ts](src/game/missionLogic.ts), [fixedTimestep.ts](src/game/fixedTimestep.ts), [triviaBank.ts](src/data/triviaBank.ts)), so they run without WebGL or a browser. Audio graph lifecycle and exhaust buffer reuse are also covered by Bun tests. The optional browser checks render audio using OfflineAudioContext and exercise focused title controls, mute, the certification input lock, shuffled quiz answers, stage transitions, and pause/resume. There is no automated visual-regression suite.
 
 For a manual smoke check, start the app and verify the title screen, WebGL canvas, live telemetry, start/pause/resume controls, and return to lobby. The fixed timestep makes physics refresh-rate independent, but randomized asteroid placement means deterministic replay is not provided.
 
