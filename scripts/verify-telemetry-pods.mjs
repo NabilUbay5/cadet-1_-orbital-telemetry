@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { once } from 'node:events';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -50,8 +51,39 @@ try {
     await page.evaluate(() => localStorage.setItem('cadet-1-research-points', '400'));
     await page.reload({ waitUntil: 'networkidle' });
     assert.equal((await page.getByTestId('research-balance').textContent())?.trim(), '400 RP');
-    await page.getByRole('button', { name: /FLIGHT ACADEMY/ }).click();
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'EXPORT RESEARCH' }).click();
+    const download = await downloadPromise;
+    assert.match(download.suggestedFilename(), /^cadet-1-research-\d{4}-\d{2}-\d{2}\.json$/);
+    const downloadedBackup = JSON.parse(await readFile(await download.path(), 'utf8'));
+    assert.equal(downloadedBackup.format, 'cadet-1-research-bank');
+    assert.equal(downloadedBackup.version, 1);
+    assert.equal(downloadedBackup.balance, 400);
+
+    await page.evaluate(() => localStorage.setItem('cadet-1-research-points', '999'));
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.getByLabel('Import research backup').setInputFiles({
+      name: download.suggestedFilename(),
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(downloadedBackup)),
+    });
+    await page.getByRole('status').filter({ hasText: 'previous balance was replaced' }).waitFor();
     assert.equal((await page.getByTestId('research-balance').textContent())?.trim(), '400 RP');
+    assert.equal(await page.evaluate(() => localStorage.getItem('cadet-1-research-points')), '400');
+
+    await page.getByLabel('Import research backup').setInputFiles({
+      name: 'invalid.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from('{'),
+    });
+    await page.getByRole('alert').filter({ hasText: 'Backup file is not valid JSON' }).waitFor();
+    assert.equal(await page.evaluate(() => localStorage.getItem('cadet-1-research-points')), '400');
+    await page.reload({ waitUntil: 'networkidle' });
+    assert.equal((await page.getByTestId('research-balance').textContent())?.trim(), '400 RP');
+    console.log('PASS: export downloads a valid backup; import replaces balance and rejects invalid files');
+
+    await page.getByRole('button', { name: /FLIGHT ACADEMY/ }).click();
 
     const podCounter = page.getByTestId('telemetry-pod-counter');
     await page.waitForFunction(() => {

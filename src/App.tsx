@@ -11,7 +11,13 @@ import { DefeatModal, PauseModal, VictoryModal } from './components/Modals.tsx';
 import { TitleScreen } from './components/TitleScreen.tsx';
 import { audioEngine } from './game/audioEngine.ts';
 import { FlightEngine } from './game/flightEngine.ts';
-import { addResearchPoints, readResearchBalance } from './game/researchBank.ts';
+import {
+  addResearchPoints,
+  createResearchBankBackup,
+  parseResearchBankBackup,
+  readResearchBalance,
+  writeResearchBalance,
+} from './game/researchBank.ts';
 import { isValidTelemetryData } from './game/telemetryValidation.ts';
 import { GameState, MissionResult, MissionStage, TelemetryData } from './types/game.ts';
 
@@ -81,6 +87,7 @@ export default function App() {
   const [outpostOpen, setOutpostOpen] = useState(false);
   const [researchBalance, setResearchBalance] = useState(0);
   const [researchSaveError, setResearchSaveError] = useState(false);
+  const [researchBackupMessage, setResearchBackupMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     try {
@@ -231,6 +238,47 @@ export default function App() {
     engineRef.current.exportTelemetryLog();
   };
 
+  const handleExportResearchBank = () => {
+    try {
+      const backup = createResearchBankBackup(researchBalance);
+      const url = URL.createObjectURL(new Blob([backup], { type: 'application/json' }));
+      const download = document.createElement('a');
+      download.href = url;
+      download.download = `cadet-1-research-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(download);
+      download.click();
+      download.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+      setResearchBackupMessage({ kind: 'success', text: 'Research backup exported.' });
+    } catch (error) {
+      console.error('Unable to export the research bank backup.', error);
+      setResearchBackupMessage({ kind: 'error', text: 'Unable to export the research backup.' });
+    }
+  };
+
+  const handleImportResearchBank = async (file: File) => {
+    try {
+      if (file.size > 16_384) {
+        throw new TypeError('Backup file is too large.');
+      }
+
+      const backup = parseResearchBankBackup(await file.text());
+      const restoredBalance = writeResearchBalance(window.localStorage, backup.balance);
+      setResearchBalance(restoredBalance);
+      setResearchSaveError(false);
+      setResearchBackupMessage({
+        kind: 'success',
+        text: `Research balance restored: ${restoredBalance} RP. The previous balance was replaced.`,
+      });
+    } catch (error) {
+      console.error('Unable to import the research bank backup.', error);
+      setResearchBackupMessage({
+        kind: 'error',
+        text: error instanceof Error ? `Import failed: ${error.message}` : 'Import failed. The saved balance was not changed.',
+      });
+    }
+  };
+
   // Trivia Certification Passed Handler
   const handlePassQuiz = (passedStage: MissionStage) => {
     engineRef.current?.setInputEnabled(true);
@@ -269,7 +317,13 @@ export default function App() {
 
       {/* Title Screen Overlay */}
       {gameState === 'TITLE' && !outpostOpen && (
-        <TitleScreen researchBalance={researchBalance} onStart={handleStart} onOutpost={handleOpenOutpost} />
+        <TitleScreen
+          researchBalance={researchBalance}
+          onStart={handleStart}
+          onOutpost={handleOpenOutpost}
+          onExportResearchBank={handleExportResearchBank}
+          onImportResearchBank={handleImportResearchBank}
+        />
       )}
 
       {/* Outpost Ops: Moon/Mars base management mode */}
@@ -330,6 +384,16 @@ export default function App() {
       {researchSaveError && (
         <div role="alert" className="fixed bottom-2 left-2 z-50 border border-[#FF3344] bg-[#0d111a] px-3 py-2 text-[9px] text-[#FF3344] font-pixel">
           RESEARCH BANK STORAGE UNAVAILABLE · BALANCE MAY NOT SURVIVE RELOAD
+        </div>
+      )}
+      {researchBackupMessage && (
+        <div
+          role={researchBackupMessage.kind === 'error' ? 'alert' : 'status'}
+          className={`fixed bottom-2 right-2 z-50 max-w-[min(90vw,28rem)] border bg-[#0d111a] px-3 py-2 text-[9px] font-pixel ${
+            researchBackupMessage.kind === 'error' ? 'border-[#FF3344] text-[#FF3344]' : 'border-[#00FF66] text-[#00FF66]'
+          }`}
+        >
+          {researchBackupMessage.text}
         </div>
       )}
     </div>

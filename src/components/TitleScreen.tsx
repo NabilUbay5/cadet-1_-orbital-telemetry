@@ -3,16 +3,26 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { PixelBadge } from './PixelBadge.tsx';
 
 interface TitleScreenProps {
   researchBalance: number;
   onStart: () => void;
   onOutpost: () => void;
+  onExportResearchBank: () => void;
+  onImportResearchBank: (file: File) => void;
 }
 
-export const TitleScreen: React.FC<TitleScreenProps> = ({ researchBalance, onStart, onOutpost }) => {
+export const TitleScreen: React.FC<TitleScreenProps> = ({
+  researchBalance,
+  onStart,
+  onOutpost,
+  onExportResearchBank,
+  onImportResearchBank,
+}) => {
+  const backupInputRef = useRef<HTMLInputElement>(null);
+
   return (
     <div data-testid="title-screen" className="absolute inset-0 flex flex-col justify-between gap-3 overflow-y-auto overflow-x-hidden overscroll-contain p-4 md:p-6 z-20 font-pixel">
       {/* Top Arcade Marquee Stamp */}
@@ -123,6 +133,35 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ researchBalance, onSta
             <div className="text-[9px] text-[#FFB000] animate-arcade-blink whitespace-nowrap text-center sm:text-left">
               INSERT COIN
             </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#2A3B5C] pt-3">
+            <button
+              type="button"
+              onClick={onExportResearchBank}
+              className="retro-btn-secondary min-h-9 px-3 text-[8px] tracking-wider cursor-pointer"
+            >
+              EXPORT RESEARCH
+            </button>
+            <button
+              type="button"
+              onClick={() => backupInputRef.current?.click()}
+              className="retro-btn-secondary min-h-9 px-3 text-[8px] tracking-wider cursor-pointer"
+            >
+              IMPORT RESEARCH
+            </button>
+            <input
+              ref={backupInputRef}
+              type="file"
+              accept="application/json,.json"
+              aria-label="Import research backup"
+              className="sr-only"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                if (file) onImportResearchBank(file);
+                event.currentTarget.value = '';
+              }}
+            />
           </div>
         </div>
       </div>
