@@ -29,6 +29,7 @@ import {
   forecastDay,
   horizonsSunlight,
   lessons,
+  mainCause,
   newOutpost,
   nextLightChange,
   openCrate,
@@ -529,6 +530,7 @@ const EventModal: React.FC<{ ev: OutpostEvent; onDone: (crate?: CrateKey) => voi
 
 const Debrief: React.FC<{ s: OutpostState; onAgain: () => void; onExit: () => void }> = ({ s, onAgain, onExit }) => {
   const r = finalReport(s);
+  const top = mainCause(s);
   const obj = (ok: boolean, text: string) => (
     <div className="flex gap-2 text-xs"><span style={{ color: ok ? C.green : '#64748B' }}>{ok ? '■' : '□'}</span><span>{text}</span></div>
   );
@@ -542,6 +544,12 @@ const Debrief: React.FC<{ s: OutpostState; onAgain: () => void; onExit: () => vo
         {obj(r.scienceMet, `Collected ${SCIENCE_GOAL}+ science samples (you: ${s.science.toFixed(0)})`)}
         {obj(r.doseOk, `Stayed under ${DOSE_LIMIT} mSv each (you: ${s.dose.toFixed(1)})`)}
       </div>
+      {top && (
+        <div className="border-2 border-[#FF3344] bg-[#FF3344]/10 p-2 text-sm">
+          <div className="font-pixel text-[9px] text-[#FF3344] mb-1">{s.result === 'complete' ? 'BIGGEST PROBLEM' : 'WHY THE MISSION FAILED'}</div>
+          <p>Most often ({top.days} day{top.days > 1 ? 's' : ''}): {top.cause}.</p>
+        </div>
+      )}
       <div className="font-pixel text-[9px] text-[#00F0FF] pt-1">WHAT THE ENGINEERS WOULD SAY</div>
       <div className="space-y-2">
         {lessons(s).map((l) => (
