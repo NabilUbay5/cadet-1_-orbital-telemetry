@@ -389,7 +389,7 @@ const Game: React.FC<{
                 {s.flareToday && (
                   <label className="flex gap-2 items-start border-2 border-[#FF3344] bg-[#FF3344]/10 p-2 text-[12px] cursor-pointer">
                     <input type="checkbox" className="mt-0.5 w-4 h-4 accent-[#00F0FF]" checked={plan.shelter} onChange={(e) => setPlan({ ...plan, shelter: e.target.checked })} />
-                    <span><b>Shelter from the flare.</b> Construction, ice mining and science stop today. Flare dose drops by 85%.</span>
+                    <span><b>Shelter from the flare.</b> Construction, ice mining and science stop today. The shelter cuts indoor flare dose by 85%.</span>
                   </label>
                 )}
               </div>

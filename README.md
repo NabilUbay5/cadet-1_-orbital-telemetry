@@ -496,6 +496,11 @@ greenhouses. Water-dependent production scales down when supply is short; the
 forecast and end-of-day results use the same allocation. Machines still draw
 their assigned power while water-limited. These are game-scale rules.
 
+Habitat shielding reduces the indoor share of both background and flare exposure;
+outdoor work remains exposed. Sheltering stops outdoor jobs and cuts the remaining
+indoor flare dose by 85%. The end-dose projection holds today's effective work
+allocation constant and conservatively assumes future flares are unsheltered.
+
 ---
 
 ## 🌐 Play Online
@@ -702,7 +707,7 @@ This launches a fresh browser context, blocks all external requests, loads the l
 | **Trivia bank**        | Three questions per stage, unique ids, four distinct options, in-range `correctIndex`, and one badge per stage.                       |
 | **Outpost Ops**        | Horizons snapshot shape and the lunar night; solar output following the data; life support powered before jobs; shelter and shielding dose rules; build caps; stock limits; seeded replay; a balance check that a sensible scripted player completes most missions while a neglected Moon base usually fails; and the "Why" explanations for power, oxygen, water and food shortages. |
 
-Tests live in [`src/game/__tests__/`](src/game/__tests__) and exercise the pure modules ([missionLogic.ts](src/game/missionLogic.ts), [fixedTimestep.ts](src/game/fixedTimestep.ts), [triviaBank.ts](src/data/triviaBank.ts)), so they run without WebGL or a browser. Audio graph lifecycle and exhaust buffer reuse are also covered by Bun tests. The optional browser checks render audio using OfflineAudioContext and exercise focused title controls, mute, the certification input lock, shuffled quiz answers, stage transitions, and pause/resume. There is no automated visual-regression suite.
+Tests live in [`src/game/__tests__/`](src/game/__tests__) and exercise the pure modules ([missionLogic.ts](src/game/missionLogic.ts), [fixedTimestep.ts](src/game/fixedTimestep.ts), [triviaBank.ts](src/data/triviaBank.ts)), so they run without WebGL or a browser. Audio graph lifecycle and exhaust buffer reuse are also covered by Bun tests. The optional browser checks render audio using OfflineAudioContext and exercise focused title controls, mute, the certification input lock, shuffled quiz answers, stage transitions, and pause/resume. The audio check steers the tilted craft using keyboard controls and HUD readings until it completes Stage 1's stabilization task. There is no automated visual-regression suite.
 
 For a manual smoke check, start the app and verify the title screen, WebGL canvas, live telemetry, start/pause/resume controls, and return to lobby. The fixed timestep makes physics refresh-rate independent, but randomized asteroid placement means deterministic replay is not provided.
 
