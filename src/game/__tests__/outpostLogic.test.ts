@@ -15,6 +15,7 @@ import {
   endDay,
   explainPowerShortage,
   explainShortage,
+  mainCause,
   environment,
   finalReport,
   fitPlan,
@@ -475,5 +476,19 @@ describe('shortage explanations', () => {
     const i = lines.findIndex((l) => l.text === 'Food ran out.');
     expect(i).toBeGreaterThanOrEqual(0);
     expect(lines[i + 1].text.startsWith('Why: ')).toBe(true);
+  });
+});
+
+describe('debrief cause summary', () => {
+  test('a smooth start has no main cause', () => {
+    expect(mainCause(newOutpost('moon', 'cadet', 1))).toBeNull();
+  });
+
+  test('a neglected Moon base reports its most frequent shortage cause', () => {
+    const { s } = playOut('moon', 'commander', 7919, false);
+    const top = mainCause(s);
+    expect(top).not.toBeNull();
+    expect(top!.days).toBe(Math.max(...Object.values(s.causes)));
+    expect(top!.cause.length).toBeGreaterThan(10);
   });
 });
