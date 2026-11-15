@@ -30,10 +30,14 @@
 .hud-wing > * { flex-shrink: 0; }
 .hud-controls { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
 .flight-modal { max-height: calc(100dvh - 2rem); overflow-y: auto; }
-.cockpit-hud button:focus-visible, .flight-modal button:focus-visible {
+/* Keyboard focus: one chunky amber ring on every control, in every screen. */
+button:focus-visible, a:focus-visible, input:focus-visible {
   outline: 2px solid #ffb000;
   outline-offset: 3px;
 }
+
+/* Scrollbars in the arcade palette instead of the browser's grey. */
+* { scrollbar-width: thin; scrollbar-color: #2A3B5C #050508; }
 
 @media (max-width: 900px) {
   .hud-wing { width: calc(50% - 1.5rem); }
@@ -112,6 +116,11 @@
   box-shadow: 1px 1px 0px #000000;
 }
 
+/* A disabled button stays put: no hover flip, no press. */
+.retro-btn:disabled, .retro-btn-secondary:disabled { cursor: not-allowed; }
+.retro-btn:disabled:hover { background-color: #00F0FF; color: #050508; }
+.retro-btn:disabled:active, .retro-btn-secondary:disabled:active { transform: none; box-shadow: 3px 3px 0px #000000; }
+
 .retro-btn-secondary {
   font-family: var(--font-pixel);
   border: 2px solid #2A3B5C;
@@ -177,5 +186,8 @@
 @media (prefers-reduced-motion: reduce) {
   .pixel-confetti {
     display: none;
+  }
+  .animate-arcade-blink, .animate-pulse {
+    animation: none;
   }
 }

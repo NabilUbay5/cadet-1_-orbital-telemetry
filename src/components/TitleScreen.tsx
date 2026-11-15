@@ -127,7 +127,7 @@ export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart, onOutpost }) 
         <div className="leading-normal">
           <span className="text-[#00F0FF]">W/S</span> THROTTLE · <span className="text-[#00F0FF]">A/D</span> YAW · <span className="text-[#00F0FF]">R/F</span> PITCH · <span className="text-[#00F0FF]">Q/E</span> ROLL · <span className="text-[#FFB000]">SHIFT</span> BOOST · <span className="text-[#00FF66]">SPACE</span> SCAN · <span className="text-[#FFFFFF]">C</span> CAM · <span className="text-[#FF3344]">ESC</span> PAUSE
         </div>
-        <div className="text-[#64748B] mt-1 md:mt-0">
+        <div className="text-[#8494AD] mt-1 md:mt-0">
           © 1989 CADET-1 ARCADE LABS
         </div>
       </div>

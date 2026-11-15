@@ -36,7 +36,7 @@ export const PauseModal: React.FC<PauseModalProps> = ({ onResume, onRestart, onE
               ★ GAME PAUSED ★
             </span>
           </div>
-          <span className="text-[9px] text-[#64748B]">[ESC]</span>
+          <span className="text-[9px] text-[#8494AD]">[ESC]</span>
         </div>
 
         {/* 8-Bit Controls Keymap */}
@@ -45,31 +45,31 @@ export const PauseModal: React.FC<PauseModalProps> = ({ onResume, onRestart, onE
             CONTROLS REFERENCE
           </div>
           <div className="flex justify-between">
-            <span className="text-[#64748B]">THRUST / BRAKE:</span>
+            <span className="text-[#8494AD]">THRUST / BRAKE:</span>
             <span className="text-[#FFFFFF]">W / S</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#64748B]">YAW STEER:</span>
+            <span className="text-[#8494AD]">YAW STEER:</span>
             <span className="text-[#FFFFFF]">A / D</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#64748B]">PITCH ELEVATION:</span>
+            <span className="text-[#8494AD]">PITCH ELEVATION:</span>
             <span className="text-[#FFFFFF]">R / F</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#64748B]">ROLL BANK:</span>
+            <span className="text-[#8494AD]">ROLL BANK:</span>
             <span className="text-[#FFFFFF]">Q / E</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#64748B]">BOOST:</span>
+            <span className="text-[#8494AD]">BOOST:</span>
             <span className="text-[#FFB000]">SHIFT</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#64748B]">RADAR SCAN:</span>
+            <span className="text-[#8494AD]">RADAR SCAN:</span>
             <span className="text-[#00F0FF]">SPACE</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[#64748B]">CAMERA:</span>
+            <span className="text-[#8494AD]">CAMERA:</span>
             <span className="text-[#FFFFFF]">C</span>
           </div>
         </div>
@@ -142,7 +142,7 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ result, onRestart, o
         <ExportFlightLogButton onExport={onExportFlightLog} />
         {/* Qualification Honors */}
         <div className="border border-[#2A3B5C] bg-[#050508] p-4 text-center mb-4">
-          <div className="text-[9px] text-[#64748B] mb-2 uppercase">OFFICIAL RANK CONFERRED</div>
+          <div className="text-[9px] text-[#8494AD] mb-2 uppercase">OFFICIAL RANK CONFERRED</div>
           <div className="text-sm md:text-base text-[#FFFFFF] tracking-wider mb-2 font-bold">
             {result.cadetRank}
           </div>
@@ -156,36 +156,36 @@ export const VictoryModal: React.FC<VictoryModalProps> = ({ result, onRestart, o
           <div className="border border-[#00F0FF] bg-[#050508] p-2 flex flex-col items-center">
             <PixelBadge stage={1} size="md" className="mb-1" />
             <div className="text-[8px] text-[#00F0FF] font-bold">STAGE 1</div>
-            <div className="text-[7px] text-[#A0AEC0] mt-0.5">GRAVITY BASIC</div>
+            <div className="text-[8px] text-[#A0AEC0] mt-0.5">GRAVITY BASIC</div>
           </div>
           <div className="border border-[#FFB000] bg-[#050508] p-2 flex flex-col items-center">
             <PixelBadge stage={2} size="md" className="mb-1" />
             <div className="text-[8px] text-[#FFB000] font-bold">STAGE 2</div>
-            <div className="text-[7px] text-[#A0AEC0] mt-0.5">ORBITAL ENTRY</div>
+            <div className="text-[8px] text-[#A0AEC0] mt-0.5">ORBITAL ENTRY</div>
           </div>
           <div className="border border-[#00FF66] bg-[#050508] p-2 flex flex-col items-center">
             <PixelBadge stage={3} size="md" className="mb-1" />
             <div className="text-[8px] text-[#00FF66] font-bold">STAGE 3</div>
-            <div className="text-[7px] text-[#A0AEC0] mt-0.5">DEEP SPACE</div>
+            <div className="text-[8px] text-[#A0AEC0] mt-0.5">DEEP SPACE</div>
           </div>
         </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-2 text-[9px] border border-[#2A3B5C] bg-[#050508] p-3 mb-5 leading-loose">
           <div className="border-r border-[#2A3B5C] pr-2">
-            <span className="text-[#64748B]">MISSION TIME:</span>
+            <span className="text-[#8494AD]">MISSION TIME:</span>
             <div className="text-xs text-[#FFFFFF] font-bold mt-0.5">{result.flightTimeFormatted}</div>
           </div>
           <div className="pl-2">
-            <span className="text-[#64748B]">ENERGY HARVEST:</span>
+            <span className="text-[#8494AD]">ENERGY HARVEST:</span>
             <div className="text-xs text-[#00F0FF] font-bold mt-0.5">{result.energyCubesCollected} / 3 CUBES</div>
           </div>
           <div className="border-r border-t border-[#2A3B5C] pr-2 pt-2 mt-1">
-            <span className="text-[#64748B]">BADGES EARNED:</span>
+            <span className="text-[#8494AD]">BADGES EARNED:</span>
             <div className="text-xs text-[#FFB000] font-bold mt-0.5">3 / 3 BADGES</div>
           </div>
           <div className="border-t border-[#2A3B5C] pl-2 pt-2 mt-1">
-            <span className="text-[#64748B]">HULL DAMAGE:</span>
+            <span className="text-[#8494AD]">HULL DAMAGE:</span>
             <div
               className={`text-xs font-bold mt-0.5 ${
                 result.hullDamageTaken === 0 ? 'text-[#00FF66]' : 'text-[#FFB000]'
@@ -247,19 +247,19 @@ export const DefeatModal: React.FC<DefeatModalProps> = ({ result, onRestart, onE
         {/* Stats */}
         <div className="grid grid-cols-2 gap-2 text-[9px] border border-[#2A3B5C] bg-[#050508] p-3 mb-5 leading-loose">
           <div className="border-r border-[#2A3B5C] pr-2">
-            <span className="text-[#64748B]">TIME:</span>
+            <span className="text-[#8494AD]">TIME:</span>
             <div className="text-xs text-[#FFFFFF] mt-1">{result.flightTimeFormatted}</div>
           </div>
           <div className="pl-2">
-            <span className="text-[#64748B]">BADGES:</span>
+            <span className="text-[#8494AD]">BADGES:</span>
             <div className="text-xs text-[#FFB000] mt-1">{result.badgesEarned} / 3</div>
           </div>
           <div className="border-r border-t border-[#2A3B5C] pr-2 pt-2 mt-1">
-            <span className="text-[#64748B]">CUBES:</span>
+            <span className="text-[#8494AD]">CUBES:</span>
             <div className="text-xs text-[#00F0FF] mt-1">{result.energyCubesCollected} / 3</div>
           </div>
           <div className="border-t border-[#2A3B5C] pl-2 pt-2 mt-1">
-            <span className="text-[#64748B]">DAMAGE:</span>
+            <span className="text-[#8494AD]">DAMAGE:</span>
             <div className="text-xs text-[#FF3344] mt-1">{result.hullDamageTaken}%</div>
           </div>
         </div>

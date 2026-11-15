@@ -346,7 +346,7 @@ const Game: React.FC<{
           <Panel title="MISSION LOG">
             <div className="max-h-56 overflow-y-auto space-y-1 pr-1 text-xs">
               {log.map((l, i) => (
-                <div key={i} className="grid grid-cols-[52px_1fr] gap-2"><span className="text-[#64748B] tabular-nums">{D.dayWord.slice(0, 1)}{l.day}</span><span style={{ color: l.kind === 'info' ? '#fff' : KIND_COLOR[l.kind] }}>{l.text}</span></div>
+                <div key={i} className="grid grid-cols-[52px_1fr] gap-2"><span className="text-[#8494AD] tabular-nums">{D.dayWord.slice(0, 1)}{l.day}</span><span style={{ color: l.kind === 'info' ? '#fff' : KIND_COLOR[l.kind] }}>{l.text}</span></div>
               ))}
             </div>
           </Panel>
@@ -453,7 +453,7 @@ const SunStrip: React.FC<{ s: OutpostState }> = ({ s }) => {
           );
         })}
       </div>
-      <div className="flex justify-between text-[11px] text-[#64748B] mt-1 tabular-nums"><span>{D.dayWord} 1</span><span>{D.dayWord} {MISSION_DAYS}</span></div>
+      <div className="flex justify-between text-[11px] text-[#8494AD] mt-1 tabular-nums"><span>{D.dayWord} 1</span><span>{D.dayWord} {MISSION_DAYS}</span></div>
     </div>
   );
 };
@@ -557,7 +557,7 @@ const Debrief: React.FC<{ s: OutpostState; onAgain: () => void; onExit: () => vo
           <div key={l.title} className="border border-[#2A3B5C] bg-[#050508] p-2 text-xs"><b className="block mb-0.5">{l.title}</b><span className="text-[#A0AEC0]">{l.body}</span></div>
         ))}
       </div>
-      <p className="text-[11px] text-[#64748B]">The {DOSE_LIMIT} mSv limit is game-sized. Real agencies set career limits in the hundreds of mSv. Sunlight data: NASA/JPL Horizons.</p>
+      <p className="text-[11px] text-[#8494AD]">The {DOSE_LIMIT} mSv limit is game-sized. Real agencies set career limits in the hundreds of mSv. Sunlight data: NASA/JPL Horizons.</p>
       <div className="flex flex-wrap gap-2 justify-end">
         <button className="retro-btn-secondary px-4 py-2 text-[11px]" onClick={onExit}>TITLE SCREEN</button>
         <button autoFocus className="retro-btn px-4 py-2 text-[11px]" onClick={onAgain}>NEW MISSION</button>
