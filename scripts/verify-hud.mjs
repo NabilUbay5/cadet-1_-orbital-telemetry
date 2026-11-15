@@ -15,7 +15,12 @@ try {
     if (new URL(request.url()).pathname === '/src/game/flightEngine.ts') engineModuleUrl = request.url();
   });
   page.on('pageerror', error => errors.push(error.message));
-  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  page.on('console', message => { if (message.type() === 'error') errors.push(`${message.text()} (${message.location().url})`); });
+  page.on('requestfailed', request => {
+    // Vite dependency optimization can cancel duplicate requests before reloading.
+    // Console/HTTP failures still fail this check; cancellation itself is not a load error.
+    if (request.failure()?.errorText !== 'net::ERR_ABORTED') errors.push(`${request.failure()?.errorText}: ${request.url()}`);
+  });
   page.on('response', response => { if (response.status() >= 400) errors.push(`HTTP ${response.status()}: ${response.url()}`); });
   await page.goto(process.env.APP_URL || 'http://127.0.0.1:3000', { waitUntil: 'networkidle' });
   // Capture the actual app engine without adding a test hook to production code.
@@ -29,6 +34,7 @@ try {
       return reset.call(this);
     };
   }, engineModuleUrl);
+  if (process.env.HUD_OFFLINE === '1') await page.context().setOffline(true);
   await page.getByRole('button', { name: /PRESS START/ }).click();
   await page.keyboard.down('r'); // Keep the automatic Stage 1 quiz from interrupting layout checks.
   await page.getByRole('button', { name: '[X]', exact: true }).click();

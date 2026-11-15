@@ -153,8 +153,8 @@ const SetupScreen: React.FC<{
               <div className="font-pixel text-[11px] mb-2" style={{ color: d === 'moon' ? C.cyan : C.amber }}>{d === 'moon' ? 'THE MOON' : 'MARS'}</div>
               <div className="font-telemetry text-xs text-[#A0AEC0]">
                 {d === 'moon'
-                  ? `${HORIZONS_SNAPSHOT.moon.site}. Full sun, then a ${HORIZONS_SNAPSHOT.moon.sunlight.filter((v) => v === 0).length}-day lunar night. About 1.37 mSv of radiation a day.`
-                  : `${HORIZONS_SNAPSHOT.mars.site}. About ${Math.round((HORIZONS_SNAPSHOT.mars.solarConstantWm2.mean / HORIZONS_SNAPSHOT.moon.solarConstantWm2.mean) * 100)}% of the Moon's sunlight, plus a dust storm. About 0.64 mSv a day.`}
+                  ? `${HORIZONS_SNAPSHOT.moon.site}. Full sun, then a ${HORIZONS_SNAPSHOT.moon.sunlight.filter((v) => v === 0).length}-day lunar night. Radiation scenario: 1.37 mSv per game day (unverified input).`
+                  : `${HORIZONS_SNAPSHOT.mars.site}. About ${Math.round((HORIZONS_SNAPSHOT.mars.solarConstantWm2.mean / HORIZONS_SNAPSHOT.moon.solarConstantWm2.mean) * 100)}% of the Moon's sunlight, plus a dust storm. Radiation scenario: 0.64 mSv per sol (unverified input).`}
               </div>
             </button>
           ))}
