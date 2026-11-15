@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { getMissionProgressCounters } from '../flightEngine.ts';
 import { isValidTelemetryData } from '../telemetryValidation.ts';
 import type { TelemetryData } from '../../types/game.ts';
 
@@ -58,6 +59,23 @@ describe('isValidTelemetryData', () => {
     expect(isValidTelemetryData({ ...validTelemetry, velocity: Number.NaN })).toBe(false);
     expect(isValidTelemetryData({ ...validTelemetry, velocity: -1 })).toBe(false);
     expect(isValidTelemetryData({ ...validTelemetry, oxygen: 101 })).toBe(false);
+  });
+
+  test('tracks stage resource counters from actual gameplay pickups', () => {
+    expect(
+      getMissionProgressCounters({
+        vectorRingsPassed: 2,
+        energyCubesCollected: 1,
+        oxygenCanistersCollected: 3,
+      })
+    ).toEqual({
+      telemetryPodsCollected: 3,
+      totalTelemetryPods: 3,
+      energyCoresCollected: 1,
+      totalEnergyCores: 3,
+      waypointsPassed: 2,
+      totalWaypoints: 3,
+    });
   });
 
   test('rejects invalid counts, stages, and radar blips', () => {

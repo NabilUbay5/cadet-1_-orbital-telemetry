@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { audioEngine } from '../game/audioEngine.ts';
 import { STAGE_BADGES, TRIVIA_QUESTIONS, TriviaQuestion } from '../data/triviaBank.ts';
 import { MissionStage } from '../types/game.ts';
@@ -15,11 +15,83 @@ interface CertificationQuizModalProps {
   onClose: () => void;
 }
 
+function shuffleItems<T>(items: readonly T[], random: () => number = Math.random): T[] {
+  const shuffled = [...items];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
+export function randomizeQuestionAnswers(
+  question: TriviaQuestion,
+  random: () => number = Math.random
+): TriviaQuestion {
+  const shuffledOptions = shuffleItems(question.options, random) as [string, string, string, string];
+  const correctAnswer = question.options[question.correctIndex];
+  const correctIndex = shuffledOptions.indexOf(correctAnswer);
+
+  if (correctIndex === -1) {
+    return question;
+  }
+
+  return {
+    ...question,
+    options: shuffledOptions,
+    correctIndex,
+  };
+}
+
+export function selectStageQuestions(
+  stage: MissionStage,
+  stageQuestions: readonly TriviaQuestion[] = TRIVIA_QUESTIONS[stage],
+  random: () => number = Math.random
+): TriviaQuestion[] {
+  const seenIds = new Set<string>();
+  const uniqueQuestions: TriviaQuestion[] = [];
+  for (const question of stageQuestions) {
+    if (question.stage !== stage || seenIds.has(question.id)) continue;
+    seenIds.add(question.id);
+    uniqueQuestions.push(question);
+  }
+
+  if (uniqueQuestions.length < 3) {
+    throw new RangeError(`Stage ${stage} requires at least three unique questions.`);
+  }
+
+  const randomizedQuestions = shuffleItems(uniqueQuestions, random).map((question) =>
+    randomizeQuestionAnswers(question, random)
+  );
+
+  return randomizedQuestions.slice(0, 3);
+}
+
+export function createQuizState() {
+  return {
+    currentIdx: 0,
+    selectedOption: null as number | null,
+    answered: false,
+    score: 0,
+    quizFinished: false,
+  };
+}
+
+export function evaluateQuizResult(score: number, totalQuestions: number): boolean {
+  return score === totalQuestions;
+}
+
 export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
   stage,
   onPass,
 }) => {
-  const questions: TriviaQuestion[] = TRIVIA_QUESTIONS[stage];
+  const questions = useMemo(() => selectStageQuestions(stage), [stage]);
+  const selectedQuestionIds = useMemo(
+    () => questions.map((question) => question.id).join(','),
+    [questions]
+  );
   const badge = STAGE_BADGES[stage];
 
   const [currentIdx, setCurrentIdx] = useState<number>(0);
@@ -27,6 +99,16 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
   const [answered, setAnswered] = useState<boolean>(false);
   const [score, setScore] = useState<number>(0);
   const [quizFinished, setQuizFinished] = useState<boolean>(false);
+  const scoreRef = useRef<number>(0);
+
+  useEffect(() => {
+    setCurrentIdx(0);
+    setSelectedOption(null);
+    setAnswered(false);
+    setScore(0);
+    scoreRef.current = 0;
+    setQuizFinished(false);
+  }, [stage]);
 
   const currentQ = questions[currentIdx];
 
@@ -37,8 +119,11 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
     setAnswered(true);
 
     const isCorrect = idx === currentQ.correctIndex;
+    const nextScore = scoreRef.current + (isCorrect ? 1 : 0);
+    scoreRef.current = nextScore;
+    setScore(nextScore);
+
     if (isCorrect) {
-      setScore((prev) => prev + 1);
       audioEngine.playQuizAnswer(true);
     } else {
       audioEngine.playQuizAnswer(false);
@@ -46,14 +131,14 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
   };
 
   const handleNext = () => {
+    const latestScore = scoreRef.current;
     if (currentIdx + 1 < questions.length) {
       setCurrentIdx((prev) => prev + 1);
       setSelectedOption(null);
       setAnswered(false);
     } else {
       setQuizFinished(true);
-      // Passing requires all 3 questions answered correctly
-      if (score === questions.length) {
+      if (evaluateQuizResult(latestScore, questions.length)) {
         audioEngine.playQuizResult(true);
       } else {
         audioEngine.playQuizResult(false);
@@ -66,14 +151,17 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
     setSelectedOption(null);
     setAnswered(false);
     setScore(0);
+    scoreRef.current = 0;
     setQuizFinished(false);
   };
 
-  // Must answer all 3 questions correctly to pass
-  const isPassed = score === questions.length;
+  const isPassed = evaluateQuizResult(scoreRef.current, questions.length);
 
   return (
-    <div className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-40 pointer-events-auto font-pixel">
+    <div
+      data-selected-question-ids={selectedQuestionIds}
+      className="absolute inset-0 bg-[#050508]/92 flex items-center justify-center p-4 z-40 pointer-events-auto font-pixel"
+    >
       <div className="w-full max-w-xl retro-window p-6 bg-[#0d111a] border-2 border-[#00F0FF] shadow-[6px_6px_0_#000]">
         {/* Terminal Header */}
         <div className="flex items-center justify-between border-b-2 border-[#2A3B5C] pb-3 mb-5">
@@ -97,7 +185,10 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
             </div>
 
             {/* Question Prompt */}
-            <div className="border-2 border-[#2A3B5C] bg-[#050508] p-4 mb-4">
+            <div
+              className="border-2 border-[#2A3B5C] bg-[#050508] p-4 mb-4"
+              data-question-id={currentQ.id}
+            >
               <div className="text-[9px] text-[#FFB000] mb-2 uppercase tracking-wide">
                 ▶ TOPIC: {badge.title}
               </div>
@@ -143,6 +234,14 @@ export const CertificationQuizModal: React.FC<CertificationQuizModalProps> = ({
               <div className="border border-[#2A3B5C] bg-[#050508] p-3 mb-4 text-[9px] leading-relaxed">
                 <span className="text-[#00FF66] font-bold">FLIGHT LOG: </span>
                 <span className="text-[#A0AEC0]">{currentQ.explanation}</span>
+                <a
+                  href={currentQ.source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block mt-2 text-[8px] text-[#00F0FF] underline"
+                >
+                  SOURCE: {currentQ.source.title}
+                </a>
               </div>
             )}
 

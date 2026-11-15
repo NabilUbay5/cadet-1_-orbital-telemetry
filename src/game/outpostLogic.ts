@@ -24,10 +24,10 @@ export type ServiceKey = 'hab' | 'o2' | 'rec' | 'gh' | 'ice' | 'sci' | 'bld';
 export type LineKind = 'good' | 'warn' | 'bad' | 'info';
 
 export const MISSION_DAYS = 30;
-/** Game-scale mission radiation limit per astronaut, in mSv. Real career limits are far higher. */
+/** Game-scale mission radiation limit per astronaut, in mSv. */
 export const DOSE_LIMIT = 30;
 export const CAP = { o2: 120, water: 160, food: 120 } as const;
-/** kWh a solar array makes in one day of full lunar-distance sunlight (snapshot value 1). */
+/** Game-scale kWh output per day at full normalized snapshot sunlight (1.0). */
 export const PANEL_KWH = 12;
 export const REACTOR_KWH = 30;
 /** Extra heater load during the lunar night. */
@@ -39,7 +39,7 @@ export const SCIENCE_GOAL = 40;
 export interface DestinationInfo {
   name: string;
   site: string;
-  /** Surface dose equivalent rate, mSv per day (published rover/lander measurements). */
+  /** Unverified literature-inspired scenario input in mSv per game day; not a mission limit. */
   dose: number;
   /** Extra dose from one big unsheltered flare (game value). */
   flare: number;
@@ -49,9 +49,8 @@ export interface DestinationInfo {
 }
 
 export const DESTINATIONS: Record<Destination, DestinationInfo> = {
-  // Chang'e-4 Lunar Lander Neutron and Dosimetry: about 1.37 mSv/day on the lunar surface.
+  // Scenario inputs; cited publications and the source-access limitation are documented in README.
   moon: { name: 'Moon', site: HORIZONS_SNAPSHOT.moon.site, dose: 1.37, flare: 14, heat: 6, dayWord: 'Day' },
-  // Curiosity RAD: about 0.64 mSv/day on the Martian surface.
   mars: { name: 'Mars', site: HORIZONS_SNAPSHOT.mars.site, dose: 0.64, flare: 8, heat: 12, dayWord: 'Sol' },
 };
 
@@ -376,6 +375,40 @@ export function build(s: OutpostState, k: ModuleKey): boolean {
 
 export interface LogLine { kind: LineKind; text: string }
 
+/** Plain-language reason the outpost was short of power today. */
+export function explainPowerShortage(s: OutpostState, f: DayForecast): string {
+  const reasons: string[] = [];
+  if (f.env.night) reasons.push('it is lunar night, so the solar arrays made nothing (sunset date from NASA/JPL Horizons)');
+  else if (f.env.storm) reasons.push('a dust storm cut the sunlight to about a quarter');
+  const brokenPower = s.broken.solar + s.broken.reactor;
+  if (brokenPower > 0) reasons.push(`${brokenPower} power machine${brokenPower > 1 ? 's were' : ' was'} broken`);
+  if (working(s, 'reactor') === 0 && (f.env.night || f.env.storm)) reasons.push('there is no working reactor for when the Sun is gone');
+  if (f.batteryAfter <= 0.01) reasons.push('the battery was empty');
+  if (reasons.length === 0) reasons.push(`the outpost wanted ${f.totalDemand.toFixed(0)} kWh but made only ${f.generated.toFixed(0)}`);
+  return reasons.join(', and ');
+}
+
+/** Plain-language reason a supply ran out, following the chain back to its cause. */
+export function explainShortage(s: OutpostState, f: DayForecast, a: EffectiveAllocation, kind: 'o2' | 'water' | 'food'): string {
+  const pct = (v: number) => `${Math.round(v * 100)}%`;
+  if (kind === 'o2') {
+    if (working(s, 'o2gen') === 0) return s.modules.o2gen > 0 ? 'the oxygen generator is broken (a maintenance block fixes it)' : 'there is no oxygen generator';
+    if (f.served.o2 < 0.999) return `the oxygen generator got only ${pct(f.served.o2)} of its power, because ${explainPowerShortage(s, f)}`;
+    return 'the crew breathes more than the outpost makes. Add an oxygen generator or a greenhouse';
+  }
+  if (kind === 'water') {
+    if (working(s, 'recycler') === 0) return s.modules.recycler > 0 ? 'the water recycler is broken (a maintenance block fixes it)' : 'there is no water recycler';
+    if (f.served.rec < 0.999) return `the water recycler got only ${pct(f.served.rec)} of its power, because ${explainPowerShortage(s, f)}`;
+    if (a.ice === 0) return 'nobody mined ice, and recycling alone cannot cover everything the crew and machines use';
+    return 'the outpost uses more water than recycling and ice mining bring in. Add a recycler or more ice mining';
+  }
+  const gh = working(s, 'greenhouse');
+  if (gh === 0) return s.modules.greenhouse > 0 ? 'the greenhouse is broken (a maintenance block fixes it)' : 'there is no greenhouse, so the crew is eating the stored food';
+  if (f.served.gh < 0.999) return `the greenhouses got only ${pct(f.served.gh)} of their power, because ${explainPowerShortage(s, f)}`;
+  if (a.farm < gh) return 'the greenhouses were not fully tended. Each one needs 1 farming block a day';
+  return 'four astronauts eat more than the greenhouses grow. Build another greenhouse';
+}
+
 /** Runs the day with the plan, applies every effect and advances to the next day. */
 export function endDay(s: OutpostState, plan: Plan): LogLine[] {
   const lines: LogLine[] = [];
@@ -386,16 +419,20 @@ export function endDay(s: OutpostState, plan: Plan): LogLine[] {
 
   s.res.battery = f.batteryAfter;
   s.stats.wastedKwh += f.wastedKwh;
-  if (f.lifeSupportShort) { s.stats.brownouts++; note('bad', 'Power ran short. Life support got power first.'); }
+  if (f.lifeSupportShort) {
+    s.stats.brownouts++;
+    note('bad', 'Power ran short. Life support got power first.');
+    note('info', `Why: ${explainPowerShortage(s, f)}.`);
+  }
   else if (SERVICES.some((sv) => !sv.lifeSupport && f.demand[sv.key] > 0 && f.served[sv.key] < 0.999)) note('warn', 'Not enough power for every job. Outdoor work slowed down.');
 
   const lack = { o2: s.res.o2 + f.o2Net < 0, water: s.res.water + f.waterNet < 0, food: s.res.food + f.foodNet < 0 };
   s.res.o2 = clamp(s.res.o2 + f.o2Net, 0, CAP.o2);
   s.res.water = clamp(s.res.water + f.waterNet, 0, CAP.water);
   s.res.food = clamp(s.res.food + f.foodNet, 0, CAP.food);
-  if (lack.o2) { s.stats.noOxygen++; note('bad', 'Oxygen ran out.'); }
-  if (lack.water) { s.stats.noWater++; note('bad', 'The water tank is empty.'); }
-  if (lack.food) { s.stats.noFood++; note('warn', 'Food ran out.'); }
+  if (lack.o2) { s.stats.noOxygen++; note('bad', 'Oxygen ran out.'); note('info', `Why: ${explainShortage(s, f, a, 'o2')}.`); }
+  if (lack.water) { s.stats.noWater++; note('bad', 'The water tank is empty.'); note('info', `Why: ${explainShortage(s, f, a, 'water')}.`); }
+  if (lack.food) { s.stats.noFood++; note('warn', 'Food ran out.'); note('info', `Why: ${explainShortage(s, f, a, 'food')}.`); }
 
   if (f.science > 0) { s.science += f.science; note('good', `+${f.science.toFixed(1)} science samples.`); }
   s.buildPoints += f.buildPoints;
@@ -459,7 +496,8 @@ export function finalReport(s: OutpostState): Report {
   const complete = s.result === 'complete';
   const crewSafe = complete && s.stats.evacuations === 0;
   const scienceMet = complete && s.science >= SCIENCE_GOAL;
-  const doseOk = s.dose <= DOSE_LIMIT;
+  // Like the other two objectives, the dose star only counts on a completed mission.
+  const doseOk = complete && s.dose <= DOSE_LIMIT;
   const stars = Number(crewSafe) + Number(scienceMet) + Number(doseOk);
   const score = Math.round(s.science * 10 + aboard(s).length * 150 + Math.max(0, DOSE_LIMIT - s.dose) * 8 + stars * 100 + (complete ? 200 : 0));
   const rank = complete ? ['Cadet in training', 'Mission specialist', 'Flight engineer', 'Commander'][stars] : 'Mission aborted';
@@ -471,7 +509,7 @@ export function lessons(s: OutpostState): Array<{ title: string; body: string }>
   const out: Array<{ title: string; body: string }> = [];
   if (st.brownouts > 0) out.push({ title: `Power ran short on ${st.brownouts} day${st.brownouts > 1 ? 's' : ''}`, body: s.dest === 'moon' ? 'Horizons shows the Sun gone for about 14 days at this site. Solar alone cannot carry a lunar night; real plans add batteries, fission power, or polar sites with long sunlight.' : 'Mars gets well under half the sunlight the Moon does, and dust storms cut it further. Engineers pair solar with batteries or fission power and keep life support first in line.' });
   if (st.noWater || st.noFood || st.noOxygen) out.push({ title: 'Supplies ran out', body: 'Every kilogram launched is expensive, so outposts recycle water, mine ice and grow food instead of waiting for deliveries.' });
-  if (s.dose > DOSE_LIMIT) out.push({ title: 'The crew went over the radiation limit', body: 'Landers have measured about 1.37 mSv a day on the Moon and rovers about 0.64 mSv a day on Mars. A few metres of soil piled on a habitat blocks a lot of it.' });
+  if (s.dose > DOSE_LIMIT) out.push({ title: 'The crew went over the radiation limit', body: 'This game uses about 1.37 mSv a day on the Moon and 0.64 mSv a day on Mars, inspired by lander and rover measurements. With no thick air or magnetic field overhead, a few metres of soil piled on a habitat is one of the best shields.' });
   else if (s.modules.shield >= 2) out.push({ title: 'Shielding paid off', body: 'Soil is heavy to launch but free to dig up, so covering habitats with regolith is a leading idea for long stays.' });
   if (st.flaresSheltered > 0) out.push({ title: 'Sheltering through a flare', body: 'You traded a day of outdoor work for an 85% smaller flare dose. Real crews make the same call using space weather forecasts.' });
   if (st.breakdowns >= 4) out.push({ title: `${st.breakdowns} machines broke down`, body: 'Spare parts and maintenance time are part of every mission plan. There is no shop next door.' });

@@ -18,7 +18,10 @@ import {
   createWaypointRing,
 } from './proceduralModels.ts';
 import { ExhaustParticles } from './exhaustParticles.ts';
+import { FLIGHT_EPHEMERIS } from '../data/nasa/flightEphemeris.ts';
+import { FlightTelemetryLog } from './flightTelemetryLog.ts';
 import { FIXED_DT, FixedTimestep } from './fixedTimestep.ts';
+import { isTelemetryUpdateDue } from './telemetrySchedule.ts';
 import {
   STAGE1_TARGET_TIME,
   STAGE1_TOTAL_RINGS,
@@ -39,6 +42,25 @@ import {
 const RAD_TO_DEG = 180 / Math.PI;
 const PREVENT_DEFAULT_KEYS = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
+export function getMissionProgressCounters({
+  vectorRingsPassed,
+  energyCubesCollected,
+  oxygenCanistersCollected,
+}: {
+  vectorRingsPassed: number;
+  energyCubesCollected: number;
+  oxygenCanistersCollected: number;
+}) {
+  return {
+    telemetryPodsCollected: oxygenCanistersCollected,
+    totalTelemetryPods: 3,
+    energyCoresCollected: energyCubesCollected,
+    totalEnergyCores: STAGE2_REQUIRED_CUBES,
+    waypointsPassed: vectorRingsPassed,
+    totalWaypoints: STAGE1_TOTAL_RINGS,
+  };
+}
+
 export class FlightEngine {
   private container: HTMLElement;
   private renderer: THREE.WebGLRenderer;
@@ -48,6 +70,7 @@ export class FlightEngine {
   private frameId: number = 0;
   private clock: THREE.Clock = new THREE.Clock();
   private readonly timestep = new FixedTimestep();
+  private readonly flightLog = new FlightTelemetryLog();
 
   // Scratch math objects, reused every physics step so the hot path never allocates.
   private readonly _tmpVec = new THREE.Vector3();
@@ -68,6 +91,7 @@ export class FlightEngine {
   private lastDistToSat: number = 0;
   private lastAlignErrorDeg: number = 0;
   private telemetryPending: boolean = false;
+  private lastTelemetryUpdateTime: number = Number.NEGATIVE_INFINITY;
 
   // Craft & Scene entities
   private craftGroup: THREE.Group;
@@ -326,6 +350,7 @@ export class FlightEngine {
   }
 
   public resetSimulation() {
+    this.flightLog.clear();
     this.position.set(0, 0, 150);
     this.velocity.set(0, 0, 0);
     this.angularVelocity.set(0, 0, 0);
@@ -380,17 +405,33 @@ export class FlightEngine {
   public advanceToStage(nextStage: MissionStage) {
     this.stage = nextStage;
     this.throttle = 0.22; // Gentle baseline cruise speed
+    // Start each stage level and still, so spin from the previous stage doesn't carry over.
+    this.angularVelocity.set(0, 0, 0);
     audioEngine.ensureRunning();
     audioEngine.playWaypointPass();
 
-    if (nextStage === 2) {
+    if (nextStage === 1) {
+      this.stabilizationTimer = 0;
+      this.vectorRingsPassedCount = 0;
+      this.waypointRings.forEach((ring) => {
+        ring.passed = false;
+        ring.group.visible = true;
+      });
+    } else if (nextStage === 2) {
       this.position.set(0, 15, 0);
       this.velocity.set(0, 0, -12);
       this.orientation.identity();
+      this.energyCubesCollectedCount = 0;
+      this.energyCubes.forEach((cube) => {
+        cube.collected = false;
+        cube.group.visible = true;
+      });
     } else if (nextStage === 3) {
       this.position.set(0, 25, -180);
       this.velocity.set(0, 0, -10);
       this.orientation.identity();
+      this.satelliteLockTimer = 0;
+      this.stage3Complete = false;
     }
     this.craftGroup.position.copy(this.position);
     this.craftGroup.quaternion.copy(this.orientation);
@@ -489,7 +530,8 @@ export class FlightEngine {
         this.onStateChange?.('PLAYING');
       }
     }
-    if ((e.code === 'Space' || e.code === 'Enter') && this.gameState === 'TITLE') {
+    // Space starts Flight Academy. Enter on the title screen opens Outpost Ops (handled in App).
+    if (e.code === 'Space' && this.gameState === 'TITLE') {
       this.resetSimulation();
     }
     if (e.code === 'KeyR' && (this.gameState === 'VICTORY' || this.gameState === 'DEFEAT')) {
@@ -532,6 +574,7 @@ export class FlightEngine {
         this.updateSimulation(FIXED_DT);
       }
       this.flushTelemetry();
+      this.captureTelemetryLog();
       this.render();
 
       if (this.isSoftwareGl) {
@@ -840,7 +883,7 @@ export class FlightEngine {
 
     this.updateCamera(dt);
 
-    // Telemetry is emitted once per rendered frame (see flushTelemetry), not once per physics step.
+    // Keep the latest readings ready for the throttled telemetry publisher.
     this.lastPitchDeg = pitchDeg;
     this.lastYawDeg = yawDeg;
     this.lastRollDeg = this._attitudeEuler.z * RAD_TO_DEG;
@@ -860,7 +903,11 @@ export class FlightEngine {
 
   private flushTelemetry() {
     if (!this.telemetryPending) return;
+    const now = performance.now();
+    if (!isTelemetryUpdateDue(now, this.lastTelemetryUpdateTime)) return;
+
     this.telemetryPending = false;
+    this.lastTelemetryUpdateTime = now;
     this.emitTelemetry(this.lastPitchDeg, this.lastYawDeg, this.lastDistToSat, this.lastAlignErrorDeg);
   }
 
@@ -1009,6 +1056,12 @@ export class FlightEngine {
       });
     }
 
+    const missionProgress = getMissionProgressCounters({
+      vectorRingsPassed: this.vectorRingsPassedCount,
+      energyCubesCollected: this.energyCubesCollectedCount,
+      oxygenCanistersCollected: this.o2Cans.filter((canister) => canister.collected).length,
+    });
+
     const telemetry: TelemetryData = {
       metSeconds: this.metSeconds,
       velocity: Math.round(currentSpeed * 10) / 10,
@@ -1050,12 +1103,12 @@ export class FlightEngine {
       satelliteAlignment: Math.round(alignErrorDeg),
       satelliteLockProgress,
 
-      telemetryPodsCollected: this.energyCubesCollectedCount,
-      totalTelemetryPods: 3,
-      energyCoresCollected: this.stage1Complete ? 1 : 0,
-      totalEnergyCores: 3,
-      waypointsPassed: this.stage,
-      totalWaypoints: 3,
+      telemetryPodsCollected: missionProgress.telemetryPodsCollected,
+      totalTelemetryPods: missionProgress.totalTelemetryPods,
+      energyCoresCollected: missionProgress.energyCoresCollected,
+      totalEnergyCores: missionProgress.totalEnergyCores,
+      waypointsPassed: missionProgress.waypointsPassed,
+      totalWaypoints: missionProgress.totalWaypoints,
 
       hazardWarning,
       hazardDistance,
@@ -1088,6 +1141,32 @@ export class FlightEngine {
     };
 
     this.onStateChange?.('DEFEAT', result);
+  }
+
+  private captureTelemetryLog(force = false) {
+    if (this.gameState === 'TITLE' || (!force && !this.flightLog.shouldRecord(this.metSeconds))) return;
+    this.flightLog.record({
+      metSeconds: this.metSeconds, stage: this.stage, speedMps: this.velocity.length(),
+      throttlePercent: this.throttle * 100, hullPercent: this.hullIntegrity,
+      oxygenPercent: this.oxygen, energyPercent: this.energy,
+      pitchDeg: this.lastPitchDeg, yawDeg: this.lastYawDeg, rollDeg: this.lastRollDeg,
+    }, force);
+  }
+
+  /** User-requested download; serialization and browser work stay outside the physics loop. */
+  public exportTelemetryLog(): void {
+    this.captureTelemetryLog(true);
+    const blob = new Blob([this.flightLog.serialize(FLIGHT_EPHEMERIS)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `cadet1-flight-log-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    document.body.appendChild(anchor);
+    try { anchor.click(); }
+    finally {
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
   }
 
   private render() {

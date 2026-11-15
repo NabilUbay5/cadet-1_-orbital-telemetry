@@ -13,6 +13,8 @@ import {
   canBuild,
   effectiveAllocation,
   endDay,
+  explainPowerShortage,
+  explainShortage,
   environment,
   finalReport,
   fitPlan,
@@ -81,10 +83,61 @@ describe('NASA/JPL Horizons snapshot', () => {
 
   test('records its source and the body constants Horizons reported', () => {
     expect(HORIZONS_SNAPSHOT.source).toContain('ssd.jpl.nasa.gov/horizons');
+    expect(HORIZONS_SNAPSHOT.apiEndpoint).toBe('https://ssd.jpl.nasa.gov/api/horizons.api');
+    expect(HORIZONS_SNAPSHOT.apiDocumentation).toBe('https://ssd-api.jpl.nasa.gov/doc/horizons.html');
     expect(HORIZONS_SNAPSHOT.moon.solarConstantWm2.mean).toBeGreaterThan(1300);
     expect(HORIZONS_SNAPSHOT.mars.solarConstantWm2.mean).toBeLessThan(700);
     expect(HORIZONS_SNAPSHOT.mars.meanSolarDaySeconds).toBeGreaterThan(88000);
     expect(HORIZONS_SNAPSHOT.moon.meanSolarDaySeconds / 86400).toBeCloseTo(29.53, 1);
+  });
+
+  test('records the actual Horizons target, epoch, center, frame, units and request URLs', () => {
+    const bodyQueries = [
+      [HORIZONS_SNAPSHOT.queries.bodyData.moon, '301'],
+      [HORIZONS_SNAPSHOT.queries.bodyData.mars, '499'],
+    ] as const;
+    for (const [record, target] of bodyQueries) {
+      const url = new URL(record.query);
+      expect(url.origin + url.pathname).toBe(HORIZONS_SNAPSHOT.apiEndpoint);
+      expect(url.searchParams.get('COMMAND')).toBe(`'${target}'`);
+      expect(url.searchParams.get('OBJ_DATA')).toBe("'YES'");
+      expect(url.searchParams.get('MAKE_EPHEM')).toBe("'NO'");
+      expect(record.target).toContain(target);
+      expect(record.epoch).toBeNull();
+      expect(record.center).toBeNull();
+      expect(record.referenceFrame).toBeNull();
+      expect(record.units).toContain('W/m^2');
+    }
+
+    const siteQueries = [
+      [HORIZONS_SNAPSHOT.queries.moonSunriseSearch, 'coord@301'],
+      [HORIZONS_SNAPSHOT.queries.moonSunlight, 'coord@301'],
+      [HORIZONS_SNAPSHOT.queries.marsSunlight, 'coord@499'],
+    ] as const;
+    for (const [record, center] of siteQueries) {
+      const url = new URL(record.query);
+      expect(url.origin + url.pathname).toBe(HORIZONS_SNAPSHOT.apiEndpoint);
+      expect(record.target).toBe('10 (Sun)');
+      expect(record.center).toBe(center);
+      expect(record.referenceFrame).toContain('ICRF');
+      expect(record.referenceFrame).toContain('local-horizon');
+      expect(record.units).toContain('degrees');
+      expect(record.epoch).not.toBeNull();
+      if (!record.epoch) throw new Error('Site ephemeris provenance must include an epoch.');
+      expect(url.searchParams.get('COMMAND')).toBe("'10'");
+      expect(url.searchParams.get('EPHEM_TYPE')).toBe("'OBSERVER'");
+      expect(url.searchParams.get('CENTER')).toBe(`'${center}'`);
+      expect(url.searchParams.get('TIME_TYPE')).toBe("'UT'");
+      expect(url.searchParams.get('REF_SYSTEM')).toBe("'ICRF'");
+      expect(url.searchParams.get('QUANTITIES')).toBe("'4'");
+      expect(url.searchParams.get('START_TIME')).toBe(`'${record.epoch.start}'`);
+      expect(url.searchParams.get('STOP_TIME')).toBe(`'${record.epoch.stop}'`);
+      expect(url.searchParams.get('STEP_SIZE')).toBe(`'${record.epoch.step}'`);
+    }
+
+    const sunriseSearchUrl = new URL(HORIZONS_SNAPSHOT.queries.moonSunriseSearch.query);
+    expect(sunriseSearchUrl.searchParams.get('START_TIME')).toBe("'2027-01-01'");
+    expect(sunriseSearchUrl.searchParams.get('STOP_TIME')).toBe("'2027-02-15'");
   });
 
   test('the Moon site has a long night inside the mission and a sunrise before the end', () => {
@@ -246,7 +299,21 @@ describe('determinism and endings', () => {
   test('stars match the three objectives', () => {
     const { s, report } = playOut('moon', 'cadet', 7, true);
     expect(report.stars).toBe(Number(report.crewSafe) + Number(report.scienceMet) + Number(report.doseOk));
-    expect(report.doseOk).toBe(s.dose <= DOSE_LIMIT);
+    expect(report.doseOk).toBe(s.result === 'complete' && s.dose <= DOSE_LIMIT);
+  });
+
+  test('an aborted mission earns no stars, even with a low dose', () => {
+    const s = newOutpost('mars', 'cadet', 1);
+    s.phase = 'over';
+    s.result = 'aborted';
+    s.dose = 5;
+    s.crew[0].aboard = false;
+    s.crew[1].aboard = false;
+    s.stats.evacuations = 2;
+    const report = finalReport(s);
+    expect(report.doseOk).toBe(false);
+    expect(report.stars).toBe(0);
+    expect(report.rank).toBe('Mission aborted');
   });
 });
 
@@ -265,5 +332,47 @@ describe('balance', () => {
 
   test('ignoring the outpost on the Moon usually fails, so the choices matter', () => {
     expect(rate('moon', 'commander', false)).toBeLessThanOrEqual(0.35);
+  });
+});
+
+describe('shortage explanations', () => {
+  const nightDay = HORIZONS_SNAPSHOT.moon.sunlight.indexOf(0) + 1;
+
+  test('a lunar-night brownout names the night and the missing reactor', () => {
+    const s = newOutpost('moon', 'commander', 1);
+    s.day = nightDay;
+    s.res.battery = 0;
+    const why = explainPowerShortage(s, forecastDay(s, basePlan()));
+    expect(why).toContain('lunar night');
+    expect(why).toContain('no working reactor');
+    expect(why).toContain('battery was empty');
+  });
+
+  test('oxygen running out traces back to the power shortage', () => {
+    const s = newOutpost('moon', 'commander', 1);
+    s.day = nightDay;
+    s.res.battery = 0;
+    s.res.o2 = 0;
+    const plan = basePlan();
+    const why = explainShortage(s, forecastDay(s, plan), effectiveAllocation(s, plan), 'o2');
+    expect(why).toContain('oxygen generator got only');
+    expect(why).toContain('lunar night');
+  });
+
+  test('broken and missing machines are named directly', () => {
+    const s = newOutpost('mars', 'cadet', 1);
+    const plan = basePlan();
+    s.broken.o2gen = 1;
+    expect(explainShortage(s, forecastDay(s, plan), effectiveAllocation(s, plan), 'o2')).toContain('broken');
+    expect(explainShortage(s, forecastDay(s, plan), effectiveAllocation(s, plan), 'food')).toContain('no greenhouse');
+  });
+
+  test('endDay logs a Why line whenever a supply runs out', () => {
+    const s = newOutpost('moon', 'commander', 1);
+    s.res.food = 0;
+    const lines = endDay(s, basePlan());
+    const i = lines.findIndex((l) => l.text === 'Food ran out.');
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(lines[i + 1].text.startsWith('Why: ')).toBe(true);
   });
 });

@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export interface TriviaSource {
+  title: string;
+  url: string;
+}
+
 export interface TriviaQuestion {
   id: string;
   stage: 1 | 2 | 3;
@@ -10,6 +15,7 @@ export interface TriviaQuestion {
   options: [string, string, string, string];
   correctIndex: number;
   explanation: string;
+  source: TriviaSource;
 }
 
 export interface StageBadge {
@@ -48,108 +54,195 @@ export const STAGE_BADGES: Record<1 | 2 | 3, StageBadge> = {
   },
 };
 
+const NASA_GRAVITY: TriviaSource = {
+  title: 'NASA Space Place: What Is Gravity?',
+  url: 'https://spaceplace.nasa.gov/what-is-gravity/en/',
+};
+const NASA_MOON: TriviaSource = {
+  title: 'NASA Science: Moon Facts',
+  url: 'https://science.nasa.gov/moon/facts/',
+};
+const NASA_TIDAL_LOCKING: TriviaSource = {
+  title: 'NASA Science: Tidal Locking',
+  url: 'https://science.nasa.gov/moon/tidal-locking/',
+};
+const NASA_MARS: TriviaSource = {
+  title: 'NASA Science: Mars Facts',
+  url: 'https://science.nasa.gov/mars/facts/',
+};
+const NASA_JUPITER: TriviaSource = {
+  title: 'NASA Science: Jupiter Facts',
+  url: 'https://science.nasa.gov/jupiter/jupiter-facts/',
+};
+const NASA_EARTH: TriviaSource = {
+  title: 'NASA Science: Earth',
+  url: 'https://science.nasa.gov/earth/facts/',
+};
+const NASA_SUN: TriviaSource = {
+  title: 'NASA Science: Our Sun: Facts',
+  url: 'https://science.nasa.gov/sun/facts/',
+};
+
 export const TRIVIA_QUESTIONS: Record<1 | 2 | 3, TriviaQuestion[]> = {
-  // Stage 1: Ground School & Gravity Basics
   1: [
     {
-      id: 'q1-1',
+      id: 'q1-gravity-orbit',
       stage: 1,
-      question: 'WHAT FORCE KEEPS PLANETS AND SPACECRAFT IN ORBIT AROUND THE SUN?',
+      question: 'WHAT FORCE KEEPS THE PLANETS IN ORBIT AROUND THE SUN?',
       options: ['MAGNETISM', 'GRAVITY', 'SOLAR WIND', 'STATIC ELECTRICITY'],
       correctIndex: 1,
-      explanation: 'Gravity is the universal invisible force that pulls objects toward one another.',
+      explanation: 'The Sun’s gravity keeps the planets in orbit around it.',
+      source: NASA_GRAVITY,
     },
     {
-      id: 'q1-2',
+      id: 'q1-moon-gravity',
       stage: 1,
-      question: 'WHY DO ASTRONAUTS FLOAT INSIDE AN ORBITING SPACE STATION?',
+      question: 'ABOUT HOW STRONG IS SURFACE GRAVITY ON THE MOON COMPARED WITH EARTH?',
+      options: ['ABOUT THE SAME', 'ABOUT ONE-SIXTH', 'ABOUT TWICE AS STRONG', 'ZERO'],
+      correctIndex: 1,
+      explanation: 'The Moon’s surface gravity is about one-sixth of Earth’s.',
+      source: NASA_MOON,
+    },
+    {
+      id: 'q1-moon-tidal-lock',
+      stage: 1,
+      question: 'WHY DOES THE SAME SIDE OF THE MOON GENERALLY FACE EARTH?',
       options: [
-        'THERE IS ZERO GRAVITY IN SPACE',
-        'THEY ARE IN CONTINUOUS FREE-FALL',
-        'THE CABIN HAS ANTI-GRAVITY TILES',
-        'MAGNETIC REPELLERS FLOAT THEM',
+        'THE MOON DOES NOT ROTATE',
+        'ITS ROTATION AND ORBIT PERIODS MATCH',
+        'EARTH’S CLOUDS HIDE THE OTHER SIDE',
+        'THE SUN PULLS ONLY ONE SIDE',
       ],
       correctIndex: 1,
-      explanation: 'Astronauts in orbit are constantly falling around Earth at orbital speed (free-fall)!',
+      explanation: 'The Moon rotates once in the same time it takes to orbit Earth, a state called synchronous tidal locking.',
+      source: NASA_TIDAL_LOCKING,
     },
     {
-      id: 'q1-3',
+      id: 'q1-moon-atmosphere',
       stage: 1,
-      question: 'COMPARED TO EARTH, HOW STRONG IS GRAVITY ON THE MOON?',
-      options: ['EQUAL TO EARTH', 'ABOUT 1/6TH AS STRONG', 'TWICE AS STRONG', 'ZERO GRAVITY'],
+      question: 'WHAT KIND OF ATMOSPHERE DOES THE MOON HAVE?',
+      options: ['A THICK, BREATHABLE ATMOSPHERE', 'A VERY THIN EXOSPHERE', 'NO SURFACE AT ALL', 'A HYDROGEN-OXYGEN ATMOSPHERE'],
       correctIndex: 1,
-      explanation: "The Moon has less mass than Earth, giving it about 1/6th of Earth's gravity.",
+      explanation: 'The Moon has a very thin, tenuous exosphere that is not breathable.',
+      source: NASA_MOON,
+    },
+    {
+      id: 'q1-moon-phases',
+      stage: 1,
+      question: 'WHAT CAUSES THE MOON’S PHASES AS SEEN FROM EARTH?',
+      options: [
+        'EARTH’S SHADOW COVERS THE MOON EVERY NIGHT',
+        'WE SEE DIFFERENT AMOUNTS OF ITS SUNLIT SIDE AS IT ORBITS',
+        'THE MOON MAKES ITS OWN LIGHT',
+        'CLOUDS CHANGE THE MOON’S SHAPE',
+      ],
+      correctIndex: 1,
+      explanation: 'As the Moon orbits Earth, we see changing portions of its sunlit hemisphere.',
+      source: NASA_MOON,
     },
   ],
-
-  // Stage 2: Atmosphere & Orbital Entry
   2: [
     {
-      id: 'q2-1',
+      id: 'q2-mars-sol',
       stage: 2,
-      question: 'WHAT IS THE GENERALLY ACCEPTED BOUNDARY WHERE SPACE BEGINS (100 KM UP)?',
-      options: ['THE OZONE LAYER', 'THE STRATOSPHERE', 'THE KARMAN LINE', 'THE ASTEROID BELT'],
+      question: 'ABOUT HOW LONG IS ONE MARTIAN SOL?',
+      options: ['12 HOURS', '24.6 HOURS', '7 EARTH DAYS', '365 EARTH DAYS'],
+      correctIndex: 1,
+      explanation: 'A Martian solar day, called a sol, lasts about 24.6 hours.',
+      source: NASA_MARS,
+    },
+    {
+      id: 'q2-mars-color',
+      stage: 2,
+      question: 'WHY DOES MARS LOOK RED?',
+      options: [
+        'ITS IRON-RICH SURFACE MATERIAL HAS RUSTED',
+        'ITS OCEANS REFLECT RED LIGHT',
+        'ITS CLOUDS ARE MADE OF FIRE',
+        'THE SUN LIGHTS IT WITH A RED BEAM',
+      ],
+      correctIndex: 0,
+      explanation: 'Iron minerals in Martian rocks, soil, and dust oxidize, or rust, giving Mars its reddish appearance.',
+      source: NASA_MARS,
+    },
+    {
+      id: 'q2-mars-moons',
+      stage: 2,
+      question: 'HOW MANY NATURAL MOONS DOES MARS HAVE?',
+      options: ['NONE', 'ONE', 'TWO', 'FOUR'],
       correctIndex: 2,
-      explanation: 'The Kármán Line at 100 km (62 miles) altitude marks the official edge of outer space.',
+      explanation: 'Mars has two small moons: Phobos and Deimos.',
+      source: NASA_MARS,
     },
     {
-      id: 'q2-2',
+      id: 'q2-mars-atmosphere',
       stage: 2,
-      question: 'WHY DO SPACECRAFT GLOW RED-HOT DURING ATMOSPHERIC RE-ENTRY?',
-      options: [
-        'EXTREME AIR COMPRESSION & FRICTION',
-        'ROCKET ENGINES ARE FIRING',
-        'SOLAR RADIATION OVERHEAT',
-        'LASER COMMUNICATIONS',
-      ],
+      question: 'HOW DOES NASA DESCRIBE THE MARTIAN ATMOSPHERE?',
+      options: ['VERY THIN', 'THICKER THAN VENUS’ ATMOSPHERE', 'BREATHABLE', 'ABSENT'],
       correctIndex: 0,
-      explanation: 'Hyper-velocity travel rapidly compresses air molecules ahead of the heat shield.',
+      explanation: 'Mars has a very thin atmosphere; it is not an Earth-like breathable atmosphere.',
+      source: NASA_MARS,
     },
     {
-      id: 'q2-3',
+      id: 'q2-olympus-mons',
       stage: 2,
-      question: 'WHAT SHIELD PROTECTS ORBITING ASTRONAUTS FROM HARMFUL SOLAR RADIATION?',
-      options: [
-        "EARTH'S MAGNETIC FIELD (MAGNETOSPHERE)",
-        'SOLAR PANELS',
-        'THE MOON SHADOW',
-        'COSMIC MIRRORS',
-      ],
-      correctIndex: 0,
-      explanation: "Earth's magnetosphere deflects dangerous high-energy solar and cosmic particles.",
+      question: 'WHICH PLANETARY VOLCANO IS THE LARGEST IN THE SOLAR SYSTEM?',
+      options: ['MAUNA KEA', 'OLYMPUS MONS', 'MOUNT EVEREST', 'MARS’ Valles Marineris'],
+      correctIndex: 1,
+      explanation: 'Olympus Mons on Mars is the largest volcano in the solar system.',
+      source: NASA_MARS,
     },
   ],
-
-  // Stage 3: Deep Space Navigation
   3: [
     {
-      id: 'q3-1',
+      id: 'q3-jupiter-largest',
       stage: 3,
-      question: 'WHAT IS THE LARGEST PLANET IN OUR SOLAR SYSTEM?',
+      question: 'WHICH PLANET IS THE LARGEST IN OUR SOLAR SYSTEM?',
       options: ['SATURN', 'JUPITER', 'NEPTUNE', 'MARS'],
       correctIndex: 1,
-      explanation: 'Jupiter is more than twice as massive as all other planets combined!',
+      explanation: 'Jupiter is the largest planet in our solar system.',
+      source: NASA_JUPITER,
     },
     {
-      id: 'q3-2',
+      id: 'q3-sun-light-time',
       stage: 3,
-      question: 'HOW LONG DOES LIGHT/RADIO SIGNALS FROM THE SUN TAKE TO REACH EARTH?',
-      options: ['8 SECONDS', '8 MINUTES', '8 HOURS', 'INSTANTLY'],
+      question: 'ABOUT HOW LONG DOES SUNLIGHT TAKE TO REACH EARTH?',
+      options: ['8 SECONDS', '8.35 MINUTES', '8 HOURS', 'INSTANTLY'],
       correctIndex: 1,
-      explanation: 'Traveling at 300,000 km/s, light takes roughly 8 minutes and 20 seconds from the Sun.',
+      explanation: 'NASA lists the one-way light time from the Sun to Earth as about 8.35 minutes.',
+      source: NASA_EARTH,
     },
     {
-      id: 'q3-3',
+      id: 'q3-sun-gravity',
       stage: 3,
-      question: 'WHAT DOES SATELLITE TELEMETRY DATA TRANSMIT TO MISSION CONTROL?',
+      question: 'WHAT DOES THE SUN’S GRAVITY DO IN OUR SOLAR SYSTEM?',
       options: [
-        'SPACECRAFT HEALTH, POSITION & SENSORS',
-        'RADIO POP MUSIC',
-        'WEATHER ON MARS ONLY',
-        'COMPUTER GAMES',
+        'IT HOLDS THE SOLAR SYSTEM TOGETHER',
+        'IT STOPS PLANETS FROM ROTATING',
+        'IT PUSHES PLANETS AWAY IN STRAIGHT LINES',
+        'IT ONLY AFFECTS EARTH',
       ],
       correctIndex: 0,
-      explanation: 'Telemetry transmits vital real-time sensor measurements, voltage, velocity, and trajectory.',
+      explanation: 'The Sun’s gravity holds the solar system together and keeps objects in orbit around it.',
+      source: NASA_SUN,
+    },
+    {
+      id: 'q3-earth-year',
+      stage: 3,
+      question: 'ABOUT HOW LONG DOES EARTH TAKE TO ORBIT THE SUN ONCE?',
+      options: ['24 HOURS', '30 DAYS', '365.25 DAYS', '12 YEARS'],
+      correctIndex: 2,
+      explanation: 'One Earth year is about 365.25 days.',
+      source: NASA_EARTH,
+    },
+    {
+      id: 'q3-jupiter-day',
+      stage: 3,
+      question: 'ABOUT HOW LONG IS ONE DAY ON JUPITER?',
+      options: ['9.9 HOURS', '24 HOURS', '7 EARTH DAYS', '12 EARTH YEARS'],
+      correctIndex: 0,
+      explanation: 'Jupiter rotates once in about 9.9 hours, the shortest day of any planet in the solar system.',
+      source: NASA_JUPITER,
     },
   ],
 };

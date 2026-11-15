@@ -20,10 +20,39 @@
 
   canvas {
     image-rendering: -moz-crisp-edges;
-    image-rendering: -webkit-crisp-edges;
-    image-rendering: pixelated;
     image-rendering: crisp-edges;
+    image-rendering: pixelated;
   }
+}
+
+.flight-canvas canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.hud-wing { position: relative; z-index: 1; max-height: 100%; overflow-y: auto; scrollbar-width: thin; min-width: 0; flex-shrink: 0; overflow-wrap: anywhere; }
+.hud-wing > * { flex-shrink: 0; }
+.hud-controls { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+.flight-modal { max-height: calc(100dvh - 2rem); overflow-y: auto; }
+.cockpit-hud button:focus-visible, .flight-modal button:focus-visible {
+  outline: 2px solid #ffb000;
+  outline-offset: 3px;
+}
+
+@media (max-width: 900px) {
+  .hud-wing { width: calc(50% - 1.5rem); }
+  .hud-reticle { position: absolute; left: 50%; top: 45%; transform: translate(-50%, -50%); z-index: 0; }
+  .hud-wing section { overflow-wrap: anywhere; }
+}
+
+@media (max-width: 600px) {
+  .hud-header { padding: 0.5rem; }
+  .hud-header > div:first-child { width: 100%; justify-content: space-between; }
+  .hud-header > div:last-child { width: 100%; justify-content: space-between; }
+  .hud-header > div:first-child > div:last-child > span:last-child { font-size: 10px; }
+  .hud-dispatch { top: 6rem; right: 0.5rem; max-width: calc(100% - 1rem); }
+  .hud-dispatch > button { display: none; }
+  .hud-viewport { gap: 1.5rem; padding: 0.5rem; align-items: stretch; }
+  .hud-wing { width: calc(50% - 0.75rem); }
+  .hud-wing > div, .hud-wing > section { padding: 0.5rem; }
+  .hud-controls { margin: 0 0.5rem; }
+  .flight-modal { padding: 1rem; }
 }
 
 .font-pixel {
